@@ -79,13 +79,16 @@
 /* ==========================================================================
    2. Temel SÄ±fÄ±rlama ve DÃ¼zen (AppShell Base)
    ========================================================================== */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
-html, body {
+html,
+body {
     height: 100%;
     overflow: hidden;
     background-color: var(--ax-surface-canvas);
@@ -268,7 +271,8 @@ html, body {
     box-shadow: var(--ax-shadow-xs);
 }
 
-.tool-btn:active, .tool-btn.active {
+.tool-btn:active,
+.tool-btn.active {
     background-color: var(--ax-color-primary-subtle);
     color: var(--ax-color-primary);
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -381,12 +385,15 @@ html, body {
 }
 
 .a4-page {
-    width: 595pt;                          /* A4 geniÅŸliÄŸi (210mm) */
-    min-height: 842pt;                     /* A4 yÃ¼ksekliÄŸi (297mm) */
+    width: 595pt;
+    /* A4 geniÅŸliÄŸi (210mm) */
+    min-height: 842pt;
+    /* A4 yÃ¼ksekliÄŸi (297mm) */
     background: #ffffff;
     box-shadow: var(--ax-shadow-paper);
     border-radius: var(--ax-radius-xs);
-    padding: 70.87pt 70.87pt 70.87pt 56.69pt;  /* UYAP standart marjinleri */
+    padding: 70.87pt 70.87pt 70.87pt 56.69pt;
+    /* UYAP standart marjinleri */
     color: #000000;
     outline: none;
     user-select: text;
@@ -422,7 +429,7 @@ html, body {
     margin: 8pt 0;
 }
 
-.a4-page table.udf-table td, 
+.a4-page table.udf-table td,
 .a4-page table.udf-table th {
     vertical-align: top;
     padding: 4pt 6pt;
@@ -445,7 +452,8 @@ html, body {
     user-select: none;
 }
 
-.status-left, .status-right {
+.status-left,
+.status-right {
     display: flex;
     align-items: center;
     gap: 16px;
@@ -522,7 +530,8 @@ html, body {
         margin: 0;
     }
 
-    body, .workspace-container {
+    body,
+    .workspace-container {
         background: transparent !important;
         overflow: visible !important;
         height: auto !important;
@@ -548,4 +557,299 @@ html, body {
         border: none !important;
         border-radius: 0 !important;
     }
+}
+/* ==========================================================================
+   9. Astryx Modal ve Ýletiþim Pencereleri (Modals & Dialogs)
+   ========================================================================== */
+.ax-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.ax-modal-dialog {
+    background: #ffffff;
+    border-radius: var(--ax-radius-md);
+    box-shadow: var(--ax-shadow-lg);
+    width: 100%;
+    max-width: 460px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: axModalIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid var(--ax-border-subtle);
+}
+
+@keyframes axModalIn {
+    from { opacity: 0; transform: scale(0.96) translateY(-6px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.ax-modal-header {
+    padding: 12px 16px;
+    background: var(--ax-surface-subtle);
+    border-bottom: 1px solid var(--ax-border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ax-modal-header h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ax-color-neutral-900);
+}
+
+.ax-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    color: var(--ax-color-neutral-500);
+    cursor: pointer;
+    line-height: 1;
+    border-radius: var(--ax-radius-xs);
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ax-modal-close:hover {
+    background: var(--ax-color-neutral-200);
+    color: var(--ax-color-neutral-800);
+}
+
+.ax-modal-body {
+    padding: 16px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.ax-modal-footer {
+    padding: 10px 16px;
+    background: var(--ax-surface-subtle);
+    border-top: 1px solid var(--ax-border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* Sayfa Önizleme Kutusu (Kullanýcý Ekran Görüntüsü ile Birebir) */
+.page-preview-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 14px 0;
+    background: #f1f5f9;
+    border-radius: var(--ax-radius-sm);
+    margin-bottom: 12px;
+    border: 1px dashed #cbd5e1;
+}
+
+.page-preview-box {
+    background: #111827;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 0 1px #94a3b8;
+    transition: all 0.2s ease;
+}
+
+.page-preview-box.orientation-portrait {
+    width: 44px;
+    height: 62px;
+}
+
+.page-preview-box.orientation-landscape {
+    width: 62px;
+    height: 44px;
+}
+
+/* Form Elemanlarý ve Fieldset */
+.ax-fieldset {
+    border: 1px solid var(--ax-border-default);
+    border-radius: var(--ax-radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: #ffffff;
+}
+
+.ax-fieldset legend {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ax-color-neutral-700);
+    padding: 0 4px;
+}
+
+.ax-form-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.ax-form-row:last-child {
+    margin-bottom: 0;
+}
+
+.ax-form-row label {
+    font-size: 12px;
+    color: var(--ax-color-neutral-700);
+}
+
+.ax-form-columns {
+    display: flex;
+    gap: 10px;
+}
+
+.ax-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.ax-radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.margin-inputs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+}
+
+.margin-input-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.margin-input-item label {
+    font-size: 11px;
+    color: var(--ax-color-neutral-600);
+}
+
+.sub-fieldset {
+    border-top: 1px solid var(--ax-border-subtle);
+    margin-top: 8px;
+    padding-top: 6px;
+}
+
+.sub-legend {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ax-color-neutral-700);
+    display: block;
+}
+
+.ax-input {
+    height: 26px;
+    width: 70px;
+    padding: 2px 6px;
+    border: 1px solid var(--ax-border-default);
+    border-radius: var(--ax-radius-xs);
+    font-size: 12px;
+    text-align: right;
+    outline: none;
+}
+
+.ax-input:focus {
+    border-color: var(--ax-border-focus);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.ax-select {
+    height: 28px;
+    padding: 0 20px 0 8px;
+    border: 1px solid var(--ax-border-default);
+    border-radius: var(--ax-radius-xs);
+    font-size: 12px;
+    outline: none;
+    background: #ffffff;
+}
+
+/* Elektronik Ýmza Kartlarý */
+.signatures-dialog {
+    max-width: 520px;
+}
+
+.sign-meta-bar {
+    display: flex;
+    justify-content: space-between;
+    background: #f8fafc;
+    border: 1px solid var(--ax-border-subtle);
+    padding: 8px 12px;
+    border-radius: var(--ax-radius-sm);
+    font-size: 11px;
+    margin-bottom: 12px;
+}
+
+.signatures-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.signature-card {
+    background: #ffffff;
+    border: 1px solid #d1fae5;
+    border-left: 4px solid #10b981;
+    border-radius: var(--ax-radius-sm);
+    padding: 10px 14px;
+    box-shadow: var(--ax-shadow-xs);
+}
+
+.signature-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.signature-card-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #065f46;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.signature-badge-valid {
+    font-size: 10px;
+    background: #10b981;
+    color: #ffffff;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.signature-details-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--ax-color-neutral-700);
+}
+
+/* Yatay Sayfa Yönelimi */
+.a4-page.orientation-landscape {
+    width: 842pt !important;
+    min-height: 595pt !important;
 }
