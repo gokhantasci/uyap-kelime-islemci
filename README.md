@@ -17,6 +17,7 @@ Herhangi bir Java kurulumu gerektirmez, tamamen istemci tarafında (tarayıcın�
   - Paragraf hizalama (Sola, Ortala, Sağa, İki Yana Yasla) ve girinti ayarları
   - Tablo ekleme, hücre düzenleme ve sayfa sonu desteği
 - **UDF Formatında İndirme:** Düzenlenen içeriği standart UYAP XML şemasıyla paketleyip doğrudan `.udf` dosyası olarak kaydeder.
+- **Word (.docx) Olarak İndirme:** Editördeki herhangi bir kararı veya metni, tabloları ve stilleri bozulmadan doğrudan Microsoft Word (.docx) olarak indirebilirsiniz.
 - **Yazdır & PDF Desteği:** A4 sayfa düzeni koruyarak doğrudan PDF veya fiziksel yazıcı çıktısı alabilirsiniz.
 - **Sanal "Print to UDF" Yazıcısı:** Windows, macOS ve Linux'ta herhangi bir uygulamadan (Word, Chrome vb.) doğrudan UDF olarak çıktı almanızı sağlayan tek dosya sanal yazıcı aracı (`print_to_udf.py`).
 

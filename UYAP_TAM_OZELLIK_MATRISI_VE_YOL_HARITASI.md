@@ -15,6 +15,7 @@ Aşağıdaki özellikler, UYAP masaüstü JAR arşivlerindeki sınıflar (`tr.co
 | **UDF Belge Aç** | Diskten şifresiz veya imzalı `.udf` arşivini açma (`Ctrl+O`) | `open.png`, `openBig.png` |  Tamamlandı |
 | **Yedeklerden Belge Aç** | Çökme kurtarma ve otomatik yedeklenen belgeleri açma | `openBackups.png` | ⏳ Faz 2 (IndexedDB yedekleme) |
 | **UDF Kaydet** | Düzenlenen içeriği UDF 1.8 standart XML arşivi olarak indirme (`Ctrl+S`) | `save.png`, `saveBig.png` |  Tamamlandı |
+| **Word (.docx) İndir** | Web editördeki kararı/metni doğrudan Microsoft Word belgesi olarak indirme | JSZip OpenXML |  Tamamlandı |
 | **Farklı Kaydet** | Farklı dosya adıyla kaydetme | `saveAs.png`, `saveAsBig.png` |  Tamamlandı |
 | **Sayfa Düzenleme (Page Setup)** | Dikey/Yatay yönelim, Sol (2cm), Sağ/Üst/Alt (2.5cm), Üst Yazı (0.529cm), Alt Yazı (2.117cm) | `pageSetup.png`, `horizontal.png`, `vertical.png` |  Tamamlandı (UYAP Birebir Diyalog) |
 | **Yazdır / Print to PDF** | Tarayıcı yazdırma ve PDF çıktı üretimi (`Ctrl+P`) | `print.png`, `printBig.png` |  Tamamlandı |

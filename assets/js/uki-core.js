@@ -881,6 +881,302 @@
         });
     }
 
+    /**
+     * Web editördeki zengin metni ve tabloları doğrudan Microsoft Word (.docx) formatına paketler.
+     * Tamamen istemci tarafında (JSZip ile) sıfır sunucu bağımlılığıyla çalışır.
+     * @param {HTMLElement} editorEl - İçerik DOM öğesi
+     * @param {Object} pageProps - Sayfa kenar boşlukları ve yönelim bilgileri
+     * @returns {Promise<Blob>} .docx ikili veri bloğu
+     */
+    async function exportDocxBlob(editorEl, pageProps) {
+        if (!window.JSZip) {
+            throw new Error('JSZip kütüphanesi yüklenemedi.');
+        }
+
+        const zip = new window.JSZip();
+
+        // 1. [Content_Types].xml
+        const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`;
+        zip.file('[Content_Types].xml', contentTypesXml);
+
+        // 2. _rels/.rels
+        const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+        zip.file('_rels/.rels', relsXml);
+
+        // 3. word/_rels/document.xml.rels
+        const docRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+        zip.file('word/_rels/document.xml.rels', docRelsXml);
+
+        // 4. word/styles.xml
+        const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault>
+      <w:rPr>
+        <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:lang w:val="tr-TR"/>
+      </w:rPr>
+    </w:rPrDefault>
+  </w:docDefaults>
+</w:styles>`;
+        zip.file('word/styles.xml', stylesXml);
+
+        // 5. word/document.xml oluşturma
+        pageProps = pageProps || {};
+        const orient = (pageProps.paperOrientation == 2 || pageProps.orientation == 2) ? 'landscape' : 'portrait';
+        const isLandscape = orient === 'landscape';
+
+        // 1 pt = 20 dxa. 1 cm = 566.929 dxa.
+        const leftDxa = Math.round(pageProps.leftMarginCm ? parseFloat(pageProps.leftMarginCm) * 566.929 : 1134);
+        const rightDxa = Math.round(pageProps.rightMarginCm ? parseFloat(pageProps.rightMarginCm) * 566.929 : 1418);
+        const topDxa = Math.round(pageProps.topMarginCm ? parseFloat(pageProps.topMarginCm) * 566.929 : 1418);
+        const bottomDxa = Math.round(pageProps.bottomMarginCm ? parseFloat(pageProps.bottomMarginCm) * 566.929 : 1418);
+        const headerDxa = Math.round(pageProps.headerFOffsetCm ? parseFloat(pageProps.headerFOffsetCm) * 566.929 : 300);
+        const footerDxa = Math.round(pageProps.footerFOffsetCm ? parseFloat(pageProps.footerFOffsetCm) * 566.929 : 1200);
+
+        const widthDxa = isLandscape ? 16838 : 11906;
+        const heightDxa = isLandscape ? 11906 : 16838;
+
+        function escapeXml(unsafe) {
+            return String(unsafe || '').replace(/[<>&'"]/g, c => {
+                switch (c) {
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '&': return '&amp;';
+                    case '\'': return '&apos;';
+                    case '"': return '&quot;';
+                }
+            });
+        }
+
+        function extractRunsFromNode(node) {
+            const runs = [];
+            function walk(n, state) {
+                if (n.nodeType === Node.TEXT_NODE) {
+                    const text = n.nodeValue;
+                    if (text && text.length > 0) {
+                        runs.push({ text, state: { ...state } });
+                    }
+                    return;
+                }
+                if (n.nodeType !== Node.ELEMENT_NODE) return;
+
+                if (n.classList && (
+                    n.classList.contains('udf-watermark') ||
+                    n.classList.contains('udf-seal-stamp') ||
+                    n.classList.contains('udf-footer-bar') ||
+                    n.classList.contains('udf-header')
+                )) {
+                    return;
+                }
+
+                const tag = n.tagName.toLowerCase();
+                const nextState = { ...state };
+
+                if (tag === 'b' || tag === 'strong' || n.style.fontWeight === 'bold' || parseInt(n.style.fontWeight, 10) >= 600) {
+                    nextState.bold = true;
+                }
+                if (tag === 'i' || tag === 'em' || n.style.fontStyle === 'italic') {
+                    nextState.italic = true;
+                }
+                if (tag === 'u' || (n.style.textDecoration && n.style.textDecoration.includes('underline'))) {
+                    nextState.underline = true;
+                }
+                if (tag === 's' || tag === 'strike' || (n.style.textDecoration && n.style.textDecoration.includes('line-through'))) {
+                    nextState.strike = true;
+                }
+                if (n.style.fontFamily) {
+                    nextState.family = n.style.fontFamily.replace(/['"]/g, '');
+                }
+                if (n.style.fontSize) {
+                    const m = n.style.fontSize.match(/([\d.]+)\s*(pt|px)/i);
+                    if (m) {
+                        const val = parseFloat(m[1]);
+                        nextState.sizePt = m[2].toLowerCase() === 'px' ? Math.round(val * 0.75) : Math.round(val);
+                    }
+                }
+                if (n.style.color) {
+                    const rgb = n.style.color.match(/\d+/g);
+                    if (rgb && rgb.length >= 3) {
+                        nextState.color = [rgb[0], rgb[1], rgb[2]].map(x => parseInt(x, 10).toString(16).padStart(2, '0')).join('');
+                    }
+                }
+
+                for (let child of n.childNodes) {
+                    walk(child, nextState);
+                }
+            }
+
+            walk(node, {
+                bold: false,
+                italic: false,
+                underline: false,
+                strike: false,
+                family: 'Times New Roman',
+                sizePt: 12,
+                color: null
+            });
+            return runs;
+        }
+
+        const bodyParts = [];
+        const pages = editorEl.querySelectorAll('.udf-page');
+        const rootElements = pages.length > 0 ? Array.from(pages) : [editorEl];
+
+        for (let pIdx = 0; pIdx < rootElements.length; pIdx++) {
+            const pageNode = rootElements[pIdx];
+            const blockNodes = pageNode.querySelectorAll(':scope > p, :scope > div.udf-p, :scope > table, :scope > div.udf-table-wrapper > table');
+            const items = blockNodes.length > 0 ? Array.from(blockNodes) : Array.from(pageNode.children);
+
+            for (let b = 0; b < items.length; b++) {
+                const el = items[b];
+
+                if (el.classList && (
+                    el.classList.contains('udf-watermark') ||
+                    el.classList.contains('udf-seal-stamp') ||
+                    el.classList.contains('udf-footer-bar') ||
+                    el.classList.contains('udf-header')
+                )) {
+                    continue;
+                }
+
+                if (el.tagName && el.tagName.toLowerCase() === 'table') {
+                    // TABLO
+                    bodyParts.push('    <w:tbl>');
+                    bodyParts.push('      <w:tblPr>');
+                    bodyParts.push('        <w:tblBorders>');
+                    bodyParts.push('          <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>');
+                    bodyParts.push('          <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>');
+                    bodyParts.push('          <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>');
+                    bodyParts.push('          <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>');
+                    bodyParts.push('          <w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/>');
+                    bodyParts.push('          <w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/>');
+                    bodyParts.push('        </w:tblBorders>');
+                    bodyParts.push('      </w:tblPr>');
+
+                    const rows = el.querySelectorAll('tr');
+                    for (let r = 0; r < rows.length; r++) {
+                        bodyParts.push('      <w:tr>');
+                        const cells = rows[r].querySelectorAll('td, th');
+                        for (let c = 0; c < cells.length; c++) {
+                            const cell = cells[c];
+                            bodyParts.push('        <w:tc>');
+                            bodyParts.push('          <w:p>');
+                            const cellRuns = extractRunsFromNode(cell);
+                            if (cellRuns.length === 0) {
+                                bodyParts.push('            <w:r><w:t></w:t></w:r>');
+                            } else {
+                                for (let cr of cellRuns) {
+                                    bodyParts.push('            <w:r>');
+                                    bodyParts.push('              <w:rPr>');
+                                    if (cr.state.bold) bodyParts.push('                <w:b/>');
+                                    if (cr.state.italic) bodyParts.push('                <w:i/>');
+                                    if (cr.state.underline) bodyParts.push('                <w:u w:val="single"/>');
+                                    bodyParts.push(`                <w:sz w:val="${(cr.state.sizePt || 11) * 2}"/>`);
+                                    bodyParts.push('              </w:rPr>');
+                                    bodyParts.push(`              <w:t xml:space="preserve">${escapeXml(cr.text)}</w:t>`);
+                                    bodyParts.push('            </w:r>');
+                                }
+                            }
+                            bodyParts.push('          </w:p>');
+                            bodyParts.push('        </w:tc>');
+                        }
+                        bodyParts.push('      </w:tr>');
+                    }
+                    bodyParts.push('    </w:tbl>');
+                } else {
+                    // PARAGRAF
+                    const alignCss = el.style.textAlign || 'left';
+                    let jcVal = 'left';
+                    if (alignCss === 'center') jcVal = 'center';
+                    else if (alignCss === 'right') jcVal = 'right';
+                    else if (alignCss === 'justify') jcVal = 'both';
+
+                    let indentDxa = 0;
+                    if (el.style.textIndent) {
+                        const m = el.style.textIndent.match(/([\d.]+)\s*(pt|px|cm)/i);
+                        if (m) {
+                            const val = parseFloat(m[1]);
+                            const unit = m[2].toLowerCase();
+                            indentDxa = unit === 'cm' ? Math.round(val * 566.929) : Math.round(val * 20);
+                        }
+                    }
+
+                    bodyParts.push('    <w:p>');
+                    bodyParts.push('      <w:pPr>');
+                    if (jcVal !== 'left') {
+                        bodyParts.push(`        <w:jc w:val="${jcVal}"/>`);
+                    }
+                    if (indentDxa > 0) {
+                        bodyParts.push(`        <w:ind w:firstLine="${indentDxa}"/>`);
+                    }
+                    bodyParts.push('      </w:pPr>');
+
+                    const runs = extractRunsFromNode(el);
+                    if (runs.length === 0) {
+                        bodyParts.push('      <w:r><w:t></w:t></w:r>');
+                    } else {
+                        for (let run of runs) {
+                            bodyParts.push('      <w:r>');
+                            bodyParts.push('        <w:rPr>');
+                            if (run.state.family) {
+                                bodyParts.push(`          <w:rFonts w:ascii="${escapeXml(run.state.family)}" w:hAnsi="${escapeXml(run.state.family)}"/>`);
+                            }
+                            if (run.state.bold) bodyParts.push('          <w:b/>');
+                            if (run.state.italic) bodyParts.push('          <w:i/>');
+                            if (run.state.underline) bodyParts.push('          <w:u w:val="single"/>');
+                            if (run.state.strike) bodyParts.push('          <w:strike/>');
+                            if (run.state.sizePt) {
+                                bodyParts.push(`          <w:sz w:val="${run.state.sizePt * 2}"/>`);
+                                bodyParts.push(`          <w:szCs w:val="${run.state.sizePt * 2}"/>`);
+                            }
+                            if (run.state.color) {
+                                bodyParts.push(`          <w:color w:val="${run.state.color}"/>`);
+                            }
+                            bodyParts.push('        </w:rPr>');
+                            bodyParts.push(`        <w:t xml:space="preserve">${escapeXml(run.text)}</w:t>`);
+                            bodyParts.push('      </w:r>');
+                        }
+                    }
+                    bodyParts.push('    </w:p>');
+                }
+            }
+
+            if (pIdx < rootElements.length - 1) {
+                bodyParts.push('    <w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+            }
+        }
+
+        bodyParts.push('    <w:sectPr>');
+        bodyParts.push(`      <w:pgSz w:w="${widthDxa}" w:h="${heightDxa}" w:orient="${orient}"/>`);
+        bodyParts.push(`      <w:pgMar w:top="${topDxa}" w:right="${rightDxa}" w:bottom="${bottomDxa}" w:left="${leftDxa}" w:header="${headerDxa}" w:footer="${footerDxa}" w:gutter="0"/>`);
+        bodyParts.push('    </w:sectPr>');
+
+        const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">\n  <w:body>\n${bodyParts.join('\n')}\n  </w:body>\n</w:document>`;
+        zip.file('word/document.xml', docXml);
+
+        return await zip.generateAsync({
+            type: 'blob',
+            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            compression: 'DEFLATE',
+            compressionOptions: { level: 6 }
+        });
+    }
+
     window.UkiCore = {
         UDF_CONSTANTS,
         ptToCm,
@@ -889,7 +1185,8 @@
         hexToArgb,
         parseUdf,
         udfModelToHtml,
-        exportUdfBlob
+        exportUdfBlob,
+        exportDocxBlob
     };
 
 })(window);

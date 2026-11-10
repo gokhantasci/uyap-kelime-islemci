@@ -656,6 +656,44 @@ document.addEventListener('DOMContentLoaded', () => {
         saveBtn.addEventListener('click', triggerSave);
     }
 
+    // ----------------------------------------------------
+    // DOSYA İŞLEMLERİ: WORD (.DOCX) DIŞA AKTARMA
+    // ----------------------------------------------------
+    const exportDocxBtn = document.getElementById('btn-export-docx');
+    if (exportDocxBtn) {
+        exportDocxBtn.addEventListener('click', triggerExportDocx);
+    }
+
+    async function triggerExportDocx() {
+        try {
+            setStatus('Word (.docx) hazırlanıyor...');
+            showToast('Word belgesi oluşturuluyor...', 'info');
+
+            const pageProps = currentDocModel ? currentDocModel.pageProperties : {};
+            const blob = await UkiCore.exportDocxBlob(editorEl, pageProps);
+
+            let rawTitle = (docTitleInput ? docTitleInput.value.trim() : '') || 'belge';
+            let baseName = rawTitle.replace(/\.udf$/i, '').replace(/\.docx$/i, '');
+            const filename = `${baseName}.docx`;
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            setStatus('DOCX Kaydedildi');
+            showToast(`"${filename}" başarıyla indirildi.`, 'success');
+        } catch (err) {
+            console.error('Word Dışa Aktarma Hatası:', err);
+            setStatus('Hata');
+            showToast('Word (.docx) oluşturulurken hata oluştu: ' + err.message, 'error');
+        }
+    }
+
     async function triggerSave() {
         try {
             setStatus('UDF oluşturuluyor...');
