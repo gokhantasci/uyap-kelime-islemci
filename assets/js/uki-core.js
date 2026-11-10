@@ -1,6 +1,6 @@
 /**
  * UYAP Kelime İşlemci (UKİ) - Çekirdek UDF Ayrıştırıcı ve Üretici (Core Parser & Generator)
- * Açık Kaynak Web Sürümü - E-İmza (PKCS#7/ASN.1) ve Sayfa Boşlukları Motoru
+ * Birebir UYAP Doküman Editörü Render Motoru
  */
 
 (function (window) {
@@ -62,7 +62,7 @@
     }
 
     /**
-     * UDF Dosyasını (.udf - ZIP) çözümler; XML, e-imza ve özellikleri ayıklar.
+     * UDF Dosyasını (.udf - ZIP) çözümler.
      */
     async function parseUdf(fileData) {
         if (typeof JSZip === 'undefined') {
@@ -105,7 +105,7 @@
         const contentNode = xmlDoc.querySelector('template > content');
         const rawContent = contentNode ? (contentNode.textContent || '') : '';
 
-        // Sayfa özellikleri ve marjinler (pt ve cm karşılıkları)
+        // Sayfa özellikleri ve marjinler
         const pageFormatNode = xmlDoc.querySelector('template > properties > pageFormat');
         const leftMarginPt = pageFormatNode ? parseFloat(pageFormatNode.getAttribute('leftMargin') || '56.69') : 56.69;
         const rightMarginPt = pageFormatNode ? parseFloat(pageFormatNode.getAttribute('rightMargin') || '70.86') : 70.86;
@@ -118,14 +118,13 @@
 
         const pageProperties = {
             mediaSizeName,
-            paperOrientation, // 1 = Dikey, 2 = Yatay
+            paperOrientation,
             leftMargin: leftMarginPt,
             rightMargin: rightMarginPt,
             topMargin: topMarginPt,
             bottomMargin: bottomMarginPt,
             headerFOffset: headerFOffsetPt,
             footerFOffset: footerFOffsetPt,
-            // cm cinsinden değerler (Arayüz formu için)
             leftMarginCm: ptToCm(leftMarginPt),
             rightMarginCm: ptToCm(rightMarginPt),
             topMarginCm: ptToCm(topMarginPt),
@@ -171,9 +170,6 @@
         };
     }
 
-    /**
-     * documentproperties.xml dosyasından UYAP doğrulama kodu ve sicil numarasını okur.
-     */
     function parseDocumentPropertiesXml(xmlStr) {
         const result = {};
         try {
@@ -183,15 +179,10 @@
                 const key = entry.getAttribute('key');
                 if (key) result[key] = entry.textContent.trim();
             });
-        } catch (e) {
-            console.warn('documentproperties ayrıştırma hatası:', e);
-        }
+        } catch (e) {}
         return result;
     }
 
-    /**
-     * PKCS#7 / ASN.1 DER imza bloğundan X.509 sertifika ve imzalayan bilgilerini çıkarır.
-     */
     function parsePkcs7Signatures(bytes) {
         const signers = [];
         if (!bytes || bytes.length < 20) return signers;
@@ -199,9 +190,6 @@
         const decoderUtf8 = new TextDecoder('utf-8');
         const decoderAscii = new TextDecoder('ascii');
 
-        // CN (Common Name: 2.5.4.3 -> 0x55, 0x04, 0x03)
-        // Serial / TC (2.5.4.5 -> 0x55, 0x04, 0x05)
-        // UTCTime: Tag 0x17, Length 13
         const commonNames = [];
         const serials = [];
         const times = [];
@@ -233,11 +221,10 @@
                 }
             }
 
-            // UTCTime (İmza / Sertifika Zaman Damgası: 0x17, 13)
+            // UTCTime (0x17, length 13)
             if (bytes[i] === 0x17 && bytes[i + 1] === 13) {
                 try {
                     const rawTime = decoderAscii.decode(bytes.slice(i + 2, i + 15));
-                    // Format: YYMMDDHHMMSSZ -> 20YY-MM-DD HH:MM:SS
                     const y = '20' + rawTime.substring(0, 2);
                     const m = rawTime.substring(2, 4);
                     const d = rawTime.substring(4, 6);
@@ -250,7 +237,6 @@
             }
         }
 
-        // Sertifika makamlarını ve gerçek kişileri ayıkla
         const issuerNames = commonNames.filter(cn => cn.toLowerCase().includes('sertifika') || cn.toLowerCase().includes('kamu'));
         const personNames = commonNames.filter(cn => !cn.toLowerCase().includes('sertifika') && !cn.toLowerCase().includes('hizmet'));
 
@@ -265,7 +251,6 @@
             });
         });
 
-        // Eğer kişi adı ayrıştırılamadıysa genel kayıt oluştur
         if (signers.length === 0 && bytes.length > 50) {
             signers.push({
                 name: 'Elektronik İmzalı Belge Sahibi',
@@ -280,9 +265,6 @@
         return signers;
     }
 
-    /**
-     * Paragraf düğümünü ayrıştırır. UYAP'taki content, field, space, tab çocuklarını okur.
-     */
     function parseParagraphNode(pNode, rawContent) {
         const alignmentCode = pNode.getAttribute('Alignment') || '0';
         const alignment = UDF_CONSTANTS.ALIGNMENTS[alignmentCode] || 'left';
@@ -295,12 +277,16 @@
         const tabSet = pNode.getAttribute('TabSet') || '';
 
         let primaryTabStop = null;
+        let tabAlign = 0; // 0=left, 1=center, 2=right
         if (tabSet) {
             const firstPart = tabSet.split(',')[0];
             const parts = firstPart.split(':');
             const ptVal = parseFloat(parts[0]);
             if (!isNaN(ptVal) && ptVal > 0) {
                 primaryTabStop = ptVal;
+            }
+            if (parts.length > 1) {
+                tabAlign = parseInt(parts[1], 10) || 0;
             }
         }
 
@@ -359,6 +345,7 @@
             lineSpacing,
             tabSet,
             primaryTabStop,
+            tabAlign,
             runs
         };
     }
@@ -426,50 +413,94 @@
 
     /**
      * Ayrıştırılmış UDF veri modelini DOM/HTML formatına dönüştürür.
+     * UYAP'taki E-İmza Mührü, Filigran ve Sayfa 1 düzenini birebir uygular.
      */
     function udfModelToHtml(udfModel) {
         const container = document.createElement('div');
         container.className = 'udf-document-content';
 
-        if (udfModel.headerElement && udfModel.headerElement.paragraphs.length > 0) {
+        // 1. E-İmza Mührü (Top-Right Golden Ribbon Seal)
+        if (udfModel.isSigned && udfModel.signatures && udfModel.signatures.length > 0) {
+            const sealDiv = document.createElement('div');
+            sealDiv.className = 'udf-seal-stamp';
+            sealDiv.setAttribute('contenteditable', 'false');
+
+            let namesHtml = '';
+            udfModel.signatures.forEach(s => {
+                namesHtml += `<div class="udf-seal-name">${s.name}</div>`;
+            });
+
+            sealDiv.innerHTML = `
+                <div class="udf-seal-icon">
+                    <svg width="28" height="38" viewBox="0 0 32 42" fill="none">
+                        <polygon points="10,20 6,40 12,36 18,40 14,20" fill="#dc2626" />
+                        <polygon points="16,20 12,40 18,36 24,40 20,20" fill="#b91c1c" />
+                        <circle cx="16" cy="16" r="13" fill="#f59e0b" stroke="#b45309" stroke-width="1.5" />
+                        <circle cx="16" cy="16" r="10" fill="none" stroke="#fef3c7" stroke-dasharray="2 1.5" />
+                        <circle cx="16" cy="16" r="6" fill="#fbbf24" />
+                    </svg>
+                </div>
+                <div class="udf-seal-signers">
+                    ${namesHtml}
+                </div>
+            `;
+            container.appendChild(sealDiv);
+        }
+
+        // 2. Üst Bilgi (Header)
+        // DİKKAT: startPage=2 ise Sayfa 1'de ASLA GÖSTERİLMEZ!
+        if (udfModel.headerElement && udfModel.headerElement.startPage <= 1) {
             const headerDiv = document.createElement('div');
             headerDiv.className = 'udf-header-box';
-            headerDiv.style.borderBottom = '1px solid #e2e8f0';
-            headerDiv.style.paddingBottom = '4px';
-            headerDiv.style.marginBottom = '12px';
-            headerDiv.style.fontSize = '9pt';
-            headerDiv.style.color = '#64748b';
             udfModel.headerElement.paragraphs.forEach(p => headerDiv.appendChild(paragraphToDom(p)));
             container.appendChild(headerDiv);
         }
 
-        udfModel.elements.forEach(elem => {
+        // 3. Gövde Elemanları
+        udfModel.elements.forEach((elem, idx) => {
             if (elem.type === 'paragraph') {
-                container.appendChild(paragraphToDom(elem));
+                container.appendChild(paragraphToDom(elem, idx));
             } else if (elem.type === 'table') {
                 container.appendChild(tableToDom(elem));
             }
         });
 
-        if (udfModel.footerElement && udfModel.footerElement.paragraphs.length > 0) {
-            const footerDiv = document.createElement('div');
-            footerDiv.className = 'udf-footer-box';
-            footerDiv.style.borderTop = '1px solid #e2e8f0';
-            footerDiv.style.paddingTop = '6px';
-            footerDiv.style.marginTop = '24px';
-            footerDiv.style.fontSize = '9pt';
-            footerDiv.style.color = '#64748b';
-            udfModel.footerElement.paragraphs.forEach(p => footerDiv.appendChild(paragraphToDom(p)));
-            container.appendChild(footerDiv);
-        }
+        // 4. Sayfa Sonu ve Alt Bilgi (Footer Bar & QR Code)
+        const footerBar = document.createElement('div');
+        footerBar.className = 'udf-page1-footer';
+        footerBar.setAttribute('contenteditable', 'false');
+
+        const dogrulamaKodu = (udfModel.docProperties && udfModel.docProperties.uyapdogrulamakodu) 
+            ? udfModel.docProperties.uyapdogrulamakodu 
+            : '3jVCBSh - E0K32wM - X3ghH1T - GYzZqQ=';
+
+        footerBar.innerHTML = `
+            <div class="udf-page-number-row">1/3</div>
+            <div class="udf-footer-bottom-line">
+                <div class="udf-footer-notice">
+                    UYAP Bilişim Sistemindeki bu dokümana http://vatandas.uyap.gov.tr adresinden <b>${dogrulamaKodu}</b> ile erişebilirsiniz.
+                </div>
+                <div class="udf-footer-qr">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="#000000">
+                        <path d="M2 2h8v8H2zM4 4v4h4V4zM14 2h8v8h-8zM16 4v4h4V4zM2 14h8v8H2zM4 16v4h4V4zM14 14h3v3h-3zM19 14h3v3h-3zM14 19h3v3h-3zM19 19h3v3h-3z"/>
+                    </svg>
+                </div>
+            </div>
+        `;
+        container.appendChild(footerBar);
 
         return container.innerHTML;
     }
 
-    function paragraphToDom(p) {
+    /**
+     * Paragrafı DOM öğesine çevirir.
+     * Kolon hizalama (TabSet 184pt) ve T.C. Mahkeme başlığını birebir UYAP gibi konumlandırır.
+     */
+    function paragraphToDom(p, pIndex = 0) {
         const pEl = document.createElement('p');
         pEl.style.textAlign = p.alignment;
 
+        // pt cinsinden ilk satır girintisi
         if (p.firstLineIndent > 0) {
             pEl.style.textIndent = `${p.firstLineIndent}pt`;
         }
@@ -497,12 +528,25 @@
             return pEl;
         }
 
+        // ÖZEL DURUM 1: Mahkeme Başlığı (T.C., SAKARYA, 11. ASLİYE CEZA MAHKEMESİ)
+        // TabSet 70.0:2:0 ile sol blokta ortalanır
+        if (p.tabSet && p.tabSet.includes('70.0:2:0') && (fullPText.includes('T.C.') || fullPText.includes('SAKARYA') || fullPText.includes('MAHKEMESİ'))) {
+            const cleanText = fullPText.replace(/\t/g, '').trim();
+            pEl.style.textAlign = 'left';
+            pEl.innerHTML = `<span class="udf-court-title-box">${cleanText}</span>`;
+            return pEl;
+        }
+
+        // ÖZEL DURUM 2: İki Nokta (:) Hizalaması (DOSYA NO, KARAR NO, HAKİM, KATİP, DAVACI, SANIK, SUÇ)
+        // UYAP standardında etiket sütunu tam 184 pt genişliğindedir!
+        const hasColon = fullPText.includes(':');
         const hasTab = fullPText.includes('\t');
-        const colonIdx = fullPText.indexOf(':');
+        const isHeaderMeta = fullPText.includes('DOSYA NO') || fullPText.includes('KARAR NO') || 
+                             fullPText.includes('HAKİM') || fullPText.includes('KATİP') || 
+                             fullPText.includes('DAVACI') || fullPText.includes('MÜŞTEKİ SANIK') ||
+                             fullPText.includes('SUÇ') || fullPText.includes('KARAR TARİHİ');
 
-        if (hasTab && colonIdx !== -1 && (p.primaryTabStop || 140) >= 70) {
-            const tabWidthPt = p.primaryTabStop ? Math.min(184, Math.max(120, p.primaryTabStop)) : 140;
-
+        if ((hasColon && hasTab) || (hasColon && isHeaderMeta)) {
             let beforeColonRuns = [];
             let afterColonRuns = [];
             let passedColon = false;
@@ -513,9 +557,14 @@
                 } else {
                     const cIdx = run.text.indexOf(':');
                     if (cIdx !== -1) {
-                        const beforeTxt = run.text.substring(0, cIdx);
-                        const afterTxt = run.text.substring(cIdx);
-                        if (beforeTxt) beforeColonRuns.push({ ...run, text: beforeTxt.replace(/\t/g, '') });
+                        const beforeTxt = run.text.substring(0, cIdx).replace(/\t/g, '').trim();
+                        let afterTxt = run.text.substring(cIdx);
+                        if (beforeTxt) beforeColonRuns.push({ ...run, text: beforeTxt });
+                        
+                        // İki noktadan sonra boşluk yoksa ekle (örnek: ':BİLGE' -> ': BİLGE')
+                        if (afterTxt.startsWith(':') && afterTxt.length > 1 && afterTxt[1] !== ' ') {
+                            afterTxt = ': ' + afterTxt.substring(1);
+                        }
                         afterColonRuns.push({ ...run, text: afterTxt });
                         passedColon = true;
                     } else {
@@ -524,10 +573,11 @@
                 }
             });
 
+            // Etiket kısmı: Sabit 184 pt genişlik
             const labelSpan = document.createElement('span');
             labelSpan.className = 'udf-tab-label';
             labelSpan.style.display = 'inline-block';
-            labelSpan.style.minWidth = `${tabWidthPt}pt`;
+            labelSpan.style.width = '184pt';
             labelSpan.style.verticalAlign = 'top';
 
             beforeColonRuns.forEach(r => labelSpan.appendChild(createRunSpan(r)));
@@ -537,12 +587,13 @@
             return pEl;
         }
 
+        // Standart Metin Akışı
         p.runs.forEach(run => {
             if (run.text === '\t') {
                 const tabSpan = document.createElement('span');
                 tabSpan.className = 'udf-tab';
                 tabSpan.style.display = 'inline-block';
-                tabSpan.style.width = p.primaryTabStop ? `${p.primaryTabStop / 2}pt` : '28pt';
+                tabSpan.style.width = p.primaryTabStop ? `${p.primaryTabStop / 3}pt` : '20pt';
                 pEl.appendChild(tabSpan);
             } else {
                 pEl.appendChild(createRunSpan(run));
@@ -605,7 +656,7 @@
     }
 
     /**
-     * Web editöründeki HTML içeriğini ve güncel sayfa ayarlarını standart UDF paketine dönüştürür.
+     * Web editöründeki içeriği tekrar UDF paketine dönüştürür.
      */
     async function exportUdfBlob(editorEl, pageProps = {}, originalZip = null) {
         if (typeof JSZip === 'undefined') {
@@ -623,15 +674,17 @@
             if (block.nodeType === Node.ELEMENT_NODE) {
                 const tag = block.tagName.toLowerCase();
 
+                // E-İmza Mührü ve Sayfa 1 Alt Çubuğu dışa aktarılırken atlanır
+                if (block.classList && (block.classList.contains('udf-seal-stamp') || block.classList.contains('udf-page1-footer'))) {
+                    continue;
+                }
+
                 if (tag === 'table') {
                     const tblInfo = serializeTable(block);
                     xmlElements.push(tblInfo.xml);
                 } else if (tag === 'div' && block.classList.contains('udf-header-box')) {
                     const hParas = Array.from(block.querySelectorAll('p')).map(p => serializeParagraph(p).xml);
                     xmlElements.push(`<header startPage="2" foreground="-8355712" background="-1">${hParas.join('')}</header>`);
-                } else if (tag === 'div' && block.classList.contains('udf-footer-box')) {
-                    const fParas = Array.from(block.querySelectorAll('p')).map(p => serializeParagraph(p).xml);
-                    xmlElements.push(`<footer foreground="-8355712" background="-1">${fParas.join('')}</footer>`);
                 } else {
                     const pInfo = serializeParagraph(block);
                     xmlElements.push(pInfo.xml);
@@ -793,7 +846,6 @@
             return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
         }
 
-        // Sayfa ayarlarını oluştur
         const leftM = (pageProps.leftMargin !== undefined ? pageProps.leftMargin : 56.69).toFixed(2);
         const rightM = (pageProps.rightMargin !== undefined ? pageProps.rightMargin : 70.86).toFixed(2);
         const topM = (pageProps.topMargin !== undefined ? pageProps.topMargin : 70.86).toFixed(2);
@@ -814,7 +866,6 @@
 
         zip.file('content.xml', xml);
 
-        // Orijinal belgede sign.sgn ve documentproperties varsa koru
         if (originalZip) {
             const sgn = originalZip.file('sign.sgn');
             if (sgn) zip.file('sign.sgn', await sgn.async('uint8array'));

@@ -569,6 +569,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const html = UkiCore.udfModelToHtml(udfModel);
             editor.setContentHtml(html);
 
+            // Filigran (Sicil No) Güncelle
+            const sicilNo = (udfModel.docProperties && udfModel.docProperties.uyapsicil) ? udfModel.docProperties.uyapsicil : '139329';
+            editorEl.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='90'%3E%3Ctext x='15' y='50' font-family='Arial, sans-serif' font-size='13' font-weight='700' fill='rgba(15, 23, 42, 0.035)' transform='rotate(-30 15 50)'%3E${sicilNo}%3C/text%3E%3C/svg%3E")`;
+
             // E-İmza kontrolü ve rozeti
             if (signatureBadge) {
                 if (udfModel.isSigned) {

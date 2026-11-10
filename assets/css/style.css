@@ -918,3 +918,106 @@ kbd {
     color: #cbd5e1;
     font-size: 10px;
 }
+
+/* ==========================================================================
+   11. UYAP Birebir Görsel Öðeleri (Mühür, Filigran, Kolonlar, Alt Bilgi)
+   ========================================================================== */
+
+/* Sayfa Arka Plan Filigraný (Sicil No 139329 Tekrarý) */
+.a4-page {
+    background-color: #ffffff !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='90'%3E%3Ctext x='15' y='50' font-family='Arial, sans-serif' font-size='13' font-weight='700' fill='rgba(15, 23, 42, 0.035)' transform='rotate(-30 15 50)'%3E139329%3C/text%3E%3C/svg%3E");
+    background-repeat: repeat;
+}
+
+/* Sað Üst E-Ýmza Mührü (Altýn Madalya ve Kýrmýzý Kurdele) */
+.udf-seal-stamp {
+    position: absolute;
+    top: 36pt;
+    right: 48pt;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    user-select: none;
+    z-index: 10;
+}
+
+.udf-seal-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.udf-seal-signers {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-family: Arial, -apple-system, sans-serif;
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.15;
+    text-align: left;
+}
+
+.udf-seal-name {
+    white-space: nowrap;
+    letter-spacing: 0.2px;
+}
+
+/* Mahkeme Baþlýðý (T.C. SAKARYA 11. ASLÝYE CEZA MAHKEMESÝ) */
+.udf-court-title-box {
+    display: inline-block;
+    width: 170pt;
+    text-align: center;
+    font-weight: 700;
+    font-family: var(--ax-font-serif);
+    font-size: 12pt;
+    line-height: 1.35;
+}
+
+/* Ýki Nokta (:) Hizalama Sütunu (Tam 184 pt) */
+.udf-tab-label {
+    display: inline-block !important;
+    width: 184pt !important;
+    min-width: 184pt !important;
+    vertical-align: top;
+    font-weight: 700;
+}
+
+/* Sayfa 1 Alt Bilgi Çubuðu ve QR Kod */
+.udf-page1-footer {
+    margin-top: 30pt;
+    padding-top: 6pt;
+    border-top: 1px solid #94a3b8;
+    user-select: none;
+    font-family: Arial, var(--ax-font-sans);
+}
+
+.udf-page-number-row {
+    text-align: right;
+    font-size: 9.5pt;
+    color: #334155;
+    font-weight: 600;
+    margin-bottom: 4pt;
+}
+
+.udf-footer-bottom-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14pt;
+}
+
+.udf-footer-notice {
+    font-size: 6.8pt;
+    color: #475569;
+    line-height: 1.3;
+}
+
+.udf-footer-qr {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
