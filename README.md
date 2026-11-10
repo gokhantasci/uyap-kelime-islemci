@@ -18,6 +18,32 @@ Herhangi bir Java kurulumu gerektirmez, tamamen istemci tarafında (tarayıcın�
   - Tablo ekleme, hücre düzenleme ve sayfa sonu desteği
 - **UDF Formatında İndirme:** Düzenlenen içeriği standart UYAP XML şemasıyla paketleyip doğrudan `.udf` dosyası olarak kaydeder.
 - **Yazdır & PDF Desteği:** A4 sayfa düzeni koruyarak doğrudan PDF veya fiziksel yazıcı çıktısı alabilirsiniz.
+- **Sanal "Print to UDF" Yazıcısı:** Windows, macOS ve Linux'ta herhangi bir uygulamadan (Word, Chrome vb.) doğrudan UDF olarak çıktı almanızı sağlayan tek dosya sanal yazıcı aracı (`print_to_udf.py`).
+
+---
+
+## 🖨️ Sanal "Print to UDF" Yazıcısı (Windows, Linux, macOS)
+
+Herhangi bir programdan (Word, Tarayıcı vb.) çıktı alır gibi `Print to UDF` sanal yazıcısını kullanabilirsiniz:
+
+```bash
+# Kurulum (Sisteme entegre eder)
+python print_to_udf.py --install
+```
+
+### İşletim Sistemi Entegrasyonları:
+1. **Windows:**
+   - Dosyaya sağ tık -> **Gönder (Send To) > Print to UDF** ile anında UDF oluşturma.
+   - Belgelerim altındaki `PrintToUDF` klasörüne `Microsoft Print to PDF` ile yazdırılan tüm dosyalar otomatik UDF yapılır (`python print_to_udf.py --watch`).
+2. **macOS:**
+   - Herhangi bir uygulamada `Cmd + P` yapıp sol alttaki **PDF > Print to UDF** seçeneğini seçerek doğrudan UDF kaydetme.
+3. **Linux (CUPS):**
+   - CUPS sanal yazıcı backend'i olarak sisteme eklenir ve standart yazıcı listesinde görünür.
+
+### Doğrudan Komut Satırı Çevirici:
+```bash
+python print_to_udf.py girdi.pdf cikti.udf
+```
 
 ---
 
