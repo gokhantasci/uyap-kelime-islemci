@@ -129,12 +129,18 @@ Aşağıdaki özellikler, UYAP masaüstü JAR arşivlerindeki sınıflar (`tr.co
 
 ## 2. Dışa Aktarma & Sanal Yazıcı (Print to UDF)
 
-| Platform | Çözüm Mimarisi | Durum |
+| Platform / Yetenek | Çözüm Mimarisi | Durum |
 | :--- | :--- | :--- |
-| **Windows** | `print_to_udf.py --install` -> SendTo menüsü ve Sanal Yazıcı Kuyruğu |  Tamamlandı |
-| **macOS** | PDF Services entegrasyonu (`~/Library/PDF Services/Print to UDF.workflow`) |  Tamamlandı |
-| **Linux** | CUPS Sanal PDF Backend entegrasyonu (`/usr/lib/cups/backend/print-to-udf`) |  Tamamlandı |
-| **Toplu Dönüştürücü** | Klasördeki tüm PDF/Word belgelerini UDF'e veya UDF'leri PDF'e dönüştürme |  Tamamlandı (`print_to_udf.py input.pdf output.udf`) |
+| **Windows Sistem Sanal Yazıcısı** | `UYAP'a Yazdır (Print to UDF)` - Her programdan (Chrome, Word, Excel, ERP vb.) `Ctrl+P` ile doğrudan UDF çıktısı |  Tamamlandı |
+| **macOS PDF Services** | `~/Library/PDF Services/` - Mac üzerindeki tüm uygulamalarda `Cmd+P > PDF > UYAP'a Yazdır` |  Tamamlandı |
+| **Linux CUPS Sanal Yazıcı** | `/usr/lib/cups/backend/print-to-udf` sanal backend |  Tamamlandı |
+| **Microsoft Word (.docx, .doc)** | Word paragrafları, başlıklar, stiller ve tabloları doğrudan yerel UDF'e dönüştürme |  Tamamlandı |
+| **Microsoft Excel & CSV (.xlsx, .csv)** | Hesap tablolarını otomatik `<table border="borderCell">` UYAP tablosuna dönüştürme |  Tamamlandı |
+| **Web Sayfaları & HTML (.html, .htm)** | HTML etiketlerini ve mizanpajını UDF XML şemasına dönüştürme |  Tamamlandı |
+| **Düz Metin & Kod (.txt, .md, .log, .json)** | Kod ve metin dosyalarını biçimli UYAP paragraflarına dönüştürme |  Tamamlandı |
+| **Tescilli Diğer Yazılımlar (CAD, Muhasebe vb.)** | Windows Shell `PrintTo` fiili ile sanal yazıcı üzerinden otomatik dönüştürme |  Tamamlandı |
+| **Grafik Arayüz & Sürükle-Bırak** | `python print_to_udf.py --gui` masaüstü arayüzü |  Tamamlandı |
+| **Arka Plan Yazdırma İzleyicisi (Daemon)** | `python print_to_udf.py --daemon` ile Ctrl+P işlerini sessiz yakalama ve bildirim |  Tamamlandı |
 
 ---
 
@@ -219,3 +225,4 @@ flowchart TD
   - Tarayıcı güvenliği gereği USB kart okuyucuya doğrudan erişilemediğinden, arka planda çalışan hafif tek dosyalık yerel yardımcı (`uki-signer` Go/Rust veya Python köprüsü).
   - WebPKI WebSocket protokolü üzerinden TÜBİTAK Kamu SM, AKİS, E-Tuğra, TürkTrust kartlarına PIN sorarak CAdES formatında `sign.sgn` üretme ve UDF'e gömme.
   - Mobil imza (Turkcell, Vodafone, TT) API entegrasyonu.
+

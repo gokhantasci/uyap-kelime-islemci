@@ -22,28 +22,47 @@ Herhangi bir Java kurulumu gerektirmez, tamamen istemci tarafında (tarayıcın�
 
 ---
 
-## 🖨️ Sanal "Print to UDF" Yazıcısı (Windows, Linux, macOS)
+## 🖨️ "UYAP'a Yazdır" - Evrensel Sistem Sanal Yazıcısı ve Dosya Çevirici
 
-Herhangi bir programdan (Word, Tarayıcı vb.) çıktı alır gibi `Print to UDF` sanal yazıcısını kullanabilirsiniz:
+Bu araç yalnızca bir PDF çevirici değildir; **bilgisayarınızdaki herhangi bir programdan yazdırılabilir olan HER ŞEYİ doğrudan UDF formatına dönüştürür**.
 
+### 1. Herhangi Bir Programdan Yazdırma (Ctrl+P / Cmd+P)
+Sisteme tek komutla gerçek bir sanal yazıcı eklenir:
 ```bash
-# Kurulum (Sisteme entegre eder)
 python print_to_udf.py --install
 ```
+Kurulum tamamlandıktan sonra:
+* **Google Chrome / Microsoft Edge:** Herhangi bir web sayfasında, e-Devlet belgesinde veya e-Postada `Ctrl + P` yapıp yazıcı olarak **"UYAP'a Yazdır (Print to UDF)"** seçin -> Otomatik olarak masaüstünüze `.udf` dosyası oluşturulur.
+* **Microsoft Word / LibreOffice:** Düzenlediğiniz belgeyi `Ctrl + P` ile doğrudan UDF olarak yazdırın.
+* **Microsoft Excel / Muhasebe / ERP:** Tablolar ve faturalar doğrudan UYAP Tablosu (`<table border="borderCell">`) olarak UDF'e aktarılır.
+* **Notepad / Metin Editörü:** Tüm metinler UYAP paragrafları olarak mizanpajı korunarak basılır.
 
-### İşletim Sistemi Entegrasyonları:
-1. **Windows:**
-   - Dosyaya sağ tık -> **Gönder (Send To) > Print to UDF** ile anında UDF oluşturma.
-   - Belgelerim altındaki `PrintToUDF` klasörüne `Microsoft Print to PDF` ile yazdırılan tüm dosyalar otomatik UDF yapılır (`python print_to_udf.py --watch`).
-2. **macOS:**
-   - Herhangi bir uygulamada `Cmd + P` yapıp sol alttaki **PDF > Print to UDF** seçeneğini seçerek doğrudan UDF kaydetme.
-3. **Linux (CUPS):**
-   - CUPS sanal yazıcı backend'i olarak sisteme eklenir ve standart yazıcı listesinde görünür.
-
-### Doğrudan Komut Satırı Çevirici:
+### 2. Doğrudan Dosya Dönüştürme Desteği
+Herhangi bir dosyayı doğrudan komut satırından veya grafik arayüzden UDF'e çevirebilirsiniz:
 ```bash
-python print_to_udf.py girdi.pdf cikti.udf
+# Herhangi bir dosyayı doğrudan UDF'e dönüştürme:
+python print_to_udf.py dilekce.docx          # Word -> UDF
+python print_to_udf.py hesap_tablosu.xlsx     # Excel -> UDF Tablo
+python print_to_udf.py karar.pdf             # PDF -> UDF
+python print_to_udf.py mevzuat.html          # HTML -> UDF
+python print_to_udf.py notlar.txt            # Metin -> UDF
+
+# Grafik Kullanıcı Arayüzünü (GUI) Açma:
+python print_to_udf.py --gui
+
+# Arka Plan Yazdırma Servisini Başlatma (Ctrl+P ile gelen işleri yakalar):
+python print_to_udf.py --daemon
 ```
+
+### 3. İşletim Sistemi Entegrasyonları
+* **Windows:** 
+  * Windows Yazıcılar listesine `"UYAP'a Yazdır (Print to UDF)"` sistem yazıcısı eklenir.
+  * Dosya Gezgini'nde herhangi bir dosyaya sağ tık -> **Gönder (Send To) > UYAP'a Yazdır** ile tek tıkla UDF üretilir.
+  * Windows Başlangıcına eklenen arka plan izleyicisi sayesinde bilgisayar açıldığında yazdırma işleri sessizce yakalanır.
+* **macOS:** 
+  * `~/Library/PDF Services/` entegrasyonu ile Mac üzerindeki TÜM uygulamaların `Cmd + P` yazdırma penceresinde sol alttaki **PDF > UYAP'a Yazdır** menüsünde görünür.
+* **Linux (CUPS):** 
+  * CUPS sanal yazıcı backend'i olarak sisteme eklenir ve sistem genelindeki yazdırma diyaloglarında standart yazıcı olarak listelenir.
 
 ---
 
