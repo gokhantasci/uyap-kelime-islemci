@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalSignatures = document.getElementById('modal-signatures');
     const modalParaSetup = document.getElementById('modal-paragraph-setup');
     const modalFindReplace = document.getElementById('modal-find-replace');
+    const modalShortcuts = document.getElementById('modal-shortcuts');
 
     // Sayfa Düzenleme Form Öğeleri
     const pageMediaSelect = document.getElementById('page-media-size');
@@ -75,23 +76,131 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // ----------------------------------------------------
+    // RESMÎ UYAP KLAVYE KISAYOLLARI (657.com.tr)
+    // ----------------------------------------------------
     window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            document.querySelectorAll('.ax-modal-backdrop').forEach(m => closeModal(m));
-        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        const key = e.key.toLowerCase();
+
+        // Alt + Q: Kısayolları Görüntüle
+        if (e.altKey && key === 'q') {
             e.preventDefault();
-            triggerSave();
-        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+            openModal(modalShortcuts);
+            return;
+        }
+
+        // Shift + Alt + N: Sayfa Düzenleme (Boşluklar)
+        if (e.shiftKey && e.altKey && key === 'n') {
             e.preventDefault();
-            fileInput.click();
-        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+            populatePageSetupForm();
+            openModal(modalPageSetup);
+            return;
+        }
+
+        // Shift + Ctrl + G: İmzaları Göster
+        if (e.shiftKey && (e.ctrlKey || e.metaKey) && key === 'g') {
             e.preventDefault();
-            window.print();
-        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+            showSignaturesModal();
+            return;
+        }
+
+        // Shift + Ctrl + Q: İlk Satır Girinti Artır
+        if (e.shiftKey && (e.ctrlKey || e.metaKey) && key === 'q') {
             e.preventDefault();
-            openModal(modalFindReplace);
+            adjustFirstLineIndent(10);
+            return;
+        }
+
+        if (e.ctrlKey || e.metaKey) {
+            if (key === 's') {
+                e.preventDefault();
+                triggerSave();
+            } else if (key === 'o') {
+                e.preventDefault();
+                fileInput.click();
+            } else if (key === 'n') {
+                e.preventDefault();
+                triggerNewDoc();
+            } else if (key === 'p') {
+                e.preventDefault();
+                window.print();
+            } else if (key === 'f' || key === 'h') {
+                e.preventDefault();
+                openModal(modalFindReplace);
+            } else if (key === 'k') {
+                // UYAP Kalın Kısayolu (Ctrl + K)
+                e.preventDefault();
+                editor.format('bold');
+            } else if (key === 't') {
+                // UYAP İtalik Kısayolu (Ctrl + T)
+                e.preventDefault();
+                editor.format('italic');
+            } else if (e.shiftKey && key === 'a') {
+                // UYAP Altı Çizili Kısayolu (Shift + Ctrl + A)
+                e.preventDefault();
+                editor.format('underline');
+            } else if (e.key === 'ArrowUp') {
+                // UYAP Punto Büyüt (Ctrl + Yukarı Ok)
+                e.preventDefault();
+                adjustFontSize(1);
+            } else if (e.key === 'ArrowDown') {
+                // UYAP Punto Küçült (Ctrl + Aşağı Ok)
+                e.preventDefault();
+                adjustFontSize(-1);
+            } else if (key === 'w') {
+                // UYAP Boşlukları Göster/Gizle (Ctrl + W)
+                e.preventDefault();
+                toggleInvisibleChars();
+            }
         }
     });
+
+    const btnShortcuts = document.getElementById('btn-shortcuts');
+    if (btnShortcuts) {
+        btnShortcuts.addEventListener('click', () => openModal(modalShortcuts));
+    }
+
+    function adjustFontSize(delta) {
+        const curSize = parseInt(sizeSelect ? sizeSelect.value : '12', 10) || 12;
+        const newSize = Math.max(6, Math.min(48, curSize + delta));
+        if (sizeSelect) sizeSelect.value = String(newSize);
+        editor.setFontSize(newSize);
+        showToast(`Yazı Boyutu: ${newSize} pt`, 'info');
+    }
+
+    function adjustFirstLineIndent(deltaPt) {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            const node = selection.getRangeAt(0).startContainer;
+            const targetP = node.nodeType === Node.ELEMENT_NODE ? node.closest('p') : node.parentElement.closest('p');
+            if (targetP && targetP.parentElement === editorEl) {
+                const cur = parseFloat(targetP.style.textIndent || '0') || 0;
+                const next = Math.max(0, cur + deltaPt);
+                targetP.style.textIndent = `${next}pt`;
+                showToast(`İlk Satır Girintisi: ${next} pt`, 'info');
+                return;
+            }
+        }
+        showToast('Girintiyi artırmak için bir paragraf seçin.', 'info');
+    }
+
+    let invisibleCharsActive = false;
+    function toggleInvisibleChars() {
+        invisibleCharsActive = !invisibleCharsActive;
+        editorEl.classList.toggle('show-invisibles', invisibleCharsActive);
+        showToast(invisibleCharsActive ? 'Boşluk ve sekmeler görünür yapıldı.' : 'Boşluk işaretleri gizlendi.', 'info');
+    }
+
+    function triggerNewDoc() {
+        if (confirm('Yeni bir belge açmak istediğinize emin misiniz?')) {
+            editor.clear();
+            if (docTitleInput) docTitleInput.value = 'Yeni Belge';
+            currentFileName = 'Yeni Belge.udf';
+            currentDocModel = null;
+            if (signatureBadge) signatureBadge.style.display = 'none';
+            showToast('Yeni boş belge oluşturuldu.', 'info');
+        }
+    }
 
     // ----------------------------------------------------
     // ARAÇ ÇUBUĞU (TOOLBAR) EYLEMLERİ

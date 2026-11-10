@@ -146,6 +146,10 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     Bul/Değiştir
                 </button>
+                <button id="btn-shortcuts" class="tool-btn" title="UYAP Kısayol Tuşları (Alt+Q)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6.01" y2="8"/><line x1="10" y1="8" x2="10.01" y2="8"/><line x1="14" y1="8" x2="14.01" y2="8"/><line x1="18" y1="8" x2="18.01" y2="8"/><line x1="7" y1="16" x2="17" y2="16"/></svg>
+                    Kısayollar
+                </button>
             </div>
 
             <div class="tool-divider"></div>
@@ -373,6 +377,53 @@
             <div class="ax-modal-footer">
                 <button type="button" id="btn-find-next" class="tool-btn-secondary">Sonrakini Bul</button>
                 <button type="button" id="btn-replace-all" class="tool-btn-primary">Tümünü Değiştir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         MODAL 5: UYAP KISAYOL TUŞLARI (657.com.tr)
+         ========================================================================== -->
+    <div id="modal-shortcuts" class="ax-modal-backdrop" style="display: none;">
+        <div class="ax-modal-dialog" style="max-width: 580px;">
+            <div class="ax-modal-header">
+                <h3>UYAP Doküman Editörü Kısayol Tuşları (Alt+Q)</h3>
+                <button type="button" class="ax-modal-close" data-close-modal>&times;</button>
+            </div>
+            <div class="ax-modal-body" style="padding: 12px 16px;">
+                <div class="shortcuts-grid">
+                    <div class="shortcuts-group">
+                        <h4>Genel & Dosya</h4>
+                        <div class="shortcut-item"><span>Yeni Doküman</span><kbd>Ctrl + N</kbd></div>
+                        <div class="shortcut-item"><span>Diskten Belge Aç</span><kbd>Ctrl + O</kbd></div>
+                        <div class="shortcut-item"><span>UDF Kaydet</span><kbd>Ctrl + S</kbd></div>
+                        <div class="shortcut-item"><span>Yazdır / PDF</span><kbd>Ctrl + P</kbd></div>
+                        <div class="shortcut-item"><span>Bul ve Değiştir</span><kbd>Ctrl + F</kbd></div>
+                        <div class="shortcut-item"><span>Kısayolları Göster</span><kbd>Alt + Q</kbd></div>
+                    </div>
+
+                    <div class="shortcuts-group">
+                        <h4>Biçimlendirme (UYAP Özel)</h4>
+                        <div class="shortcut-item"><span>Kalın (Bold)</span><kbd>Ctrl + K</kbd> / <kbd>Ctrl + B</kbd></div>
+                        <div class="shortcut-item"><span>İtalik</span><kbd>Ctrl + T</kbd> / <kbd>Ctrl + I</kbd></div>
+                        <div class="shortcut-item"><span>Altı Çizili</span><kbd>Shift+Ctrl+A</kbd> / <kbd>Ctrl+U</kbd></div>
+                        <div class="shortcut-item"><span>Punto Büyüt</span><kbd>Ctrl + ↑</kbd></div>
+                        <div class="shortcut-item"><span>Punto Küçült</span><kbd>Ctrl + ↓</kbd></div>
+                        <div class="shortcut-item"><span>Boşlukları Göster</span><kbd>Ctrl + W</kbd></div>
+                    </div>
+
+                    <div class="shortcuts-group">
+                        <h4>Paragraf & Sayfa Düzeni</h4>
+                        <div class="shortcut-item"><span>İlk Satır Girinti Artır</span><kbd>Shift + Ctrl + Q</kbd></div>
+                        <div class="shortcut-item"><span>Sayfa Düzenleme (cm)</span><kbd>Shift + Alt + N</kbd></div>
+                        <div class="shortcut-item"><span>Elektronik İmzalar</span><kbd>Shift + Ctrl + G</kbd></div>
+                        <div class="shortcut-item"><span>Sola / Sağa Yasla</span><kbd>Ctrl + L</kbd> / <kbd>Ctrl + R</kbd></div>
+                        <div class="shortcut-item"><span>Ortala / İki Yana</span><kbd>Ctrl + E</kbd> / <kbd>Ctrl + J</kbd></div>
+                    </div>
+                </div>
+            </div>
+            <div class="ax-modal-footer">
+                <button type="button" class="tool-btn-primary" data-close-modal>Kapat</button>
             </div>
         </div>
     </div>
