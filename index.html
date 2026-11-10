@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UYAP Web Kelime İşlemci - Açık Kaynak UDF Editörü</title>
+    <meta name="description" content="Java gerektirmeyen, tarayıcıda çalışan açık kaynak UYAP UDF doküman editörü.">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231e3a8a%22/><text y=%2265%22 x=%2250%22 font-size=%2250%22 font-family=%22sans-serif%22 font-weight=%22bold%22 text-anchor=%22middle%22 fill=%22white%22>U</text></svg>">
+</head>
+<body>
+
+    <!-- ÜST BAŞLIK VE HIZLI EYLEMLER -->
+    <header class="header-bar">
+        <div class="brand">
+            <div class="brand-icon">U</div>
+            <span>UYAP Web Kelime İşlemci</span>
+        </div>
+
+        <div class="doc-info">
+            <input type="text" id="doc-title" value="Yeni Belge" title="Belge Başlığı (UDF Dosya Adı)">
+            <span id="signature-badge" class="signature-badge" style="display: none;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                E-İmzalı
+            </span>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+            <button id="btn-open" class="tool-btn tool-btn-primary" title="Bilgisayarınızdan bir UDF dosyası açın">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+                UDF Aç
+            </button>
+            <button id="btn-save" class="tool-btn tool-btn-primary" title="Düzenlenen belgeyi .udf olarak indirin">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                UDF Kaydet
+            </button>
+        </div>
+    </header>
+
+    <!-- ARAÇ ÇUBUĞU (TOOLBAR) -->
+    <nav class="toolbar">
+        <!-- Dosya Grubu -->
+        <div class="tool-group">
+            <button id="btn-new" class="tool-btn" title="Yeni Boş Belge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                Yeni
+            </button>
+            <button id="btn-print" class="tool-btn" title="Yazdır / PDF Olarak Kaydet">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Yazdır / PDF
+            </button>
+        </div>
+
+        <div class="tool-divider"></div>
+
+        <!-- Yazı Tipi ve Boyut -->
+        <div class="tool-group">
+            <select id="font-family-select" class="tool-select" title="Yazı Tipi">
+                <option value="Times New Roman" selected>Times New Roman</option>
+                <option value="Arial">Arial</option>
+                <option value="Calibri">Calibri</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Courier New">Courier New</option>
+            </select>
+
+            <select id="font-size-select" class="tool-select" title="Yazı Boyutu (Punto)">
+                <option value="8">8 pt</option>
+                <option value="9">9 pt</option>
+                <option value="10">10 pt</option>
+                <option value="11">11 pt</option>
+                <option value="12" selected>12 pt</option>
+                <option value="13">13 pt</option>
+                <option value="14">14 pt</option>
+                <option value="16">16 pt</option>
+                <option value="18">18 pt</option>
+                <option value="24">24 pt</option>
+            </select>
+        </div>
+
+        <!-- Stil Düğmeleri -->
+        <div class="tool-group">
+            <button class="tool-btn" data-command="bold" title="Kalın (Ctrl+B)"><b>K</b></button>
+            <button class="tool-btn" data-command="italic" title="İtalik (Ctrl+I)"><i>İ</i></button>
+            <button class="tool-btn" data-command="underline" title="Altı Çizili (Ctrl+U)"><u>A</u></button>
+            <button class="tool-btn" data-command="strikeThrough" title="Üstü Çizili"><s>S</s></button>
+
+            <!-- Metin Rengi Seçici -->
+            <div class="color-picker-wrapper tool-btn" title="Yazı Rengi">
+                <span style="border-bottom: 3px solid #1e3a8a; font-weight: bold;">R</span>
+                <input type="color" id="text-color-picker" value="#000000">
+            </div>
+        </div>
+
+        <div class="tool-divider"></div>
+
+        <!-- Hizalama -->
+        <div class="tool-group">
+            <button class="tool-btn" data-command="justifyLeft" title="Sola Yasla">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+            </button>
+            <button class="tool-btn" data-command="justifyCenter" title="Ortala">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg>
+            </button>
+            <button class="tool-btn" data-command="justifyRight" title="Sağa Yasla">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
+            </button>
+            <button class="tool-btn" data-command="justifyFull" title="İki Yana Yasla">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="3" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="tool-divider"></div>
+
+        <!-- Girinti & Liste -->
+        <div class="tool-group">
+            <button class="tool-btn" data-command="outdent" title="Girintiyi Azalt">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 8 3 12 7 16"/><line x1="21" y1="12" x2="3" y2="12"/><line x1="21" y1="6" x2="11" y2="6"/><line x1="21" y1="18" x2="11" y2="18"/></svg>
+            </button>
+            <button class="tool-btn" data-command="indent" title="Girintiyi Arttır">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 8 21 12 17 16"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="13" y2="6"/><line x1="3" y1="18" x2="13" y2="18"/></svg>
+            </button>
+            <button class="tool-btn" data-command="insertUnorderedList" title="Madde İşaretli Liste">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            </button>
+            <button class="tool-btn" data-command="insertOrderedList" title="Numaralı Liste">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>
+            </button>
+        </div>
+
+        <div class="tool-divider"></div>
+
+        <!-- Ekle (Tablo & Sayfa Sonu) -->
+        <div class="tool-group">
+            <button id="btn-insert-table" class="tool-btn" title="Tablo Ekle">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 12H3"/><path d="M12 3v18"/></svg>
+                Tablo
+            </button>
+            <button id="btn-page-break" class="tool-btn" title="Sayfa Sonu Ekle">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="2" y1="13" x2="22" y2="13"/></svg>
+                Sayfa Sonu
+            </button>
+        </div>
+
+        <div class="tool-divider"></div>
+
+        <!-- Hazır Şablonlar -->
+        <div class="tool-group">
+            <select id="template-select" class="tool-select" title="Hazır Adli Şablon veya Örnek Belge Yükle">
+                <option value="">-- Şablon / Örnek Seç --</option>
+                <option value="ornek_karar">📄 Örnek Gerekçeli Karar (Test UDF)</option>
+                <option value="dilekce">Dava Dilekçesi Şablonu</option>
+                <option value="bilirkisi">Bilirkişi Raporu Şablonu</option>
+            </select>
+        </div>
+
+        <!-- Yakınlaştırma -->
+        <div class="tool-group" style="margin-left: auto;">
+            <select id="zoom-select" class="tool-select" title="Sayfa Yakınlaştırma">
+                <option value="75">75%</option>
+                <option value="90">90%</option>
+                <option value="100" selected>100%</option>
+                <option value="125">125%</option>
+                <option value="150">150%</option>
+            </select>
+        </div>
+    </nav>
+
+    <!-- ÇALIŞMA ALANI VE A4 KAĞIT SİMÜLASYONU -->
+    <main class="workspace-container">
+        <div id="page-wrapper" class="page-wrapper">
+            <div id="editor" class="a4-page" contenteditable="true" spellcheck="true"></div>
+        </div>
+    </main>
+
+    <!-- DURUM ÇUBUĞU (STATUS BAR) -->
+    <footer class="status-bar">
+        <div class="status-left">
+            <span class="status-item" id="stat-status">Hazır</span>
+        </div>
+        <div class="status-right">
+            <span class="status-item" id="stat-pages">Sayfa: 1</span>
+            <span class="status-item" id="stat-words">Kelime: 0</span>
+            <span class="status-item" id="stat-chars">Karakter: 0</span>
+        </div>
+    </footer>
+
+    <!-- Gizli Dosya Girişi -->
+    <input type="file" id="file-input" accept=".udf" style="display: none;">
+
+    <!-- Kütüphaneler ve Betikler -->
+    <script src="assets/vendor/jszip.min.js"></script>
+    <script src="assets/js/uki-core.js"></script>
+    <script src="assets/js/uki-editor.js"></script>
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
+

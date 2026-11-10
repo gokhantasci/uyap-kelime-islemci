@@ -1,0 +1,359 @@
+/* ==========================================================================
+   UYAP Kelime İşlemci (UKİ) - Web Sürümü Stilleri
+   ========================================================================== */
+
+:root {
+    --primary: #1e3a8a;          /* UYAP Laciverti */
+    --primary-hover: #172554;
+    --primary-light: #eff6ff;
+    --accent: #b91c1c;           /* Adalet Kırmızısı */
+    --bg-workspace: #cbd5e1;     /* Çalışma alanı arka planı */
+    --bg-toolbar: #f8fafc;
+    --border-color: #cbd5e1;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --paper-bg: #ffffff;
+    --paper-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1), 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text-main);
+    background-color: var(--bg-workspace);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+}
+
+/* ==========================================================================
+   Üst Başlık ve Menü Çubuğu (Header & Navigation)
+   ========================================================================== */
+.header-bar {
+    background-color: var(--primary);
+    color: #ffffff;
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    z-index: 50;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.brand-icon {
+    width: 24px;
+    height: 24px;
+    background: #ffffff;
+    color: var(--primary);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+}
+
+.doc-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#doc-title {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    outline: none;
+    transition: all 0.2s;
+    min-width: 260px;
+}
+
+#doc-title:focus {
+    background: #ffffff;
+    color: var(--text-main);
+    border-color: #ffffff;
+}
+
+.signature-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: #10b981;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+/* ==========================================================================
+   Araç Çubuğu (Toolbar & Ribbon)
+   ========================================================================== */
+.toolbar {
+    background-color: var(--bg-toolbar);
+    border-bottom: 1px solid var(--border-color);
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    z-index: 40;
+}
+
+.tool-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 2px;
+}
+
+.tool-divider {
+    width: 1px;
+    height: 22px;
+    background-color: #cbd5e1;
+    margin: 0 4px;
+}
+
+.tool-btn {
+    background: transparent;
+    border: none;
+    padding: 5px 8px;
+    border-radius: 3px;
+    color: #334155;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: background 0.15s, color 0.15s;
+    min-width: 28px;
+    height: 28px;
+}
+
+.tool-btn:hover {
+    background-color: #f1f5f9;
+    color: var(--primary);
+}
+
+.tool-btn:active, .tool-btn.active {
+    background-color: var(--primary-light);
+    color: var(--primary);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.tool-btn-primary {
+    background-color: var(--primary);
+    color: #ffffff;
+    padding: 5px 12px;
+}
+
+.tool-btn-primary:hover {
+    background-color: var(--primary-hover);
+    color: #ffffff;
+}
+
+.tool-select {
+    padding: 4px 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    font-size: 12px;
+    background: #ffffff;
+    color: var(--text-main);
+    outline: none;
+    height: 28px;
+}
+
+.color-picker-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.color-picker-wrapper input[type="color"] {
+    opacity: 0;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+/* ==========================================================================
+   Çalışma Alanı ve A4 Belge Görünümü
+   ========================================================================== */
+.workspace-container {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    padding: 30px 20px;
+    position: relative;
+}
+
+.page-wrapper {
+    transition: transform 0.2s ease-out;
+    transform-origin: top center;
+}
+
+.a4-page {
+    width: 595pt;                 /* A4 genişliği (210mm) */
+    min-height: 842pt;            /* A4 yüksekliği (297mm) */
+    background: var(--paper-bg);
+    box-shadow: var(--paper-shadow);
+    padding: 70.87pt 70.87pt 70.87pt 56.69pt; /* UYAP standart marjinleri */
+    color: #000000;
+    outline: none;
+    user-select: text;
+    line-height: 1.35;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    position: relative;
+    white-space: pre-wrap;        /* Boşluk ve satır başlarını koru */
+}
+
+.a4-page p {
+    margin-bottom: 2pt;
+    min-height: 1.2em;
+    word-break: break-word;
+}
+
+/* Tab Hizalama Kolonları */
+.udf-tab-label {
+    display: inline-block;
+    vertical-align: top;
+    font-weight: inherit;
+    white-space: normal;
+}
+
+.udf-tab {
+    display: inline-block;
+}
+
+.a4-page table.udf-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8pt 0;
+}
+
+.a4-page table.udf-table td, 
+.a4-page table.udf-table th {
+    vertical-align: top;
+    padding: 4pt 6pt;
+}
+
+/* ==========================================================================
+   Durum Çubuğu (Status Bar)
+   ========================================================================== */
+.status-bar {
+    background-color: #f1f5f9;
+    border-top: 1px solid var(--border-color);
+    padding: 4px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    z-index: 50;
+}
+
+.status-left, .status-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ==========================================================================
+   Toast Bildirimleri
+   ========================================================================== */
+.uki-toast {
+    position: fixed;
+    bottom: 35px;
+    right: 20px;
+    background: #1e293b;
+    color: #ffffff;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+}
+
+.uki-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.uki-toast-success { background: #065f46; }
+.uki-toast-warning { background: #92400e; }
+.uki-toast-error   { background: #991b1b; }
+.uki-toast-info    { background: #1e3a8a; }
+
+/* ==========================================================================
+   Yazdırma ve PDF Çıktı Kuralları (@media print)
+   ========================================================================== */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 0;
+    }
+
+    body, .workspace-container {
+        background: transparent !important;
+        overflow: visible !important;
+        height: auto !important;
+        padding: 0 !important;
+    }
+
+    .header-bar,
+    .toolbar,
+    .status-bar,
+    .uki-toast {
+        display: none !important;
+    }
+
+    .page-wrapper {
+        transform: none !important;
+    }
+
+    .a4-page {
+        width: 100% !important;
+        min-height: auto !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        border: none !important;
+    }
+}
