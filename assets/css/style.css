@@ -77,6 +77,132 @@
 }
 
 /* ==========================================================================
+   1.1. Astryx KaranlÄ±k Tema BelirteÃ§leri (Dark Mode Tokens)
+   ========================================================================== */
+[data-theme="dark"] {
+    --ax-color-neutral-0: #090d16;
+    --ax-color-neutral-50: #0f172a;
+    --ax-color-neutral-100: #1e293b;
+    --ax-color-neutral-200: #334155;
+    --ax-color-neutral-300: #475569;
+    --ax-color-neutral-400: #64748b;
+    --ax-color-neutral-500: #94a3b8;
+    --ax-color-neutral-600: #cbd5e1;
+    --ax-color-neutral-700: #e2e8f0;
+    --ax-color-neutral-800: #f1f5f9;
+    --ax-color-neutral-900: #ffffff;
+
+    /* Aksan ve Vurgu */
+    --ax-color-primary-subtle: rgba(59, 130, 246, 0.16);
+    --ax-color-primary-muted: rgba(59, 130, 246, 0.32);
+    --ax-color-primary: #3b82f6;
+    --ax-color-primary-hover: #60a5fa;
+    --ax-color-primary-active: #2563eb;
+
+    /* YÃ¼zeyler */
+    --ax-surface-canvas: #090d16;
+    --ax-surface-default: #111827;
+    --ax-surface-subtle: #1e293b;
+    --ax-surface-hover: #293548;
+    --ax-surface-active: #334155;
+
+    /* KenarlÄ±klar */
+    --ax-border-subtle: #1e293b;
+    --ax-border-default: #334155;
+    --ax-border-strong: #475569;
+    --ax-border-focus: #3b82f6;
+
+    --ax-shadow-paper: 0 8px 32px rgba(0, 0, 0, 0.85);
+}
+
+/* KaranlÄ±k Mod Form ve ArayÃ¼z DÃ¼zeltmeleri */
+[data-theme="dark"] .ax-modal-dialog {
+    background: var(--ax-surface-default);
+    color: var(--ax-color-neutral-900);
+    border-color: var(--ax-border-default);
+}
+
+[data-theme="dark"] .ax-input,
+[data-theme="dark"] .ax-select,
+[data-theme="dark"] .tool-select {
+    background-color: var(--ax-surface-subtle);
+    color: var(--ax-color-neutral-900);
+    border-color: var(--ax-border-default);
+}
+
+[data-theme="dark"] #doc-title:focus {
+    background: var(--ax-surface-subtle);
+    color: var(--ax-color-neutral-900);
+}
+
+[data-theme="dark"] .sign-meta-bar {
+    background: var(--ax-surface-subtle);
+    border-color: var(--ax-border-subtle);
+    color: var(--ax-color-neutral-600);
+}
+
+[data-theme="dark"] .signature-card {
+    background: var(--ax-surface-subtle);
+    border-color: var(--ax-border-default);
+}
+
+[data-theme="dark"] .shortcuts-group {
+    background: var(--ax-surface-subtle);
+    border-color: var(--ax-border-subtle);
+}
+
+[data-theme="dark"] kbd {
+    background: var(--ax-surface-hover);
+    color: var(--ax-color-neutral-900);
+    border-color: var(--ax-border-default);
+}
+
+/* GÃ¶z Yormayan Gece / Sayfa Koyu Modu */
+[data-doc-theme="dark"] .udf-page {
+    background-color: #171d2b !important;
+    color: #f1f5f9 !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.85) !important;
+}
+
+[data-doc-theme="dark"] .udf-page p,
+[data-doc-theme="dark"] .udf-page span,
+[data-doc-theme="dark"] .udf-page td,
+[data-doc-theme="dark"] .udf-page th,
+[data-doc-theme="dark"] .udf-page div {
+    color: #f1f5f9;
+}
+
+[data-doc-theme="dark"] .udf-watermark {
+    color: rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-doc-theme="dark"] .udf-page table,
+[data-doc-theme="dark"] .udf-page td,
+[data-doc-theme="dark"] .udf-page th {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+[data-doc-theme="dark"] .udf-footer-bar {
+    border-top-color: rgba(255, 255, 255, 0.2) !important;
+    color: #94a3b8 !important;
+}
+
+/* BaskÄ± / PDF KaydÄ±nda Kesinlikle Beyaz Sayfa ve Siyah YazÄ± */
+@media print {
+    [data-doc-theme="dark"] .udf-page {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }
+    [data-doc-theme="dark"] .udf-page p,
+    [data-doc-theme="dark"] .udf-page span,
+    [data-doc-theme="dark"] .udf-page td,
+    [data-doc-theme="dark"] .udf-page th,
+    [data-doc-theme="dark"] .udf-page div {
+        color: #000000 !important;
+    }
+}
+
+/* ==========================================================================
    2. Temel SÄ±fÄ±rlama ve DÃ¼zen (AppShell Base)
    ========================================================================== */
 *,
@@ -559,7 +685,7 @@ body {
     }
 }
 /* ==========================================================================
-   9. Astryx Modal ve Ýletiþim Pencereleri (Modals & Dialogs)
+   9. Astryx Modal ve ï¿½letiï¿½im Pencereleri (Modals & Dialogs)
    ========================================================================== */
 .ax-modal-backdrop {
     position: fixed;
@@ -645,7 +771,7 @@ body {
     gap: 8px;
 }
 
-/* Sayfa Önizleme Kutusu (Kullanýcý Ekran Görüntüsü ile Birebir) */
+/* Sayfa ï¿½nizleme Kutusu (Kullanï¿½cï¿½ Ekran Gï¿½rï¿½ntï¿½sï¿½ ile Birebir) */
 .page-preview-container {
     display: flex;
     justify-content: center;
@@ -674,7 +800,7 @@ body {
     height: 44px;
 }
 
-/* Form Elemanlarý ve Fieldset */
+/* Form Elemanlarï¿½ ve Fieldset */
 .ax-fieldset {
     border: 1px solid var(--ax-border-default);
     border-radius: var(--ax-radius-sm);
@@ -784,7 +910,7 @@ body {
     background: #ffffff;
 }
 
-/* Elektronik Ýmza Kartlarý */
+/* Elektronik ï¿½mza Kartlarï¿½ */
 .signatures-dialog {
     max-width: 520px;
 }
@@ -848,14 +974,14 @@ body {
     color: var(--ax-color-neutral-700);
 }
 
-/* Yatay Sayfa Yönelimi */
+/* Yatay Sayfa Yï¿½nelimi */
 .a4-page.orientation-landscape {
     width: 842pt !important;
     min-height: 595pt !important;
-}
+}
 
 /* ==========================================================================
-   10. Kýsayol Tuþlarý Tablosu & Klavye Tuþlarý (<kbd>)
+   10. Kï¿½sayol Tuï¿½larï¿½ Tablosu & Klavye Tuï¿½larï¿½ (<kbd>)
    ========================================================================== */
 .shortcuts-grid {
     display: flex;
@@ -905,9 +1031,9 @@ kbd {
     white-space: nowrap;
 }
 
-/* Görünmez Karakterler Modu (Ctrl + W) */
+/* Gï¿½rï¿½nmez Karakterler Modu (Ctrl + W) */
 .a4-page.show-invisibles .udf-tab::before {
-    content: '›';
+    content: 'ï¿½';
     color: #94a3b8;
     font-size: 10px;
     margin-right: 4px;
@@ -917,20 +1043,20 @@ kbd {
     content: ' ?';
     color: #cbd5e1;
     font-size: 10px;
-}
+}
 
 /* ==========================================================================
-   11. UYAP Birebir Görsel Öðeleri (Mühür, Filigran, Kolonlar, Alt Bilgi)
+   11. UYAP Birebir Gï¿½rsel ï¿½ï¿½eleri (Mï¿½hï¿½r, Filigran, Kolonlar, Alt Bilgi)
    ========================================================================== */
 
-/* Sayfa Arka Plan Filigraný (Sicil No 139329 Tekrarý) */
+/* Sayfa Arka Plan Filigranï¿½ (Sicil No 139329 Tekrarï¿½) */
 .a4-page {
     background-color: #ffffff !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='90'%3E%3Ctext x='15' y='50' font-family='Arial, sans-serif' font-size='13' font-weight='700' fill='rgba(15, 23, 42, 0.035)' transform='rotate(-30 15 50)'%3E139329%3C/text%3E%3C/svg%3E");
     background-repeat: repeat;
 }
 
-/* Sað Üst E-Ýmza Mührü (Altýn Madalya ve Kýrmýzý Kurdele) */
+/* Saï¿½ ï¿½st E-ï¿½mza Mï¿½hrï¿½ (Altï¿½n Madalya ve Kï¿½rmï¿½zï¿½ Kurdele) */
 .udf-seal-stamp {
     position: absolute;
     top: 36pt;
@@ -965,7 +1091,7 @@ kbd {
     letter-spacing: 0.2px;
 }
 
-/* Mahkeme Baþlýðý (T.C. SAKARYA 11. ASLÝYE CEZA MAHKEMESÝ) */
+/* Mahkeme Baï¿½lï¿½ï¿½ï¿½ (T.C. SAKARYA 11. ASLï¿½YE CEZA MAHKEMESï¿½) */
 .udf-court-title-box {
     display: inline-block;
     width: 170pt;
@@ -976,7 +1102,7 @@ kbd {
     line-height: 1.35;
 }
 
-/* Ýki Nokta (:) Hizalama Sütunu (Tam 184 pt) */
+/* ï¿½ki Nokta (:) Hizalama Sï¿½tunu (Tam 184 pt) */
 .udf-tab-label {
     display: inline-block !important;
     width: 184pt !important;
@@ -985,7 +1111,7 @@ kbd {
     font-weight: 700;
 }
 
-/* Sayfa 1 Alt Bilgi Çubuðu ve QR Kod */
+/* Sayfa 1 Alt Bilgi ï¿½ubuï¿½u ve QR Kod */
 .udf-page1-footer {
     margin-top: 30pt;
     padding-top: 6pt;
@@ -1020,4 +1146,4 @@ kbd {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-}
+}

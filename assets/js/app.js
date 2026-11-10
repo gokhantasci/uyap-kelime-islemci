@@ -77,6 +77,53 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ----------------------------------------------------
+    // TEMA YÖNETİMİ (DARK / LIGHT THEME & BELGE GECE MODU)
+    // ----------------------------------------------------
+    const btnThemeToggle = document.getElementById('btn-theme-toggle');
+    const themeIconSun = document.getElementById('theme-icon-sun');
+    const themeIconMoon = document.getElementById('theme-icon-moon');
+    const themeModeText = document.getElementById('theme-mode-text');
+    const btnDocDark = document.getElementById('btn-doc-dark');
+
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('uki-theme', theme);
+        if (theme === 'dark') {
+            if (themeIconSun) themeIconSun.style.display = 'none';
+            if (themeIconMoon) themeIconMoon.style.display = 'inline-block';
+            if (themeModeText) themeModeText.textContent = 'Açık Tema';
+        } else {
+            if (themeIconSun) themeIconSun.style.display = 'inline-block';
+            if (themeIconMoon) themeIconMoon.style.display = 'none';
+            if (themeModeText) themeModeText.textContent = 'Koyu Tema';
+        }
+    }
+
+    const savedTheme = localStorage.getItem('uki-theme') || 
+        (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    applyTheme(savedTheme);
+
+    if (btnThemeToggle) {
+        btnThemeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme') || 'light';
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        });
+    }
+
+    if (btnDocDark) {
+        btnDocDark.addEventListener('click', () => {
+            const isDark = document.documentElement.getAttribute('data-doc-theme') === 'dark';
+            if (isDark) {
+                document.documentElement.removeAttribute('data-doc-theme');
+                btnDocDark.classList.remove('active');
+            } else {
+                document.documentElement.setAttribute('data-doc-theme', 'dark');
+                btnDocDark.classList.add('active');
+            }
+        });
+    }
+
+    // ----------------------------------------------------
     // RESMÎ UYAP KLAVYE KISAYOLLARI (657.com.tr)
     // ----------------------------------------------------
     window.addEventListener('keydown', (e) => {
@@ -108,6 +155,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.shiftKey && (e.ctrlKey || e.metaKey) && key === 'q') {
             e.preventDefault();
             adjustFirstLineIndent(10);
+            return;
+        }
+
+        // Shift + Ctrl + D: Tema Değiştir (Aydınlık / Karanlık)
+        if (e.shiftKey && (e.ctrlKey || e.metaKey) && key === 'd') {
+            e.preventDefault();
+            const current = document.documentElement.getAttribute('data-theme') || 'light';
+            applyTheme(current === 'dark' ? 'light' : 'dark');
             return;
         }
 
