@@ -127,6 +127,85 @@ python print_to_udf.py --daemon
 
 ---
 
+## 🌐 Web Sitenize Gömme: Hafif Editör & Görüntüleyici (Embed SDK)
+
+Kendi web sitenize, hukuk büronuzun portalına veya iç intranet sisteminize tek satır kodla hafif UYAP UDF doküman görüntüleyicisi ve düzenleyicisi gömebilirsiniz.
+
+### 1. Tek Satır Script ile Otomatik Gömme (HTML)
+
+Herhangi bir HTML sayfasında editörün görünmesini istediğiniz yere aşağıdaki script etiketini eklemeniz yeterlidir:
+
+```html
+<!-- Hafif Düzenleyici (Editor Modu: Yazma, Biçimlendirme, UDF İndirme) -->
+<script src="https://udf.657.com.tr/embed.js" data-mode="editor" data-theme="light" data-width="100%" data-height="700px"></script>
+
+<!-- Salt Okunur Görüntüleyici (Viewer Modu: Uzak UDF dosyasını sayfada okutma) -->
+<script src="https://udf.657.com.tr/embed.js" data-mode="viewer" data-src="https://site.com/ornek-karar.udf" data-theme="light"></script>
+```
+
+### 2. JavaScript API (Programatik Kullanım)
+
+Sayfanızdaki belirli bir `div` içerisine JavaScript ile dinamik olarak gömmek için:
+
+```javascript
+// Sayfaya embed.js kütüphanesini dahil ettikten sonra:
+window.UkiEmbed.create({
+    container: '#editor-alani',            // Hedef div seçici veya DOM öğesi
+    mode: 'editor',                        // 'editor' (düzenleyici) veya 'viewer' (salt okunur)
+    src: 'https://site.com/belge.udf',     // (İsteğe bağlı) Açılacak uzak UDF veya DOCX URL'si
+    theme: 'light',                        // 'light' (Aydınlık) veya 'dark' (Karanlık)
+    width: '100%',                         // Genişlik (px veya %)
+    height: '700px'                        // Yükseklik
+});
+```
+
+### 3. Desteklenen Parametreler
+
+| Parametre | Varsayılan | Seçenekler | Açıklama |
+| :--- | :--- | :--- | :--- |
+| `data-mode` / `mode` | `editor` | `editor`, `viewer` | `editor`: Kalın, italik, tablo, hizalama ve UDF indirme butonları aktif hafif editör.<br>`viewer`: Salt okunur, yalnızca belgeyi görüntüleme ve yazdırma modu. |
+| `data-src` / `src` | *Boş* | `https://.../dosya.udf` | Sayfa açıldığında otomatik olarak getirilip yüklenecek `.udf` veya `.docx` dosyasının web adresi (CORS destekli olmalıdır). |
+| `data-theme` / `theme` | `light` | `light`, `dark` | Editör arayüzü teması. |
+| `data-width` / `width` | `100%` | CSS ölçü birimi | Editör çerçevesinin genişliği. |
+| `data-height` / `height` | `700px` | CSS ölçü birimi | Editör çerçevesinin yüksekliği. |
+| `data-target` | *Sonraki öğe* | `#hedef-id` | İframe'in içine ekleneceği hedef öğe seçicisi. |
+
+---
+
+## 🔌 WordPress Eklentisi: UYAP Kelime İşlemci (Web UDF)
+
+WordPress tabanlı hukuk siteleri, barolar, mevzuat portalları veya bloglar için hazır resmi eklenti paketi depomuzda yer almaktadır (`wordpress-plugin/uyap-kelime-islemci/`).
+
+### 1. Kurulum
+
+1. Depodaki `wordpress-plugin/uyap-kelime-islemci` klasörünü bilgisayarınıza indirin (veya ZIP olarak arşivleyin).
+2. WordPress yönetim panelinizde **Eklentiler > Yeni Eklenti Ekle > Eklenti Yükle** kısmından yükleyin (veya FTP ile `/wp-content/plugins/` dizinine kopyalayın).
+3. **Eklentiyi Etkinleştir** butonuna basın.
+
+### 2. Kısa Kodlar (Shortcodes) ile Kullanım
+
+Yazılarınıza, sayfalarınıza veya şablonlarınıza tek bir kısa kod ekleyerek editörü veya görüntüleyiciyi yayınlayabilirsiniz:
+
+#### A) Boş / Yeni UDF Düzenleyici Ekleme:
+```text
+[uyap_editor width="100%" height="700px" theme="light"]
+```
+*Ziyaretçileriniz doğrudan siteniz üzerinde dilekçe, karar veya metin yazabilir, biçimlendirebilir ve tek tıkla `.udf` dosyası olarak indirebilir.*
+
+#### B) Belirli Bir UDF / Karar Dosyasını Görüntüleme (Viewer):
+```text
+[uyap_viewer src="https://site.com/emsal-karar.udf" width="100%" height="650px"]
+```
+*Ziyaretçilerinize Java veya ek programa gerek kalmadan emsal kararları, tensip zaptlarını veya dilekçe örneklerini sayfa içerisinde okutabilirsiniz.*
+
+### 3. Eklenti Özellikleri ve Avantajları
+
+* **%100 İstemci Taraflı Güvenlik:** Kullanıcıların yüklediği veya yazdığı dosyalar hiçbir harici sunucuya iletilmez, WordPress veritabanınızı şişirmez.
+* **Mobil ve Tablet Uyumlu:** Telefon ve tabletlerden tam ekran görüntülenebilir.
+* **Gelişmiş Yönetim Paneli:** WordPress yönetici panelinde **Ayarlar > UYAP Kelime İşlemci** menüsünden varsayılan ayarları ve kısa kod rehberini görebilirsiniz.
+
+---
+
 ## 🚀 Yerel Olarak Çalıştırma
 
 Proje tamamen statik dosyalardan oluşur:
@@ -165,15 +244,22 @@ Projeyi kendi GitHub hesabınızda yayınlamak için:
 
 ```
 ├── index.html                   # Ana web arayüzü ve editör sayfası
+├── embed.html                   # Sitene gömülebilir hafif editör ve görüntüleyici arayüzü
+├── embed.js                     # Tek komutla herhangi bir web sitesine gömme SDK'sı
 ├── install.ps1                  # Tek komutla Windows PowerShell kurulum sihirbazı
 ├── uninstall.ps1                # Temiz sistem kaldırma betiği
 ├── Dockerfile                   # Python 3.11 Slim mikroservis ve web konteyner tanımı
 ├── docker-compose.yml           # Tek komutla Docker Compose orkestrasyonu
+├── wordpress-plugin/            # Resmi WordPress eklenti paketi ([uyap_editor] & [uyap_viewer])
+│   └── uyap-kelime-islemci/
+│       ├── uyap-kelime-islemci.php
+│       └── readme.txt
 ├── assets/
 │   ├── css/
-│   │   └── style.css            # A4 sayfa düzeni, araç çubuğu, modallar, koyu tema ve mizanpaj
+│   │   └── style.css            # A4 sayfa düzeni, araç çubuğu, modallar, grafik şeridi ve mizanpaj
 │   ├── js/
 │   │   ├── uki-core.js          # UDF (ZIP/XML) ayrıştırma, docx & markdown dönüştürme çekirdeği
+│   │   ├── uki-image.js         # UYAP resim ekleme/düzenleme, boyutlandırma ve grafik modülü
 │   │   ├── uki-table.js         # Excel / Word zengin tablo yapıştırma ve tablo motoru
 │   │   ├── uki-stats.js         # 657astro sayaç entegrasyonu ve kullanım istatistiği
 │   │   ├── uki-editor.js        # WYSIWYG düzenleme, paragraf ve metin motoru
