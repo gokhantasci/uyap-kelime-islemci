@@ -382,6 +382,226 @@
         return { d: (r.top - bt) / scale() };
     }
 
+    // ---- Aktif Satır İçi (Inline) Üst/Alt Yazı Düzenleme Durumu ----
+    let activeInlineEdit = null;
+
+    function finishActiveInlineEdit() {
+        if (activeInlineEdit && typeof activeInlineEdit.save === 'function') {
+            activeInlineEdit.save();
+        }
+    }
+
+    function startHeaderInlineEdit(hEl) {
+        if (!hEl || hEl.classList.contains('pb-header-editing')) return;
+        finishActiveInlineEdit();
+
+        hEl.classList.add('pb-header-editing');
+        const leftEl = hEl.querySelector('.pb-header-left');
+        const rightEl = hEl.querySelector('.pb-header-right');
+
+        if (leftEl) {
+            leftEl.setAttribute('contenteditable', 'true');
+            leftEl.setAttribute('spellcheck', 'false');
+            leftEl.title = 'Mahkeme / Kurum adını düzenleyin';
+        }
+        if (rightEl) {
+            rightEl.setAttribute('contenteditable', 'true');
+            rightEl.setAttribute('spellcheck', 'false');
+            rightEl.title = 'Dosya-Karar numarasını düzenleyin';
+        }
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'pb-inline-toolbar';
+        toolbar.setAttribute('contenteditable', 'false');
+        toolbar.innerHTML = `
+            <span class="pb-inline-title">Üst Yazı</span>
+            <button type="button" class="pb-inline-btn pb-inline-btn-primary btn-save-inline" title="Değişiklikleri Kaydet (Enter)">💾 Kaydet</button>
+            <button type="button" class="pb-inline-btn btn-modal-inline" title="Gelişmiş Üst Yazı Ayarları Penceresini Aç">⚙️ Ayarlar</button>
+            <button type="button" class="pb-inline-btn btn-cancel-inline" title="Vazgeç (Esc)">✖ Kapat</button>
+        `;
+        hEl.appendChild(toolbar);
+
+        let isSaved = false;
+        const saveHeader = () => {
+            if (isSaved) return;
+            isSaved = true;
+            const leftVal = leftEl ? ((leftEl.innerText !== undefined ? leftEl.innerText : leftEl.textContent) || '').trim() : '';
+            const rightVal = rightEl ? ((rightEl.innerText !== undefined ? rightEl.innerText : rightEl.textContent) || '').trim() : '';
+
+            hEl.classList.remove('pb-header-editing');
+            toolbar.remove();
+            if (leftEl) leftEl.removeAttribute('contenteditable');
+            if (rightEl) rightEl.removeAttribute('contenteditable');
+            activeInlineEdit = null;
+
+            const curStart = (cfg.header && typeof cfg.header.startPage === 'number') ? cfg.header.startPage : 2;
+            UkiPages.setHeader({
+                left: leftVal,
+                right: rightVal,
+                startPage: curStart
+            });
+
+            if (window.currentDocModel) {
+                if (!window.currentDocModel.headerInfo) window.currentDocModel.headerInfo = {};
+                window.currentDocModel.headerInfo.left = leftVal;
+                window.currentDocModel.headerInfo.right = rightVal;
+                if (window.currentDocModel.pageProperties) {
+                    if (!window.currentDocModel.pageProperties.headerInfo) window.currentDocModel.pageProperties.headerInfo = {};
+                    window.currentDocModel.pageProperties.headerInfo.left = leftVal;
+                    window.currentDocModel.pageProperties.headerInfo.right = rightVal;
+                }
+            }
+            if (typeof window.showToast === 'function') {
+                window.showToast('Üst yazı güncellendi.', 'success');
+            }
+        };
+
+        const cancelHeader = () => {
+            if (isSaved) return;
+            isSaved = true;
+            hEl.classList.remove('pb-header-editing');
+            toolbar.remove();
+            if (leftEl) leftEl.removeAttribute('contenteditable');
+            if (rightEl) rightEl.removeAttribute('contenteditable');
+            activeInlineEdit = null;
+            repaginate();
+        };
+
+        toolbar.querySelector('.btn-save-inline').addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            saveHeader();
+        });
+        toolbar.querySelector('.btn-cancel-inline').addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            cancelHeader();
+        });
+        toolbar.querySelector('.btn-modal-inline').addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            cancelHeader();
+            if (window.openHeaderSetupModal) window.openHeaderSetupModal();
+        });
+
+        const keyHandler = (e) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+                cancelHeader();
+            } else if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                saveHeader();
+            }
+        };
+        if (leftEl) leftEl.addEventListener('keydown', keyHandler);
+        if (rightEl) rightEl.addEventListener('keydown', keyHandler);
+
+        activeInlineEdit = { type: 'header', el: hEl, save: saveHeader, cancel: cancelHeader };
+
+        setTimeout(() => {
+            if (leftEl) {
+                leftEl.focus();
+                try {
+                    const r = document.createRange();
+                    r.selectNodeContents(leftEl);
+                    r.collapse(false);
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(r);
+                } catch (e) {}
+            }
+        }, 20);
+    }
+
+    function startFooterTextInlineEdit(fEl) {
+        if (!fEl || fEl.classList.contains('pb-footer-editing')) return;
+        finishActiveInlineEdit();
+
+        fEl.classList.add('pb-footer-editing');
+        fEl.setAttribute('contenteditable', 'true');
+        fEl.setAttribute('spellcheck', 'false');
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'pb-inline-toolbar';
+        toolbar.setAttribute('contenteditable', 'false');
+        toolbar.innerHTML = `
+            <span class="pb-inline-title">Alt Yazı</span>
+            <button type="button" class="pb-inline-btn pb-inline-btn-primary btn-save-inline" title="Değişiklikleri Kaydet (Enter)">💾 Kaydet</button>
+            <button type="button" class="pb-inline-btn btn-modal-inline" title="Gelişmiş Alt Yazı Ayarları Penceresini Aç">⚙️ Ayarlar</button>
+            <button type="button" class="pb-inline-btn btn-cancel-inline" title="Vazgeç (Esc)">✖ Kapat</button>
+        `;
+        fEl.appendChild(toolbar);
+
+        let isSaved = false;
+        const saveFooter = () => {
+            if (isSaved) return;
+            isSaved = true;
+            toolbar.remove();
+            const textVal = ((fEl.innerText !== undefined ? fEl.innerText : fEl.textContent) || '').trim();
+            fEl.classList.remove('pb-footer-editing');
+            fEl.removeAttribute('contenteditable');
+            activeInlineEdit = null;
+
+            cfg.footerParas = [{ tabSet: '', runs: [{ text: textVal, fontName: 'Times New Roman', size: 11 }] }];
+            cfg.footerEl = true;
+            cfg.showFooter = true;
+            try { document.dispatchEvent(new (window.Event || Event)('uki-document-change')); } catch(e) {}
+            repaginate();
+
+            if (typeof window.showToast === 'function') {
+                window.showToast('Alt yazı güncellendi.', 'success');
+            }
+        };
+
+        const cancelFooter = () => {
+            if (isSaved) return;
+            isSaved = true;
+            toolbar.remove();
+            fEl.classList.remove('pb-footer-editing');
+            fEl.removeAttribute('contenteditable');
+            activeInlineEdit = null;
+            repaginate();
+        };
+
+        toolbar.querySelector('.btn-save-inline').addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            saveFooter();
+        });
+        toolbar.querySelector('.btn-cancel-inline').addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            cancelFooter();
+        });
+        toolbar.querySelector('.btn-modal-inline').addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            cancelFooter();
+            if (window.openFooterSetupModal) window.openFooterSetupModal();
+        });
+
+        const keyHandler = (e) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+                cancelFooter();
+            } else if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                saveFooter();
+            }
+        };
+        fEl.addEventListener('keydown', keyHandler);
+
+        activeInlineEdit = { type: 'footer', el: fEl, save: saveFooter, cancel: cancelFooter };
+
+        setTimeout(() => {
+            fEl.focus();
+            try {
+                const r = document.createRange();
+                r.selectNodeContents(fEl);
+                r.collapse(false);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(r);
+            } catch (e) {}
+        }, 20);
+    }
+
     // ---- Sayfa kromu (üst/alt bilgi, sayfa araları) ----
     function renderChrome(n) {
         if (!layer || !ed.contains(layer)) {
@@ -405,6 +625,11 @@
             if (cfg.header && (k + 1) >= cfg.startPage) {
                 const h = document.createElement('div');
                 h.className = 'pb-header';
+                h.title = 'Üst Yazı (Düzenlemek için çift tıklayın)';
+                h.addEventListener('dblclick', (ev) => {
+                    ev.stopPropagation();
+                    startHeaderInlineEdit(h);
+                });
                 const hTopPt = cfg.headerOffsetPt > 0 ? cfg.headerOffsetPt : 15;
                 const hTopPx = pageTop + Math.round(hTopPt * 96 / 72);
                 h.style.cssText = `top:${hTopPx}px;left:${g.Ml}px;right:${g.Mr}px;`;
@@ -508,6 +733,11 @@
                     }
                 }
                 num.textContent = numStr;
+                num.title = 'Sayfa Numarası (Biçimlendirmek için çift tıklayın)';
+                num.addEventListener('dblclick', (ev) => {
+                    ev.stopPropagation();
+                    if (window.openPageNumSetupModal) window.openPageNumSetupModal();
+                });
 
                 const align = cfg.pageNumberAlign || 'right';
                 let alignCss = `right:${g.Mr}px; text-align: right;`;
@@ -527,6 +757,11 @@
                 if (fText) {
                     const fDiv = document.createElement('div');
                     fDiv.className = 'pb-footer pb-footer-text';
+                    fDiv.title = 'Alt Yazı (Düzenlemek için çift tıklayın)';
+                    fDiv.addEventListener('dblclick', (ev) => {
+                        ev.stopPropagation();
+                        startFooterTextInlineEdit(fDiv);
+                    });
                     const baseH = g.H > 0 ? g.H : 1123;
                     const footOffPt = cfg.footerOffsetPt > 0 ? cfg.footerOffsetPt : 20;
                     const fTopPx = pageTop + baseH - Math.round((footOffPt + 24) * 96 / 72);
@@ -540,6 +775,11 @@
             if (cfg.showFooter !== false && cfg.webId) {
                 const line = document.createElement('div');
                 line.className = 'pb-footer pb-notice';
+                line.title = 'Alt Bilgi Doğrulama (Düzenlemek için çift tıklayın)';
+                line.addEventListener('dblclick', (ev) => {
+                    ev.stopPropagation();
+                    if (window.openFooterSetupModal) window.openFooterSetupModal();
+                });
                 const lineTopPx = pageTop + Math.round(811.20 * 96 / 72);
                 line.style.cssText = `top:${lineTopPx}px;left:87.84px;width:636.48px;`;
                 if (cfg.qrCode) {
@@ -569,7 +809,7 @@
 
     // ---- Ana giriş ----
     function repaginate() {
-        if (!ed || busy) return UkiPages.pageCount || 1;
+        if (!ed || busy || activeInlineEdit) return UkiPages.pageCount || 1;
         busy = true;
         let n = 1;
         try {
@@ -633,6 +873,72 @@
             layer = layerEl || editorEl.querySelector('.page-boundaries-layer');
             if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => repaginate());
             window.addEventListener('resize', () => { clearTimeout(UkiPages._rt); UkiPages._rt = setTimeout(repaginate, 200); });
+
+            // Üst veya alt kenar boşluğuna çift tıklanınca ilgili alanı düzenlemeye aç
+            editorEl.addEventListener('dblclick', (e) => {
+                if (e.target && e.target.closest && (e.target.closest('.pb-header') || e.target.closest('.pb-footer') || e.target.closest('.pb-inline-toolbar'))) {
+                    return;
+                }
+
+                const g = lastGeom || (ed ? geom() : null);
+                if (!g || !g.S) return;
+
+                const edRect = editorEl.getBoundingClientRect();
+                const sc = scale();
+                const offsetY = (e.clientY - edRect.top) / sc;
+                const pageIndex = Math.floor(offsetY / g.S);
+                const inPageY = offsetY - (pageIndex * g.S);
+
+                // Üst kenar boşluğu (Header alanı)
+                if (inPageY >= 0 && inPageY < Math.max(75, g.Mt || 95)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!cfg.header) {
+                        cfg.header = {
+                            left: 'T.C. MAHKEMESİ',
+                            right: 'Dosya-Karar No: ',
+                            startPage: 2,
+                            paras: []
+                        };
+                        repaginate();
+                    }
+                    const hEl = layer ? layer.querySelector('.pb-header') : null;
+                    if (hEl) {
+                        startHeaderInlineEdit(hEl);
+                    } else if (window.openHeaderSetupModal) {
+                        window.openHeaderSetupModal();
+                    }
+                    return;
+                }
+
+                // Alt kenar boşluğu (Footer alanı)
+                if (inPageY > (g.H - Math.max(75, g.Mb || 95)) && inPageY <= g.H) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!cfg.footerParas || !cfg.footerParas.length) {
+                        cfg.footerParas = [{ tabSet: '', runs: [{ text: 'Alt Yazı Metni', fontName: 'Times New Roman', size: 11 }] }];
+                        cfg.footerEl = true;
+                        cfg.showFooter = true;
+                        repaginate();
+                    }
+                    const fEl = layer ? layer.querySelector('.pb-footer-text') : null;
+                    if (fEl) {
+                        startFooterTextInlineEdit(fEl);
+                    } else if (window.openFooterSetupModal) {
+                        window.openFooterSetupModal();
+                    }
+                    return;
+                }
+            });
+
+            // Düzenleme alanının dışına tıklanırsa otomatik kaydet ve kapat
+            document.addEventListener('mousedown', (e) => {
+                if (!activeInlineEdit) return;
+                if (activeInlineEdit.el && (activeInlineEdit.el.contains(e.target) || activeInlineEdit.el === e.target)) {
+                    return;
+                }
+                finishActiveInlineEdit();
+            });
         },
         configure(model) {
             const h = headerTexts(model);
@@ -749,7 +1055,10 @@
             const edTop = ed.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
             container.scrollTo({ top: Math.max(0, edTop + (k - 1) * g.S * sc - 12), behavior: 'smooth' });
         },
-        scale
+        scale,
+        startHeaderInlineEdit,
+        startFooterTextInlineEdit,
+        finishActiveInlineEdit
     };
 
     window.UkiPages = UkiPages;

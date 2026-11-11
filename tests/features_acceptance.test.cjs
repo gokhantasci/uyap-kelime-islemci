@@ -15,6 +15,7 @@ function initDom() {
     global.Node = dom.window.Node;
     global.DOMParser = dom.window.DOMParser;
     global.XMLSerializer = dom.window.XMLSerializer;
+    global.getComputedStyle = dom.window.getComputedStyle ? dom.window.getComputedStyle.bind(dom.window) : () => ({});
     const memoryStorage = {
         getItem: (k) => store[k] !== undefined ? store[k] : null,
         setItem: (k, v) => { store[k] = String(v); },
@@ -263,5 +264,68 @@ test('Embed SDK ve WordPress Eklentisi: Tek komutla gömme ve eklenti dosyaları
     const wpPhpContent = fs.readFileSync(wpPluginPath, 'utf8');
     assert.ok(wpPhpContent.includes('add_shortcode(\'uyap_editor\''), '[uyap_editor] kısa kodu tanımlanmalı');
     assert.ok(wpPhpContent.includes('add_shortcode(\'uyap_viewer\''), '[uyap_viewer] kısa kodu tanımlanmalı');
+});
+
+test('Üst Yazı ve Alt Yazıya Çift Tıklama (Inline Edit): Yerinde düzenleme ve kaydetme', () => {
+    const dom = initDom();
+    const pagesCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-pages.js'), 'utf8');
+    eval(pagesCode);
+
+    const editorEl = dom.window.document.getElementById('editor');
+    dom.window.UkiPages.init(editorEl);
+
+    // 1. Üst Yazı çift tıklama & inline düzenleme
+    dom.window.UkiPages.setHeader({
+        left: 'T.C. ANKARA 1. ASLİYE CEZA MAHKEMESİ',
+        right: 'Dosya-Karar No: 2026/10',
+        startPage: 1
+    });
+
+    const headerEl = dom.window.document.querySelector('.pb-header');
+    assert.ok(headerEl, 'Üst yazı öğesi oluşturulmalı');
+    assert.equal(headerEl.title, 'Üst Yazı (Düzenlemek için çift tıklayın)');
+
+    // Çift tıklama simülasyonu
+    headerEl.dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true }));
+
+    assert.ok(headerEl.classList.contains('pb-header-editing'), 'Düzenleme sınıfı eklenmeli');
+    assert.ok(headerEl.querySelector('.pb-inline-toolbar'), 'Inline araç çubuğu eklenmeli');
+
+    const leftEl = headerEl.querySelector('.pb-header-left');
+    const rightEl = headerEl.querySelector('.pb-header-right');
+    assert.equal(leftEl.getAttribute('contenteditable'), 'true');
+    assert.equal(rightEl.getAttribute('contenteditable'), 'true');
+
+    // Metin değiştirme ve kaydetme
+    leftEl.textContent = 'T.C. İSTANBUL 5. ASLİYE CEZA MAHKEMESİ';
+    rightEl.textContent = 'Dosya-Karar No: 2026/999';
+
+    const saveBtn = headerEl.querySelector('.btn-save-inline');
+    assert.ok(saveBtn, 'Kaydet butonu bulunmalı');
+    saveBtn.click();
+
+    const updatedH = dom.window.UkiPages.getHeader();
+    assert.equal(updatedH.left, 'T.C. İSTANBUL 5. ASLİYE CEZA MAHKEMESİ');
+    assert.equal(updatedH.right, 'Dosya-Karar No: 2026/999');
+
+    // 2. Alt Yazı çift tıklama & inline düzenleme
+    const fDiv = dom.window.document.createElement('div');
+    fDiv.className = 'pb-footer pb-footer-text';
+    fDiv.textContent = 'Eski Alt Yazı';
+    dom.window.document.body.appendChild(fDiv);
+
+    dom.window.UkiPages.startFooterTextInlineEdit(fDiv);
+    assert.ok(fDiv.classList.contains('pb-footer-editing'));
+    assert.equal(fDiv.getAttribute('contenteditable'), 'true');
+
+    const footerSaveBtn = fDiv.querySelector('.btn-save-inline');
+    assert.ok(footerSaveBtn, 'Alt yazı kaydet butonu bulunmalı');
+    
+    // Metin değiştirme simülasyonu
+    fDiv.childNodes[0].nodeValue = 'Yeni Güncellenen Dipnot Alt Yazısı';
+    footerSaveBtn.click();
+
+    const cfg = dom.window.UkiPages.getConfig();
+    assert.ok(cfg.footerParas[0].runs[0].text.includes('Yeni Güncellenen Dipnot'));
 });
 
