@@ -179,14 +179,30 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDocThemeButton();
     }
 
-    const savedTheme = localStorage.getItem('uki-theme') || 
-        (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    applyTheme(savedTheme);
+    // udf.657.com.tr varsayılan tema politikası: Varsayılan görünüm daima 'light' (Aydınlık) olmalıdır.
+    const urlParamsTheme = new URLSearchParams(window.location.search);
+    const urlTheme = urlParamsTheme.get('theme');
+
+    let initialTheme = 'light';
+    if (urlTheme === 'light' || urlTheme === 'dark') {
+        initialTheme = urlTheme;
+    } else {
+        const storedTheme = localStorage.getItem('uki-theme');
+        const isExplicit = localStorage.getItem('uki-theme-explicit') === 'true';
+        if (storedTheme === 'dark' && isExplicit) {
+            initialTheme = 'dark';
+        } else {
+            initialTheme = 'light';
+        }
+    }
+    applyTheme(initialTheme);
 
     if (btnThemeToggle) {
         btnThemeToggle.addEventListener('click', () => {
             const current = document.documentElement.getAttribute('data-theme') || 'light';
-            applyTheme(current === 'dark' ? 'light' : 'dark');
+            const next = current === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('uki-theme-explicit', 'true');
+            applyTheme(next);
         });
     }
 
@@ -292,7 +308,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.shiftKey && (e.ctrlKey || e.metaKey) && key === 'd') {
             e.preventDefault();
             const current = document.documentElement.getAttribute('data-theme') || 'light';
-            applyTheme(current === 'dark' ? 'light' : 'dark');
+            const next = current === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('uki-theme-explicit', 'true');
+            applyTheme(next);
             return;
         }
 
@@ -3997,6 +4015,13 @@ function openColorPicker(pickerId, ev) {
         }
         if (typeof recalculatePagesAndThumbnails === 'function') {
             recalculatePagesAndThumbnails();
+        }
+
+        // 8. Tema -> Varsayılan Aydınlık (Light)
+        localStorage.removeItem('uki-theme');
+        localStorage.removeItem('uki-theme-explicit');
+        if (typeof applyTheme === 'function') {
+            applyTheme('light');
         }
 
         showToast('Tüm sayfa tasarımı ve renkler varsayılana sıfırlandı.', 'success');

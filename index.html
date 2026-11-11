@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" data-theme="light">
 <head>
     <script>
         // /linkac=... yollarında varlıklar kökten; file:// altında dosyanın kendi dizininden yüklenir.
@@ -8,6 +8,16 @@
             base.href = '/';
             document.head.appendChild(base);
         }
+        // udf.657.com.tr varsayılan tema kontrolü (Varsayılan daima 'light')
+        try {
+            const sp = new URLSearchParams(window.location.search);
+            const ut = sp.get('theme');
+            if (ut === 'dark' || (localStorage.getItem('uki-theme') === 'dark' && localStorage.getItem('uki-theme-explicit') === 'true')) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        } catch (e) {}
     </script>
     <meta name="referrer" content="no-referrer">
     <meta name="google-site-verification" content="xwowJ-54FGSaD3bM95W5R7NaRCoGV9H-cdrW61tqXRw">

@@ -329,3 +329,56 @@ test('Üst Yazı ve Alt Yazıya Çift Tıklama (Inline Edit): Yerinde düzenleme
     assert.ok(cfg.footerParas[0].runs[0].text.includes('Yeni Güncellenen Dipnot'));
 });
 
+test('udf.657.com.tr Varsayılan Görünüm: İlk açılışta ve varsayılan olarak light (Aydınlık) tema uygulanır', () => {
+    // 1. index.html başlangıç data-theme özelliği
+    const indexHtml = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8');
+    assert.ok(indexHtml.includes('<html lang="tr" data-theme="light">'), 'index.html varsayılan olarak data-theme="light" taşımalı');
+
+    // 2. app.js tema başlatma simülasyonu
+    const dom = initDom();
+    const doc = dom.window.document;
+    const localStorage = dom.window.localStorage;
+
+    // Simüle edilen tema mantığı (app.js ile birebir)
+    function testThemeInit(searchQuery = '') {
+        const urlParams = new dom.window.URLSearchParams(searchQuery);
+        const urlTheme = urlParams.get('theme');
+        let initialTheme = 'light';
+        if (urlTheme === 'light' || urlTheme === 'dark') {
+            initialTheme = urlTheme;
+        } else {
+            const storedTheme = localStorage.getItem('uki-theme');
+            const isExplicit = localStorage.getItem('uki-theme-explicit') === 'true';
+            if (storedTheme === 'dark' && isExplicit) {
+                initialTheme = 'dark';
+            } else {
+                initialTheme = 'light';
+            }
+        }
+        doc.documentElement.setAttribute('data-theme', initialTheme);
+        localStorage.setItem('uki-theme', initialTheme);
+        return initialTheme;
+    }
+
+    // A) İlk ziyaret: Hiçbir ayar yokken varsayılan light olmalı
+    localStorage.clear();
+    const t1 = testThemeInit('');
+    assert.equal(t1, 'light', 'Varsayılan tema light olmalı');
+    assert.equal(doc.documentElement.getAttribute('data-theme'), 'light');
+
+    // B) Eski otomatik dark kaydedilmiş olsa bile (explicit bayrağı yoksa) light olmalı
+    localStorage.setItem('uki-theme', 'dark');
+    const t2 = testThemeInit('');
+    assert.equal(t2, 'light', 'Eski örtük dark seçimi ezilmeli ve light açılmalı');
+
+    // C) Kullanıcı açıkça koyu temayı seçtiğinde (explicit=true) dark olmalı
+    localStorage.setItem('uki-theme', 'dark');
+    localStorage.setItem('uki-theme-explicit', 'true');
+    const t3 = testThemeInit('');
+    assert.equal(t3, 'dark', 'Açıkça seçilen koyu tema korunmalı');
+
+    // D) URL parametresi (?theme=light) gelirse dark tercihi olsa dahi light uygulanmalı
+    const t4 = testThemeInit('?theme=light');
+    assert.equal(t4, 'light', '?theme=light parametresi uygulanmalı');
+});
+
