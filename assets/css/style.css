@@ -2506,7 +2506,7 @@ kbd {
     gap: 16px;
     padding-bottom: 0;
     border-bottom: none;
-    font: 700 9.8pt 'Times New Roman', serif;
+    font: 400 9.84pt 'Times New Roman', serif;
     color: #808080;
     white-space: nowrap;
     pointer-events: none;
@@ -2519,10 +2519,15 @@ kbd {
 
 .pb-header-right {
     white-space: nowrap;
+    font-weight: 400;
 }
 
 .pb-header-right b {
     font-weight: 700;
+}
+
+.pb-header-right span {
+    font-weight: 400;
 }
 
 .pb-footer {
@@ -2530,6 +2535,12 @@ kbd {
     pointer-events: none;
     font-family: Arial, sans-serif;
     color: #111;
+}
+
+.pb-footer-text {
+    font-family: 'Times New Roman', serif !important;
+    font-size: 11pt !important;
+    color: #333 !important;
 }
 
 .pb-pagenum {
@@ -2541,7 +2552,7 @@ kbd {
 .pb-notice {
     border-top: 0.96pt solid #000;
     padding-top: 2.8pt;
-    font: 6.84pt Arial, Helvetica, sans-serif;
+    font: 6.84pt 'Times New Roman', serif;
     line-height: 1.1;
     white-space: nowrap;
     overflow: visible;
@@ -2551,8 +2562,8 @@ kbd {
 }
 
 .pb-notice b {
-    font: 700 9.84pt Consolas, 'Courier New', monospace;
-    letter-spacing: 0.5px;
+    font: 400 9.84pt Consolas, 'Courier New', monospace;
+    letter-spacing: normal;
 }
 
 .udf-underline-dot {
@@ -2582,17 +2593,38 @@ kbd {
 
     .pb-header {
         font-size: 9.84pt !important;
+        font-weight: 400 !important;
         white-space: nowrap !important;
     }
 
+    .pb-header-left {
+        font-weight: 700 !important;
+    }
+
+    .pb-header-right {
+        font-weight: 400 !important;
+    }
+
+    .pb-header-right b {
+        font-weight: 700 !important;
+    }
+
+    .pb-header-right span {
+        font-weight: 400 !important;
+    }
+
     .pb-notice {
+        font-family: 'Times New Roman', serif !important;
         font-size: 6.84pt !important;
         white-space: nowrap !important;
         border-top: 0.96pt solid #000 !important;
     }
 
     .pb-notice b {
+        font-family: Consolas, monospace !important;
         font-size: 9.84pt !important;
+        font-weight: 400 !important;
+        letter-spacing: normal !important;
     }
 
     .pb-qr {
@@ -3033,7 +3065,7 @@ mark.find-hit.current {
     position: absolute;
     border-top: 0.96pt solid #000;
     padding-top: 2.8pt;
-    font: 6.84pt Arial, Helvetica, sans-serif;
+    font: 6.84pt 'Times New Roman', serif;
     line-height: 1.1;
     white-space: nowrap;
     overflow: visible;
@@ -3484,6 +3516,10 @@ mark.find-hit.current {
 }
 
 .pb-notice .pb-copy-code {
+    font-family: Consolas, monospace;
+    font-size: 9.84pt;
+    font-weight: 400;
+    letter-spacing: normal;
     pointer-events: auto;
     cursor: pointer;
     border-radius: 3px;

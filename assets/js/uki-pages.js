@@ -421,21 +421,25 @@
                         const b = document.createElement('b');
                         b.textContent = 'Dosya-Karar No:';
                         rightEl.appendChild(b);
-                        rightEl.appendChild(document.createTextNode(rText.substring('Dosya-Karar No:'.length)));
+                        const span = document.createElement('span');
+                        span.textContent = rText.substring('Dosya-Karar No:'.length);
+                        rightEl.appendChild(span);
                     } else if (rText.startsWith('Dosya-Karar:')) {
                         const b = document.createElement('b');
                         b.textContent = 'Dosya-Karar:';
                         rightEl.appendChild(b);
-                        rightEl.appendChild(document.createTextNode(rText.substring('Dosya-Karar:'.length)));
+                        const span = document.createElement('span');
+                        span.textContent = rText.substring('Dosya-Karar:'.length);
+                        rightEl.appendChild(span);
                     } else {
                         rightEl.textContent = rText;
                     }
-                }
-
-                if (cfg.header && cfg.header.tabPosPt > 0) {
-                    const tabPx = Math.round(cfg.header.tabPosPt * 96 / 72);
-                    rightEl.style.position = 'absolute';
-                    rightEl.style.left = tabPx + 'px';
+                    if (cfg.header && cfg.header.tabPosPt > 0) {
+                        const tabPt = Math.max(0, cfg.header.tabPosPt - 5.0);
+                        const tabPx = Math.round(tabPt * 96 / 72);
+                        rightEl.style.position = 'absolute';
+                        rightEl.style.left = tabPx + 'px';
+                    }
                 }
 
                 h.appendChild(leftEl);
@@ -474,7 +478,10 @@
                 if (fText) {
                     const fDiv = document.createElement('div');
                     fDiv.className = 'pb-footer pb-footer-text';
-                    fDiv.style.cssText = `top:${pageTop + g.H - 118}px;left:${g.Ml}px;text-align:left;font-family:'Times New Roman',serif;font-size:11pt;color:#333;`;
+                    const baseH = g.H > 0 ? g.H : 1123;
+                    const footOffPt = cfg.footerOffsetPt > 0 ? cfg.footerOffsetPt : 20;
+                    const fTopPx = pageTop + baseH - Math.round((footOffPt + 24) * 96 / 72);
+                    fDiv.style.cssText = `top:${fTopPx}px;left:${g.Ml}px;text-align:left;font-family:'Times New Roman',serif;font-size:11pt;color:#333;`;
                     fDiv.textContent = fText;
                     layer.appendChild(fDiv);
                 }
@@ -560,12 +567,13 @@
         const p0 = he.paragraphs[0] || {};
         const tabSet = p0.tabSet || '';
         const tabParts = tabSet ? tabSet.split(',')[0].split(':') : [];
-        const tabPosPt = tabParts[0] ? parseFloat(tabParts[0]) : 255;
+        const tabPosPt = tabParts[0] ? parseFloat(tabParts[0]) : (right ? 255 : 0);
         const firstRun = (p0.runs && p0.runs[0]) || {};
         const fontSize = firstRun.size || 10;
         const fontFamily = firstRun.family || 'Times New Roman';
         const paras = he.paragraphs.map(p => ({ tabSet: p.tabSet || '', runs: (p.runs || []).map(r => ({ text: r.text || '', bold: !!r.bold })) }));
-        return { left, right, startPage: he.startPage || 2, paras, tabPosPt, fontSize, fontFamily };
+        const startPg = (he.startPage !== undefined && he.startPage !== null) ? he.startPage : (he.attrs && he.attrs.startPage ? parseInt(he.attrs.startPage, 10) : 1);
+        return { left, right, startPage: startPg, paras, tabPosPt, fontSize, fontFamily };
     }
 
     const UkiPages = {

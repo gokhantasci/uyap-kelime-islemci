@@ -88,7 +88,7 @@ test('test metni.udf: Liste işaretleri (●, 1., 1), 2)), barkod ve girintiler 
     env.close();
 });
 
-test('test metni.udf: Altbilgi özel sayfa numarası (a1) ve alt yazı render edilir', async () => {
+test('test metni.udf: Altbilgi özel sayfa numarası (a1), alt yazı ve sayfa 1 üstbilgi render edilir', async () => {
     const env = createEnv('<div id="editor" class="a4-page"><div class="page-boundaries-layer"></div></div>');
     env.load('uki-core');
     env.load('uki-pages');
@@ -104,6 +104,19 @@ test('test metni.udf: Altbilgi özel sayfa numarası (a1) ve alt yazı render ed
     assert.equal(model.footerElement.pageNumberForeStr, 'a');
     assert.equal(model.footerElement.pageNumberStartNum, 1);
     assert.ok(model.footerElement.paragraphs.some(p => p.runs.some(r => r.text.includes('Alt yazı'))));
+
+    assert.ok(model.headerInfo, 'headerInfo ayrıştırılmalı');
+    assert.equal(model.headerInfo.left, 'Üst yazı');
+    assert.equal(model.headerInfo.startPage, 1);
+
+    env.w.UkiPages.repaginate();
+    const hEl = layer.querySelector('.pb-header');
+    assert.ok(hEl, 'Sayfa 1 üst bilgisi (.pb-header) render edilmeli');
+    assert.ok(hEl.textContent.includes('Üst yazı'));
+
+    const fTextEl = layer.querySelector('.pb-footer-text');
+    assert.ok(fTextEl, 'Alt yazı (.pb-footer-text) render edilmeli');
+    assert.ok(fTextEl.textContent.includes('Alt yazı'));
 
     env.close();
 });

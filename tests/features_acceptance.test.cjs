@@ -53,6 +53,10 @@ test('UDF Roundtrip: örnek karar.udf dışa aktarımı üstbilgi sekmeleri, alt
     assert.equal(reloaded.webId, model.webId, 'Yeniden açılan UDF aynı webID değerini taşımalı');
     assert.ok(reloaded.headerElement, 'Yeniden açılan UDF üst bilgi taşımalı');
     assert.ok(reloaded.footerElement, 'Yeniden açılan UDF alt bilgi taşımalı');
+    assert.ok(reloaded.headerInfo, 'Yeniden açılan UDF headerInfo taşımalı');
+    assert.equal(reloaded.headerInfo.startPage, 2, 'Üst bilgi startPage=2 olmalı');
+    assert.ok(reloaded.headerInfo.left.includes('SAKARYA'), 'Üst bilgi sol metin korunmalı');
+    assert.ok(reloaded.headerInfo.right.includes('Dosya-Karar'), 'Üst bilgi sağ metin korunmalı');
 });
 
 test('DOCX Dışa Aktarma: OpenXML pPr ve sectPr etiket sıralaması Microsoft Word şemasına uygundur', async () => {

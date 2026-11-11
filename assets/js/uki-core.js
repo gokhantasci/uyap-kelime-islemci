@@ -184,6 +184,7 @@
             elements,
             headerElement,
             footerElement,
+            headerInfo: headerElement ? extractHeaderInfo(headerElement) : null,
             isSigned: signatures.length > 0 || !!sgnFile,
             signatures,
             docProperties,
@@ -505,6 +506,27 @@
             attrs,
             paragraphs
         };
+    }
+
+    function extractHeaderInfo(he) {
+        if (!he || !he.paragraphs || !he.paragraphs.length) return null;
+        const full = he.paragraphs.map(p => (p.runs || []).map(r => r.text || '').join('')).join(' ').trim();
+        let left = full, right = '';
+        if (full.indexOf('\t') >= 0) {
+            const parts = full.split('\t');
+            left = parts[0].trim();
+            right = parts.slice(1).join(' ').trim();
+        } else if (full.indexOf('Dosya-Karar') >= 0) {
+            const i = full.indexOf('Dosya-Karar');
+            left = full.substring(0, i).trim();
+            right = full.substring(i).trim();
+        }
+        const p0 = he.paragraphs[0] || {};
+        const tabSet = p0.tabSet || '';
+        const tabParts = tabSet ? tabSet.split(',')[0].split(':') : [];
+        const tabPosPt = tabParts[0] ? parseFloat(tabParts[0]) : (right ? 255 : 0);
+        const startPg = (he.startPage !== undefined && he.startPage !== null) ? he.startPage : (he.attrs && he.attrs.startPage ? parseInt(he.attrs.startPage, 10) : 1);
+        return { left, right, startPage: startPg, tabSet, tabPosPt, attrs: he.attrs || {}, paragraphs: he.paragraphs };
     }
 
     /**
@@ -961,12 +983,17 @@
             blocks = Array.from(editorEl.childNodes);
         }
 
-        // Üst bilgi (2. sayfadan itibaren), metin akışının başında yer alır (UYAP Tam Uyumlu)
-        if (pageProps.headerInfo && (pageProps.headerInfo.left || pageProps.headerInfo.right)) {
-            const hi = pageProps.headerInfo;
+        // Üst bilgi (metin akışının başında yer alır - UYAP Tam Uyumlu)
+        let hi = pageProps.headerInfo;
+        const rawHeaderEl = pageProps.headerElement || (hi && hi.paragraphs ? hi : null);
+        if ((!hi || (!hi.left && !hi.right)) && rawHeaderEl && rawHeaderEl.paragraphs && rawHeaderEl.paragraphs.length > 0) {
+            hi = extractHeaderInfo(rawHeaderEl);
+        }
+
+        if (hi && (hi.left || hi.right)) {
             const leftText = (hi.left || '').trim();
             const rightText = (hi.right || '').trim();
-            const startPg = hi.startPage || 2;
+            const startPg = (hi.startPage !== undefined && hi.startPage !== null) ? hi.startPage : (hi.attrs && hi.attrs.startPage ? parseInt(hi.attrs.startPage, 10) : 1);
 
             const hRunsXml = [];
             let hFullText = '';
@@ -979,10 +1006,10 @@
 
             if (rightText) {
                 const tabStart = currentOffset + hFullText.length;
-                hFullText += '	';
+                hFullText += '\t';
                 const labelMatch = rightText.match(/^(Dosya-Karar(?:\s*No)?:\s*)(.*)$/i);
                 if (labelMatch) {
-                    const label = '	' + labelMatch[1];
+                    const label = '\t' + labelMatch[1];
                     const val = labelMatch[2];
                     hRunsXml.push(`<content resolver="hvl-default" size="10" bold="true" foreground="-8355712" family="Times New Roman" startOffset="${tabStart}" length="${label.length}" />`);
                     hFullText += labelMatch[1];
@@ -992,7 +1019,7 @@
                         hRunsXml.push(`<content resolver="hvl-default" size="10" bold="false" foreground="-8355712" family="Times New Roman" startOffset="${valStart}" length="${val.length}" />`);
                     }
                 } else {
-                    const rTextWithTab = '	' + rightText;
+                    const rTextWithTab = '\t' + rightText;
                     hRunsXml.push(`<content resolver="hvl-default" size="10" bold="true" foreground="-8355712" family="Times New Roman" startOffset="${tabStart}" length="${rTextWithTab.length}" />`);
                     hFullText += rightText;
                 }
@@ -1005,8 +1032,11 @@
             fullText += hFullText;
             currentOffset += hFullText.length;
 
-            const headerParaXml = `<paragraph LineSpacing="0.0" LeftIndent="0.0" SpaceAbove="1.0" TabSet="255.0:0:0" RightIndent="0.0" Alignment="0" resolver="hvl-default" Hanging="0.0" SpaceBelow="1.0">${hRunsXml.join('')}</paragraph>`;
-            xmlElements.push(`<header startPage="${startPg}" foreground="-8355712" background="-1">${headerParaXml}</header>`);
+            const tabSetAttr = (hi.tabSet !== undefined && hi.tabSet !== null && hi.tabSet !== '') ? hi.tabSet : (rightText ? '255.0:0:0' : '');
+            const tabSetXml = tabSetAttr ? ` TabSet="${tabSetAttr}"` : '';
+            const headerParaXml = `<paragraph LineSpacing="0.0" LeftIndent="0.0" SpaceAbove="1.0"${tabSetXml} RightIndent="0.0" Alignment="0" resolver="hvl-default" Hanging="0.0" SpaceBelow="1.0">${hRunsXml.join('')}</paragraph>`;
+            const startPageAttr = startPg > 1 ? ` startPage="${startPg}"` : (hi.attrs && hi.attrs.startPage ? ` startPage="${hi.attrs.startPage}"` : '');
+            xmlElements.push(`<header${startPageAttr} foreground="-8355712" background="-1">${headerParaXml}</header>`);
         }
 
         for (const block of blocks) {
@@ -1362,8 +1392,8 @@
         if (hasFooter) {
             const fe = pageProps.footerElement;
             const sep = (fe && fe.pageNumberSep !== undefined) ? fe.pageNumberSep : ((footerInfo.pageNumberFormat === 'dash') ? '-' : (footerInfo.pageNumberFormat === 'single' ? '' : '/'));
-            const foreStr = (fe && fe.pageNumberForeStr) || footerInfo.pageNumberForeStr || '';
-            const startNumStr = (fe && fe.pageNumberStartNum) || footerInfo.pageNumberStartNum || '1';
+            const foreStr = (fe && fe.pageNumberForeStr !== undefined) ? fe.pageNumberForeStr : (footerInfo.pageNumberForeStr || '');
+            const startNumStr = (fe && fe.pageNumberStartNum !== undefined) ? fe.pageNumberStartNum : (footerInfo.pageNumberStartNum || '1');
             const footStart = currentOffset;
 
             let footParasXml = '';
@@ -1378,9 +1408,19 @@
                 footParasXml = `<paragraph size="12" LineSpacing="0.0" description="Gövde" LeftIndent="0.0" SpaceAbove="0.0" RightIndent="0.0" Alignment="0" resolver="default" family="Times New Roman" SpaceBelow="0.0"><content resolver="default" size="12" family="Times New Roman" startOffset="${footStart}" length="1" /></paragraph>`;
             }
 
-            xmlElements.push(
-                `<footer pageNumber-fontItalic="false" pageNumber-color="-16777216" foreground="-8355712" pageNumber-fontBold="false" pageNumber-spec="BSP32_2120" background="-1" pageNumber-fontFace="Arial" pageNumber-foreStr="${foreStr}" pageNumber-pageStartNumStr="${startNumStr}" pageNumber-fontSize="11" pageNumber-seperator="${sep}">${footParasXml}</footer>`
-            );
+            const origAttrs = (fe && fe.attrs) ? Object.assign({}, fe.attrs) : {};
+            if (origAttrs['pageNumber-seperator'] === undefined) origAttrs['pageNumber-seperator'] = sep;
+            if (origAttrs['pageNumber-foreStr'] === undefined) origAttrs['pageNumber-foreStr'] = foreStr;
+            if (origAttrs['pageNumber-pageStartNumStr'] === undefined) origAttrs['pageNumber-pageStartNumStr'] = String(startNumStr);
+            if (!origAttrs['pageNumber-fontSize']) origAttrs['pageNumber-fontSize'] = '11';
+            if (!origAttrs['pageNumber-fontFace']) origAttrs['pageNumber-fontFace'] = 'Arial';
+            if (!origAttrs['pageNumber-color']) origAttrs['pageNumber-color'] = '-16777216';
+            if (!origAttrs['pageNumber-spec']) origAttrs['pageNumber-spec'] = 'BSP32_2120';
+            if (!origAttrs['foreground']) origAttrs['foreground'] = '-8355712';
+            if (!origAttrs['background']) origAttrs['background'] = '-1';
+
+            const footerAttrStr = Object.keys(origAttrs).map(k => `${k}="${origAttrs[k]}"`).join(' ');
+            xmlElements.push(`<footer ${footerAttrStr}>${footParasXml}</footer>`);
         }
 
         function serializeParagraphNodeModel(pModel) {

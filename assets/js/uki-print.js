@@ -111,7 +111,7 @@
                 opacity: 0 !important;
             }
             .uki-print-page .pb-header {
-                font: 700 9.84pt 'Times New Roman', serif !important;
+                font: 400 9.84pt 'Times New Roman', serif !important;
                 color: #808080 !important;
                 white-space: nowrap !important;
                 border-bottom: none !important;
@@ -124,9 +124,13 @@
             .uki-print-page .pb-header-right {
                 white-space: nowrap !important;
                 font-size: 9.84pt !important;
+                font-weight: 400 !important;
             }
             .uki-print-page .pb-header-right b {
                 font-weight: 700 !important;
+            }
+            .uki-print-page .pb-header-right span {
+                font-weight: 400 !important;
             }
             .uki-print-page .pb-qr,
             .pb-qr {
@@ -147,12 +151,19 @@
                 max-height: 50.04pt !important;
                 display: block !important;
             }
+            .uki-print-page .pb-footer.pb-footer-text,
+            .uki-print-page .pb-footer-text {
+                position: absolute !important;
+                font-family: 'Times New Roman', serif !important;
+                font-size: 11pt !important;
+                color: #333333 !important;
+            }
             .uki-print-page .pb-footer.pb-notice,
             .uki-print-page .pb-notice {
                 position: absolute !important;
                 border-top: 0.96pt solid #000000 !important;
                 padding-top: 2.8pt !important;
-                font-family: Arial, Helvetica, sans-serif !important;
+                font-family: 'Times New Roman', serif !important;
                 font-size: 6.84pt !important;
                 line-height: 1.1 !important;
                 white-space: nowrap !important;
@@ -164,8 +175,8 @@
             .uki-print-page .pb-notice .pb-copy-code {
                 font-family: Consolas, 'Courier New', monospace !important;
                 font-size: 9.84pt !important;
-                font-weight: 700 !important;
-                letter-spacing: 0.5px !important;
+                font-weight: 400 !important;
+                letter-spacing: normal !important;
             }
             .uki-print-page .pb-footer.pb-pagenum {
                 font-family: Arial, sans-serif !important;
