@@ -103,3 +103,42 @@ UDF (`.udf`) dosyaları arka planda standart bir **ZIP Arşivi** konteyneridir:
 * [ ] GitHub Pages dağıtım yapılandırması (`.github/workflows/deploy.yml` veya doğrudan `gh-pages` dalı).
 * [ ] Kullanım kılavuzu, ekran görüntüleri ve `README.md` hazırlanması.
 
+
+
+---
+
+## DURUM GÜNCELLEMESİ — 2026-11-11 (doğrulanmış)
+
+Bu bölüm, önceki oturumlardaki "yapıldı" iddialarının tarayıcıda sınanmasının sonucudur.
+Kaynaklar: bu dosya, `UYAP_TAM_OZELLIK_MATRISI_VE_YOL_HARITASI.md`, `docs/E_UDF_EDITOR_TEST_NOTLARI.md`.
+
+### Doğrulanıp düzeltilenler
+| Konu | Bulgu | Durum |
+|---|---|---|
+| UDF kaydetme (UYAP'ta açılmama) | `documentproperties.xml` özel bir kök etiketle yazılıyordu; UYAP Java `properties` DTD biçimi bekler. Paragraflarda `resolver="hvl-default"` yoktu. Değişen belgeye eski `sign.sgn` ekleniyordu. | Düzeltildi (JS + `print_to_udf.py`). **Masaüstü UYAP'ta elle açma sınaması hâlâ gerekli.** |
+| `print_to_udf.py` ofsetleri | Run uzunlukları 1 yazılıyor, satır sonu içeriği ve tablo ofsetleri hatalıydı | Üretici baştan yazıldı, ofsetler yeniden hesaplanıyor |
+| Sayfalama / sayfa önizleme / sayfaya git | HTML vardı, motor yoktu (tek uzun sayfa) | `assets/js/uki-pages.js`: gerçek A4 sayfalama, üst bilgi (2. sayfadan), sayfa no, doğrulama satırı, küçük önizlemeler |
+| Örnek kararın görünümü | Belgeye özel hileler (sabit 180pt sütun vb.) | Genel `TabSet`/`Hanging`/girinti işleyicisi; örnek karar 3 sayfa (PDF ile aynı) |
+| Avukat anteti | `escapeHtml` tanımsızdı, pencere hata veriyordu | Düzeltildi; profil `localStorage`'da |
+| Bul ve Değiştir | CSS yoktu (ham HTML görünümü); `` Türkçe harflerde bozuktu; "Tümünü değiştir" `g` bayrağı hatası | Yan panel tasarımı, Türkçe duyarlı arama |
+| Boş paragraf çıktısı | Boş `<br>` satırı iki satır sonu üretiyordu | Düzeltildi |
+
+### Kalanlar (öncelik sırasıyla)
+1. Gerçek UYAP Doküman Editörü ile açma testi (kullanıcı) — başarısızsa `content.xml` farkı bu dosyadaki `Bilinen format notları` ile karşılaştırılacak.
+2. Paragraf özellikleri penceresi (girinti/sekme durağı) — e-udf.com'daki gibi.
+3. Sesli Oku, yazım denetimi aç/kapat, otomatik kaydet + son açılanlar.
+4. Üstbilgi/altbilgi düzenleme arayüzü, sayfa sonu ekleme.
+5. İmzalı belge düzenlenirse imza düşer uyarısı; imza ayrıntı penceresi.
+6. Tablo hücre genişlikleri (`columnSpans`) ve birleştirme.
+
+### Bilinen format notları (gerçek örnekten)
+- Hizalama: 0 sol, 1 ortala, 2 sağ, 3 iki yana. TabSet: `konum:hizalama:dolgu` (hizalama 0 sol / 1 sağ / 2 ortalı).
+- `Hanging` asılı girinti, `FirstLineIndent` ilk satır; `SpaceAbove/Below` 1pt; tek satır aralığı.
+- `<header startPage="2">` yalnızca 2. sayfadan itibaren; altbilgideki doğrulama kodu `<webID id="...">` içindedir.
+- `documentproperties.xml`: `<properties><entry key="uyapdogrulamakodu">…</entry><entry key="uyapsicil">…</entry></properties>`.
+
+
+### Birebir görünüm kalibrasyonu (2026-11-11, örnek karar PDF'i ile ölçüldü)
+`tools/cmp_lines.js` + `examples/ref_lines.json`: PDF'teki 104 satırın başı/sonu ve sayfası web editörle karşılaştırılır (tarayıcı konsolunda `eval` ile çalıştırılır). Sonuç: 104 satırın **102'si birebir aynı satır sonu ve sayfa**, 3 sayfa, sayfa 1 "…hitaben \" aç" ile biter (gerçek editör gibi).
+Bulunan nedenler: (1) satır yüksekliği Java'da 1,1667×punto (14 pt) idi, 1,35 kullanılıyordu; (2) paragraf üst/alt boşluğu (1+1 pt) birleşmemeli (padding); (3) sekme kutusu satırı uzatıyordu (inline padding kullanılıyor); (4) alt bilgi varsa metin alt marjdan değil `footerFOffset + alt bilgi` yüksekliğinden önce biter; (5) Java glif genişlikleri tarayıcıdan hafif geniş: kerning/ligatür kapalı + 0,05 px harf aralığı; (6) paragraf sonu padding'i sığmayınca son satır yanlışlıkla bir sonraki sayfaya itiliyordu.
+Kalan fark: imza bloğunda (Katip/Hakim) satır düzeni.

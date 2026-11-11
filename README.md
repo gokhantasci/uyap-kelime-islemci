@@ -1,15 +1,75 @@
 # UYAP Web Kelime İşlemci (UDF Web Editor)
 
-Adalet Bakanlığı UYAP sistemi tarafından kullanılan `.udf` (UYAP Doküman Formatı) dosyalarını tarayıcı üzerinden doğrudan açmaya, düzenlemeye ve tekrar standart UDF olarak kaydetmeye yarayan açık kaynaklı web uygulaması.
+Adalet Bakanlığı UYAP sistemi tarafından kullanılan `.udf` (UYAP Doküman Formatı) dosyalarını tarayıcı üzerinden doğrudan açmaya, düzenlemeye ve tekrar standart UDF olarak kaydetmeye yarayan açık kaynaklı web uygulaması ve evrensel dönüştürücü ekosistemi.
 
-Herhangi bir Java kurulumu gerektirmez, tamamen istemci tarafında (tarayıcınızda) çalışır ve GitHub Pages üzerinden ücretsiz olarak yayınlanabilir.
+Herhangi bir Java kurulumu gerektirmez, tamamen istemci tarafında (tarayıcınızda) çalışır, GitHub Pages üzerinden ücretsiz olarak yayınlanabilir, tek komutla PowerShell veya Docker ile kurulup çalıştırılabilir.
+
+---
+
+## ⚡ Hızlı Başlangıç: Tek Komutla Kurulum ve Çalıştırma
+
+### 1. Windows PowerShell ile Tek Komutla Kurulum
+
+Aşağıdaki komutla tüm sistemi (Masaüstü kısayolları, Dosya Gezgini sağ tık menüleri, terminal `udf` komutları ve sanal yazıcıyı) saniyeler içinde otomatik kurabilirsiniz:
+
+```powershell
+# Yerel depodan çalıştırma:
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+
+# Veya tek satırda doğrudan internet üzerinden kurulum:
+irm https://raw.githubusercontent.com/uyap-editor/uyap-kelime-islemci/master/install.ps1 | iex
+```
+
+**Kurulum neleri kapsar?**
+* **Masaüstü & Başlat Menüsü:** Tek tıkla açılan "UYAP Kelime İşlemci" web editörü kısayolu.
+* **Sağ Tık Menü Entegrasyonu:** Windows Gezgini'nde herhangi bir `.pdf`, `.docx`, `.md`, `.txt`, `.png`, `.jpg` dosyasına sağ tıklayıp **"UDF'e Dönüştür (Print to UDF)"** seçebilirsiniz.
+* **.UDF Dosya Entegrasyonu:** `.udf` dosyalarına sağ tıklayıp **"UYAP Editöründe Aç"** seçeneği.
+* **Windows 'Gönder (SendTo)' Menüsü:** Dosyaları doğrudan sanal yazıcıya gönderebilme.
+* **Terminalden Evrensel `udf` Komutu:** PowerShell, CMD ve Windows Terminal'de herhangi bir klasörden doğrudan `udf dosya.pdf` çalıştırabilme.
+* **Sanal Yazıcı (Print to UDF):** Yönetici olarak çalıştırıldığında sistem yazıcılarına *"UYAP'a Yazdır (Print to UDF)"* aygıtını ekler.
+* **Temiz Kaldırma:** Dilediğiniz zaman `.\uninstall.ps1` veya `.\install.ps1 -Uninstall` ile tüm sistem kayıtlarını tek hamlede geri alabilirsiniz.
+
+---
+
+### 2. Docker ile Tek Komutla Mikroservis & Web Editörü
+
+Hem modern web editörünü hem de arka plan dönüştürme API'sini Docker ile tek komutta ayağa kaldırabilirsiniz:
+
+```bash
+# Docker Compose ile tek komutla başlatma:
+docker compose up -d
+
+# Veya Docker CLI ile doğrudan çalıştırma:
+docker run -d --name uyap-editor -p 8080:8080 uyap-kelime-islemci:latest
+```
+
+Artık tarayıcınızdan:
+* **Web Editörü:** `http://localhost:8080`
+* **Sağlık Denetimi (Healthcheck):** `http://localhost:8080/api/health`
+* **Headless REST API Uç Noktası:** `http://localhost:8080/api/convert`
+
+#### cURL ile REST API Dönüştürme Örnekleri:
+```bash
+# PDF dosyasını UDF'e dönüştür ve indir:
+curl -X POST "http://localhost:8080/api/convert?filename=karar.pdf" \
+     --data-binary "@karar.pdf" \
+     -o "karar.udf"
+
+# UDF dosyasını Markdown (.md) formatına dönüştür:
+curl -X POST "http://localhost:8080/api/convert?filename=karar.udf&format=md" \
+     --data-binary "@karar.udf" \
+     -o "karar.md"
+```
 
 ---
 
 ## 🌟 Temel Özellikler
 
 - **Kurulumsuz & Sıfır Bağımlılık:** Java JRE veya yerel yazılım kurmaya gerek yoktur. Chrome, Firefox, Edge ve Safari gibi modern tarayıcılarda çalışır.
-- **%100 Yerel ve Güvenli:** Dosyalarınız hiçbir sunucuya yüklenmez; tüm açma, biçimlendirme ve UDF oluşturma işlemleri tarayıcınızın belleğinde gerçekleşir.
+- **🤖 Tarayıcı İçi Yapay Zeka & WebGPU Hukuk Asistanı (`Alt+A`):** Tarayıcıda yerleşik yapay zeka (Chrome Prompt API / Gemini Nano) veya WebGPU donanım hızlandırması ile açılan belgeyi otomatik okur; *"Bu belge ne hakkında, davanın konusu nedir, mahkeme ne karar verdi, kanun yolu ve istinaf süresi ne kadar?"* sorularını yanıtlar, belgeye ilişkin serbest sorular sormanıza olanak tanır (%100 yerel ve gizli).
+- **%100 Yerel ve Gizlilik Güvencesi:** Dosyalarınız hiçbir sunucuya yüklenmez veya aktarılmaz; tüm açma, biçimlendirme, e-imza denetimi ve UDF/Word oluşturma işlemleri doğrudan tarayıcınızın kendi belleğinde yerel olarak gerçekleşir.
+- **Doğrudan Bağlantı ile UDF Açma (`linkac=URL.udf`):** Herhangi bir web sitesinden, portaldan veya `657.com.tr`'den `webeditor.657.com.tr/linkac=URL.udf` veya `?linkac=URL` bağlantısıyla dokümanlar doğrudan editörde açılabilir.
+- **657astro Sayaç ve İstatistik Takibi:** Açılan evrak sayısı, toplam okunan kelime, karakter, satır ve indirilen döküman istatistikleri tutulur; anonim kullanım darbesi iletilir.
 - **Sürükle & Bırak Desteği:** Masaüstünüzdeki `.udf` dosyasını tarayıcı penceresine sürükleyip bırakarak anında görüntüleyebilirsiniz.
 - **Zengin Metin Editörü:**
   - Yazı tipi (Times New Roman, Arial, Calibri vb.) ve punto boyutları
@@ -105,21 +165,36 @@ Projeyi kendi GitHub hesabınızda yayınlamak için:
 
 ```
 ├── index.html                   # Ana web arayüzü ve editör sayfası
+├── install.ps1                  # Tek komutla Windows PowerShell kurulum sihirbazı
+├── uninstall.ps1                # Temiz sistem kaldırma betiği
+├── Dockerfile                   # Python 3.11 Slim mikroservis ve web konteyner tanımı
+├── docker-compose.yml           # Tek komutla Docker Compose orkestrasyonu
 ├── assets/
 │   ├── css/
-│   │   └── style.css            # A4 sayfa düzeni, araç çubuğu ve yazdırma stilleri
+│   │   └── style.css            # A4 sayfa düzeni, araç çubuğu, modallar, koyu tema ve mizanpaj
 │   ├── js/
-│   │   ├── uki-core.js          # UDF (ZIP/XML) ayrıştırma ve üretme çekirdeği
-│   │   ├── uki-editor.js        # WYSIWYG düzenleme ve biçimlendirme motoru
+│   │   ├── uki-core.js          # UDF (ZIP/XML) ayrıştırma, docx & markdown dönüştürme çekirdeği
+│   │   ├── uki-table.js         # Excel / Word zengin tablo yapıştırma ve tablo motoru
+│   │   ├── uki-stats.js         # 657astro sayaç entegrasyonu ve kullanım istatistiği
+│   │   ├── uki-editor.js        # WYSIWYG düzenleme, paragraf ve metin motoru
+│   │   ├── uki-embed.js         # Dış sitelerden linkac=URL ile doğrudan döküman açıcı SDK
+│   │   ├── uki-pages.js         # A4 sayfa bölücü ve sayfalama motoru
+│   │   ├── uki-seal.js          # Yüzen bağımsız elektronik imza mührü
+│   │   ├── uki-ai.js            # Tarayıcı içi yapay zeka & WebGPU belge inceleme ve Q&A asistanı
 │   │   └── app.js               # Arayüz kontrolleri, dosya yönetimi ve eylemler
 │   └── vendor/
 │       └── jszip.min.js         # Çevrimdışı ZIP okuma ve yazma kütüphanesi
-├── .github/
-│   └── workflows/
-│       └── deploy.yml           # Otomatik GitHub Pages dağıtım iş akışı
-├── UYAP_KAYNAKLAR_VE_YOL_HARITASI.md # Teknik analiz ve format inceleme dokümantasyonu
+├── print_to_udf.py              # Evrensel sistem sanal yazıcısı, REST API ve UDF çevirici
 └── README.md
 ```
+
+---
+
+## 👨‍💻 Geliştirici
+
+**Gökhan TAŞÇI**  
+Sakarya Yazı İşleri Müdürü (Sicil No: 139329)  
+Web: [657.com.tr](https://657.com.tr) · [webeditor.657.com.tr](https://webeditor.657.com.tr)
 
 ---
 

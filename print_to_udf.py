@@ -27,6 +27,7 @@ Kullanım:
 
 import os
 import sys
+import re
 import time
 import zipfile
 import platform
@@ -38,17 +39,16 @@ import html
 from html.parser import HTMLParser
 import xml.etree.ElementTree as ET
 
-# PDF İşleme Kütüphanesi
-HAVE_FITX = False
+# PDF İşleme Kütüphanesi (Modern PyMuPDF API)
+
+HAVE_PYMUPDF = False
 try:
-    import pymupdf as fitz
-    HAVE_FITX = True
+    import pymupdf
+    HAVE_PYMUPDF = True
 except ImportError:
-    try:
-        import fitz
-        HAVE_FITX = True
-    except ImportError:
-        pass
+    pymupdf = None
+
+HAVE_FITX = HAVE_PYMUPDF
 
 CURRENT_OS = platform.system()
 
@@ -64,136 +64,97 @@ SPOOL_FILE = os.path.join(APPDATA_DIR, "spool.pdf")
 
 def create_udf_package(paragraphs, page_props=None, full_text=None, sign_bytes=None):
     """
-    Paragraf ve stil verilerini standart UYAP 1.8 UDF zip arşivine paketler.
-    paragraphs: list of dict(text, align, format_runs)
-    page_props: dict(left, right, top, bottom, orientation, etc.)
+    Paragraf listesini gercek UYAP Dokuman Editoru (format_id 1.8) UDF arsivine paketler.
+    Tum ofsetler burada yeniden hesaplanir (full_text parametresi geriye uyumluluk icindir).
+    paragraphs: [{align, runs:[{text,...}]} | {text,...} | {is_table, table_data:{rows:[[{text}]]}}]
     """
-    if page_props is None:
-        page_props = {
-            "mediaSize": "1",
-            "orientation": "1",
-            "leftMargin": "56.69",
-            "rightMargin": "70.86",
-            "topMargin": "70.86",
-            "bottomMargin": "70.86",
-            "headerFOffset": "14.99",
-            "footerFOffset": "60.00"
-        }
+    pp = {"mediaSize": "1", "orientation": "1", "leftMargin": "56.69", "rightMargin": "70.86",
+          "topMargin": "70.86", "bottomMargin": "70.86", "headerFOffset": "14.99", "footerFOffset": "60.00"}
+    pp.update(page_props or {})
 
-    # Metin akışını ve ofsetleri hesapla
-    if full_text is None:
-        full_text = ""
-        offset = 0
-        computed_paras = []
-        for p in paragraphs:
-            p_text = p.get("text", "")
-            p_align = str(p.get("align", "0"))
-            runs = p.get("runs", [])
+    NL = "\n"
+    text_parts = []
+    state = {"off": 0}
+    # UYAP Standart TabSet: 184.25 pt (6.5 cm) İki Nokta Hizalama Pozisyonu
+    P_OPEN = ('<paragraph LineSpacing="0.0" LeftIndent="0.0" SpaceAbove="1.0" TabSet="184.25196838378906:0:0" '
+              'RightIndent="0.0" Alignment="{al}" resolver="hvl-default" Hanging="0.0" SpaceBelow="1.0"{ind}>')
 
-            if not runs and p_text:
-                runs = [{
-                    "start": offset,
-                    "length": len(p_text),
-                    "family": p.get("family", "Times New Roman"),
-                    "size": p.get("size", 12),
-                    "bold": p.get("bold", False),
-                    "italic": p.get("italic", False),
-                    "color": p.get("color", "-16777216")
-                }]
-                full_text += p_text + "\n"
-                offset += len(p_text) + 1
-            else:
-                for r in runs:
-                    r["start"] = offset
-                    full_text += r.get("text", "")
-                    offset += len(r.get("text", ""))
-                full_text += "\n"
-                offset += 1
+    def run_xml(r, txt):
+        start = state["off"]
+        state["off"] += len(txt)
+        text_parts.append(txt)
+        a = ['resolver="hvl-default"', 'startOffset="%d"' % start, 'length="%d"' % len(txt),
+             'family="%s"' % html.escape(str(r.get("family", "Times New Roman"))),
+             'size="%s"' % r.get("size", 12), 'foreground="%s"' % r.get("color", "-16777216")]
+        for k in ("bold", "italic", "underline"):
+            if r.get(k):
+                a.append('%s="true"' % k)
+        return "<content %s />" % " ".join(a)
 
-            computed_paras.append({
-                "align": p_align,
-                "firstLineIndent": p.get("firstLineIndent", "0.0"),
-                "runs": runs,
-                "is_table": p.get("is_table", False),
-                "table_data": p.get("table_data", None)
-            })
-    else:
-        computed_paras = paragraphs
+    def para_xml(align, runs, indent=0):
+        ind = ' FirstLineIndent="%s"' % indent if indent and float(indent) > 0 else ""
+        out = [P_OPEN.format(al=align, ind=ind)]
+        for r in runs:
+            txt = str(r.get("text", "")).replace(chr(13), "").replace(chr(10), " ")
+            if txt:
+                out.append(run_xml(r, txt))
+        start = state["off"]
+        state["off"] += 1
+        text_parts.append(NL)
+        out.append('<content resolver="hvl-default" startOffset="%d" length="1" />' % start)
+        out.append("</paragraph>")
+        return "".join(out)
 
-    # XML Üretimi
-    xml_parts = [
-        '<?xml version="1.0" encoding="UTF-8" ?>',
-        '<template format_version="1.8">',
-        '  <documentproperties>',
-        '    <creationdate>{}</creationdate>'.format(time.strftime("%d.%m.%Y %H:%M:%S")),
-        '    <lastmodifieddate>{}</lastmodifieddate>'.format(time.strftime("%d.%m.%Y %H:%M:%S")),
-        '    <creator>Print to UDF Universal</creator>',
-        '    <editorVersion>5.0.0</editorVersion>',
-        '  </documentproperties>',
-        '  <pageProperties mediaSize="{}" orientation="{}" leftMargin="{}" rightMargin="{}" topMargin="{}" bottomMargin="{}" headerFOffset="{}" footerFOffset="{}" />'.format(
-            page_props.get("mediaSize", "1"),
-            page_props.get("orientation", "1"),
-            page_props.get("leftMargin", "56.69"),
-            page_props.get("rightMargin", "70.86"),
-            page_props.get("topMargin", "70.86"),
-            page_props.get("bottomMargin", "70.86"),
-            page_props.get("headerFOffset", "14.99"),
-            page_props.get("footerFOffset", "60.00")
-        ),
-        '  <elements>'
-    ]
-
-    for p in computed_paras:
+    elements = []
+    for p in paragraphs:
         if p.get("is_table") and p.get("table_data"):
             t = p["table_data"]
-            border_style = t.get("border", "borderCell")
-            xml_parts.append(f'    <table border="{border_style}">')
-            for row in t.get("rows", []):
-                xml_parts.append('      <row>')
+            rows = t.get("rows", [])
+            cols = max((len(r) for r in rows), default=1)
+            rx = []
+            for ri, row in enumerate(rows):
+                cells = []
                 for cell in row:
-                    cell_text = html.escape(cell.get("text", ""))
-                    cell_align = cell.get("align", "0")
-                    xml_parts.append(f'        <cell><paragraph alignment="{cell_align}"><content family="Times New Roman" size="11" foreground="-16777216">{cell_text}</content></paragraph></cell>')
-                xml_parts.append('      </row>')
-            xml_parts.append('    </table>')
+                    cells.append("<cell>%s</cell>" % para_xml("0", [{"size": 11, "text": cell.get("text", "")}]))
+                for _ in range(cols - len(row)):
+                    cells.append("<cell>%s</cell>" % para_xml("0", []))
+                rx.append('<row rowName="row%d" rowType="dataRow">%s</row>' % (ri + 1, "".join(cells)))
+            elements.append('<table tableName="Sabit" columnCount="%d" columnSpans="%s" border="%s">%s</table>' % (
+                cols, ",".join(["100"] * cols), t.get("border", "borderCell"), "".join(rx)))
         else:
-            align = p.get("align", "0")
-            first_indent = p.get("firstLineIndent", "0.0")
-            xml_parts.append(f'    <paragraph alignment="{align}" firstLineIndent="{first_indent}">')
-            for r in p.get("runs", []):
-                attrs = [
-                    f'family="{html.escape(r.get("family", "Times New Roman"))}"',
-                    f'size="{r.get("size", 12)}"',
-                    f'foreground="{r.get("color", "-16777216")}"'
-                ]
-                if r.get("bold"):
-                    attrs.append('bold="true"')
-                if r.get("italic"):
-                    attrs.append('italic="true"')
-                if r.get("underline"):
-                    attrs.append('underline="true"')
-                if "start" in r and "length" in r:
-                    attrs.append(f'startOffset="{r["start"]}"')
-                    attrs.append(f'length="{r["length"]}"')
+            runs = p.get("runs")
+            if not runs:
+                base = {k: p[k] for k in ("family", "size", "bold", "italic", "underline", "color") if k in p}
+                base["text"] = p.get("text", "")
+                runs = [base]
+            elements.append(para_xml(str(p.get("align", "0")), runs, p.get("firstLineIndent", 0)))
 
-                attr_str = " ".join(attrs)
-                run_text = html.escape(r.get("text", ""))
-                xml_parts.append(f'      <content {attr_str}>{run_text}</content>')
-            xml_parts.append('    </paragraph>')
+    full = "".join(text_parts)
+    content_xml = (
+        '<?xml version="1.0" encoding="UTF-8" ?>' + NL + NL + '<template format_id="1.8" >' + NL +
+        '<content><![CDATA[' + full + ']]></content><properties><pageFormat mediaSizeName="' + str(pp["mediaSize"]) +
+        '" leftMargin="' + str(pp["leftMargin"]) + '" rightMargin="' + str(pp["rightMargin"]) +
+        '" topMargin="' + str(pp["topMargin"]) + '" bottomMargin="' + str(pp["bottomMargin"]) +
+        '" paperOrientation="' + str(pp["orientation"]) + '" headerFOffset="' + str(pp["headerFOffset"]) +
+        '" footerFOffset="' + str(pp["footerFOffset"]) + '" /></properties>' + NL + '<elements >' + NL +
+        NL.join(elements) + NL + '</elements>' + NL +
+        '<styles><style name="default" description="Geçerli" family="Dialog" size="12" bold="false" italic="false" '
+        'FONT_ATTRIBUTE_KEY="javax.swing.plaf.FontUIResource[family=Dialog,name=Dialog,style=plain,size=12]" '
+        'foreground="-13421773" /><style name="hvl-default" family="Times New Roman" size="12" description="Gövde" /></styles>'
+        + NL + '</template>')
 
-    xml_parts.append('  </elements>')
-    xml_parts.append('</template>')
+    doc_props = ('<?xml version="1.0" encoding="UTF-8"?>' + NL +
+                 '<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">' + NL +
+                 '<properties>' + NL + '<entry key="uyapdogrulamakodu"></entry>' + NL +
+                 '<entry key="uyapsicil"></entry>' + NL + '</properties>' + NL)
 
-    content_xml = "\n".join(xml_parts)
-
-    # ZIP Arşivi Oluştur
     import io
     zip_buf = io.BytesIO()
     with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("content.xml", content_xml.encode("utf-8"))
+        zf.writestr("documentproperties.xml", doc_props.encode("utf-8"))
         if sign_bytes:
             zf.writestr("sign.sgn", sign_bytes)
-
     return zip_buf.getvalue()
 
 
@@ -203,13 +164,13 @@ def create_udf_package(paragraphs, page_props=None, full_text=None, sign_bytes=N
 
 def convert_pdf_to_udf(pdf_input, udf_output_path=None):
     """PDF belgesini mizanpaj, hizalama ve font bilgileriyle UDF'e çevirir."""
-    if not HAVE_FITX:
+    if not HAVE_PYMUPDF or pymupdf is None:
         raise RuntimeError("PDF dönüştürmek için 'pymupdf' kütüphanesi gereklidir. (pip install pymupdf)")
 
     if isinstance(pdf_input, (str, bytes, os.PathLike)) and os.path.exists(str(pdf_input)):
-        doc = fitz.open(str(pdf_input))
+        doc = pymupdf.open(str(pdf_input))
     else:
-        doc = fitz.open(stream=pdf_input, filetype="pdf")
+        doc = pymupdf.open(stream=pdf_input, filetype="pdf")
 
     full_text = ""
     current_offset = 0
@@ -218,6 +179,7 @@ def convert_pdf_to_udf(pdf_input, udf_output_path=None):
     for page_idx in range(len(doc)):
         page = doc[page_idx]
         page_w = page.rect.width
+        page_h = page.rect.height
         blocks = page.get_text("dict").get("blocks", [])
 
         for b in blocks:
@@ -225,6 +187,19 @@ def convert_pdf_to_udf(pdf_input, udf_output_path=None):
                 continue
 
             b_x0, b_y0, b_x1, b_y1 = b["bbox"]
+
+            # Sayfa 2+ Üst Bilgi Başlıklarını Gövdeden Ayıkla (UYAP'ta üst bilgi ayrıdır)
+            if page_idx > 0 and b_y0 < 65:
+                block_txt = " ".join("".join(s.get("text", "") for s in l["spans"]) for l in b["lines"]).strip()
+                if "MAHKEMESİ" in block_txt or "Dosya-Karar" in block_txt:
+                    continue
+
+            # Alt Bilgi ve Sayfa Numaralarını Gövdeden Ayıkla
+            if b_y1 > page_h - 65:
+                block_txt = " ".join("".join(s.get("text", "") for s in l["spans"]) for l in b["lines"]).strip()
+                if "vatandas.uyap.gov.tr" in block_txt or re.match(r'^\d+\s*/\s*\d+$', block_txt):
+                    continue
+
             center_dist = abs(((b_x0 + b_x1) / 2.0) - (page_w / 2.0))
 
             align = "0"
@@ -237,10 +212,30 @@ def convert_pdf_to_udf(pdf_input, udf_output_path=None):
 
             para_runs = []
             for line in b["lines"]:
-                for span in line["spans"]:
+                # Satır metnini birleştir
+                line_text = "".join(s.get("text", "") for s in line["spans"])
+                # UYAP İki Nokta (Colon) Tab Hizalaması Tespiti
+                is_meta_colon = bool(":" in line_text and re.search(
+                    r'^(DOSYA NO|KARAR NO|\[?C\.SAVCILIĞI ESAS NO\]?|HAKİM|KATİP|DAVACI|MÜŞTEKİ SANIK|SANIK|MAĞDUR|SUÇ|SUÇ TARİHİ|SUÇ YERİ|KARAR TARİHİ)\b',
+                    line_text.strip()
+                ))
+
+                for span_idx, span in enumerate(line["spans"]):
                     txt = span.get("text", "")
                     if not txt:
                         continue
+
+                    # Stray cedilla (¸) temizle
+                    txt = txt.replace("\u00b8", "")
+
+                    # Eğer metadata satırıysa ve bu span iki nokta içeriyorsa, önüne sekme (\t) koy
+                    if is_meta_colon and ":" in txt:
+                        # Eğer iki noktanın solunda boşluklar varsa veya bitiştirilmişse
+                        parts = txt.split(":", 1)
+                        if parts[0].strip() and parts[0].strip() in ("DOSYA NO", "KARAR NO", "HAKİM", "KATİP", "DAVACI", "SUÇ", "SUÇ YERİ", "KARAR TARİHİ", "[C.SAVCILIĞI ESAS NO]"):
+                            txt = parts[0].strip() + "\t: " + parts[1].lstrip()
+                        elif not parts[0].strip() and span_idx > 0:
+                            txt = "\t: " + parts[1].lstrip()
 
                     font_name = span.get("font", "").lower()
                     flags = span.get("flags", 0)
@@ -403,6 +398,226 @@ def convert_text_to_udf(txt_path_or_str, udf_output_path=None):
         with open(udf_output_path, "wb") as f:
             f.write(udf_bytes)
         return udf_output_path
+    return udf_bytes
+
+
+def convert_markdown_to_udf(md_path_or_str, udf_output_path=None):
+    """Markdown (.md) belgesini yapısal, zengin ve formatlı UDF dokümanına çevirir."""
+    if os.path.exists(str(md_path_or_str)):
+        with open(str(md_path_or_str), "r", encoding="utf-8", errors="replace") as f:
+            content = f.read()
+    else:
+        content = str(md_path_or_str)
+
+    lines = content.replace("\r\n", "\n").split("\n")
+    paras = []
+    table_rows = []
+    in_table = False
+
+    def flush_table():
+        nonlocal in_table, table_rows
+        if in_table and table_rows:
+            paras.append({
+                "is_table": True,
+                "table_data": {"rows": table_rows, "border": "borderCell"}
+            })
+            table_rows = []
+            in_table = False
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Tablo satırları (| col1 | col2 |)
+        if stripped.startswith("|") and stripped.endswith("|"):
+            if re.match(r"^\|[\s\-:]+(\|[\s\-:]+)+\|$", stripped):
+                continue
+            cells = [c.strip() for c in stripped[1:-1].split("|")]
+            table_rows.append([{"text": c} for c in cells])
+            in_table = True
+            continue
+        elif in_table:
+            flush_table()
+
+        # Başlıklar (# H1, ## H2, ### H3)
+        m_head = re.match(r"^(#{1,6})\s+(.+)$", stripped)
+        if m_head:
+            level = len(m_head.group(1))
+            txt = m_head.group(2).strip()
+            if level == 1:
+                paras.append({"text": txt, "bold": True, "size": 15, "align": "1"})
+            elif level == 2:
+                paras.append({"text": txt, "bold": True, "size": 13.5, "align": "0"})
+            else:
+                paras.append({"text": txt, "bold": True, "size": 12, "align": "0"})
+            continue
+
+        # Alıntılar (> ...)
+        if stripped.startswith(">"):
+            txt = stripped.lstrip(">").strip()
+            paras.append({"text": txt, "italic": True, "firstLineIndent": "28.34", "align": "0"})
+            continue
+
+        # Yatay çizgi (---, ***)
+        if stripped in ("---", "***", "___"):
+            paras.append({"text": "―" * 40, "align": "1", "size": 10})
+            continue
+
+        # Sırasız Liste (- veya *)
+        m_ul = re.match(r"^[\*\-\+]\s+(.+)$", stripped)
+        if m_ul:
+            paras.append({"text": "• " + m_ul.group(1), "firstLineIndent": "14.17", "align": "0"})
+            continue
+
+        # Sıralı Liste (1. 2.)
+        m_ol = re.match(r"^(\d+\.)\s+(.+)$", stripped)
+        if m_ol:
+            paras.append({"text": f"{m_ol.group(1)} {m_ol.group(2)}", "firstLineIndent": "14.17", "align": "0"})
+            continue
+
+        # Boş satır
+        if not stripped:
+            paras.append({"text": " ", "align": "0"})
+            continue
+
+        # Standart UYAP Paragrafı
+        paras.append({"text": stripped, "align": "3", "firstLineIndent": "28.34", "size": 12})
+
+    flush_table()
+
+    udf_bytes = create_udf_package(paras)
+    if udf_output_path:
+        with open(udf_output_path, "wb") as f:
+            f.write(udf_bytes)
+        return udf_output_path
+    return udf_bytes
+
+
+def convert_udf_to_markdown(udf_path_or_bytes, md_output_path=None):
+    """UDF arşivini açarak içeriğini standart GitHub Flavored Markdown (.md) formatına dönüştürür."""
+    if isinstance(udf_path_or_bytes, (str, os.PathLike)) and os.path.exists(str(udf_path_or_bytes)):
+        zf = zipfile.ZipFile(str(udf_path_or_bytes), "r")
+    else:
+        import io
+        zf = zipfile.ZipFile(io.BytesIO(udf_path_or_bytes), "r")
+
+    with zf:
+        xml_content = zf.read("content.xml").decode("utf-8", errors="replace")
+        if "content.txt" in zf.namelist():
+            txt_content = zf.read("content.txt").decode("utf-8", errors="replace")
+        else:
+            root_match = re.search(r"<content><!\[CDATA\[(.*?)\]\]></content>", xml_content, re.DOTALL)
+            txt_content = root_match.group(1) if root_match else ""
+
+    root = ET.fromstring(xml_content)
+    md_lines = []
+
+    elements_node = root.find("elements")
+    if elements_node is None:
+        elements_node = root
+
+    for elem in elements_node:
+        tag = elem.tag.lower()
+        if tag == "paragraph":
+            p_text = ""
+            is_bold = False
+            is_italic = False
+            size = 12.0
+            align = elem.get("Alignment", "0")
+
+            for content_tag in elem.findall("content"):
+                start = int(content_tag.get("startOffset", 0))
+                length = int(content_tag.get("length", 0))
+                chunk = txt_content[start:start + length]
+                if content_tag.get("bold") == "true":
+                    is_bold = True
+                if content_tag.get("italic") == "true":
+                    is_italic = True
+                try:
+                    s_val = float(content_tag.get("size", 12))
+                    if s_val > size:
+                        size = s_val
+                except (ValueError, TypeError):
+                    pass
+                p_text += chunk
+
+            p_clean = p_text.rstrip("\r\n").strip()
+            if not p_clean:
+                md_lines.append("")
+                continue
+
+            # Başlık tespiti
+            if size >= 14 and (is_bold or align == "1"):
+                md_lines.append(f"# {p_clean}\n")
+            elif size >= 13 and is_bold:
+                md_lines.append(f"## {p_clean}\n")
+            elif p_clean.startswith("• ") or p_clean.startswith("- "):
+                md_lines.append(f"- {p_clean[2:]}")
+            elif is_bold and not is_italic:
+                md_lines.append(f"**{p_clean}**\n")
+            elif is_italic and not is_bold:
+                md_lines.append(f"*{p_clean}*\n")
+            else:
+                md_lines.append(f"{p_clean}\n")
+
+        elif tag == "table":
+            rows = elem.findall("row")
+            table_md = []
+            for r_idx, row in enumerate(rows):
+                cells = row.findall("cell")
+                cell_texts = []
+                for cell in cells:
+                    c_txt = ""
+                    for p in cell.findall("paragraph"):
+                        for c in p.findall("content"):
+                            st = int(c.get("startOffset", 0))
+                            ln = int(c.get("length", 0))
+                            c_txt += txt_content[st:st + ln]
+                    cell_texts.append(c_txt.strip().replace("|", "\\|").replace("\n", " "))
+                table_md.append("| " + " | ".join(cell_texts) + " |")
+                if r_idx == 0:
+                    table_md.append("| " + " | ".join(["---"] * len(cells)) + " |")
+
+            if table_md:
+                md_lines.append("\n".join(table_md) + "\n")
+
+    result_md = "\n".join(md_lines).replace("\n\n\n+", "\n\n").strip() + "\n"
+
+    if md_output_path:
+        with open(md_output_path, "w", encoding="utf-8") as f:
+            f.write(result_md)
+        return md_output_path
+
+    return result_md
+
+
+def convert_image_ocr_to_udf(image_path, output_udf=None, lang="tur"):
+    """Taranmış görseli (PNG, JPG, TIFF, BMP) veya taranmış sayfayı OCR ile metne döküp UDF yapar."""
+    extracted_text = ""
+    try:
+        img_doc = pymupdf.open(image_path)
+        pdf_bytes = img_doc.convert_to_pdf()
+        pdf_doc = pymupdf.open("pdf", pdf_bytes)
+        for page in pdf_doc:
+            try:
+                tp = page.get_textpage_ocr(language=lang)
+                extracted_text += page.get_text(textpage=tp) + "\n"
+            except Exception:
+                extracted_text += page.get_text() + "\n"
+        if extracted_text.strip():
+            return convert_text_to_udf(extracted_text, output_udf)
+    except Exception as e:
+        print(f"[!] Görsel OCR uyarısı: {e}")
+
+    # Fallback
+    paras = [
+        {"text": f"[Taranmış Belge: {os.path.basename(image_path)}]", "align": "1", "bold": True, "size": 14},
+        {"text": f"Görsel Boyutu: {os.path.getsize(image_path)} bayt", "align": "1"}
+    ]
+    udf_bytes = create_udf_package(paras)
+    if output_udf:
+        with open(output_udf, "wb") as f:
+            f.write(udf_bytes)
+        return output_udf
     return udf_bytes
 
 
@@ -587,7 +802,9 @@ def convert_any_to_udf(input_file, output_udf=None):
 
     print(f"[*] Dosya Türü Algılandı: {ext} -> UDF'e dönüştürülüyor...")
 
-    if ext == ".pdf":
+    if ext in (".md", ".markdown"):
+        return convert_markdown_to_udf(input_file, output_udf)
+    elif ext == ".pdf":
         return convert_pdf_to_udf(input_file, output_udf)
     elif ext in (".docx", ".doc"):
         if ext == ".docx":
@@ -601,16 +818,8 @@ def convert_any_to_udf(input_file, output_udf=None):
         return convert_html_to_udf(input_file, output_udf)
     elif ext in (".txt", ".log", ".md", ".json", ".xml", ".py", ".sql", ".ini", ".rtf"):
         return convert_text_to_udf(input_file, output_udf)
-    elif ext in (".png", ".jpg", ".jpeg", ".bmp", ".tiff"):
-        # Resim dosyasını UDF içine yerleştir
-        paras = [
-            {"text": f"[Gömülü Görsel Belge: {os.path.basename(input_file)}]", "align": "1", "bold": True},
-            {"text": f"Görsel Boyutu: {os.path.getsize(input_file)} bayt", "align": "1"}
-        ]
-        udf_bytes = create_udf_package(paras)
-        with open(output_udf, "wb") as f:
-            f.write(udf_bytes)
-        return output_udf
+    elif ext in (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"):
+        return convert_image_ocr_to_udf(input_file, output_udf)
     else:
         # Önce metin dosyası olarak okumayı dene (UTF-8 / ANSI)
         try:
@@ -772,6 +981,148 @@ def uninstall_system_virtual_printer():
 # 4. ARKA PLAN YAZDIRMA İZLEYİCİSİ (SPOOL INTERCEPTOR DAEMON)
 # ==============================================================================
 
+# ==============================================================================
+# 4a. "NEREYE KAYDEDİLSİN?" PENCERESİ (Print to PDF gibi) VE YARDIMCILAR
+# ==============================================================================
+
+CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".uyap_print_to_udf.json")
+
+
+def _load_config():
+    try:
+        import json
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_config(cfg):
+    try:
+        import json
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+
+def default_save_dir():
+    """Son kullanılan klasör; yoksa Belgeler; o da yoksa kullanıcı klasörü."""
+    cfg = _load_config()
+    last = cfg.get("last_dir")
+    if last and os.path.isdir(last):
+        return last
+    home = os.path.expanduser("~")
+    for name in ("Documents", "Belgeler", "Desktop", "Masaüstü"):
+        cand = os.path.join(home, name)
+        if os.path.isdir(cand):
+            return cand
+    return home
+
+
+def suggest_file_name(pdf_path=None):
+    """Yazdırılan belgenin başlığından (yoksa tarih-saatten) önerilen .udf adı."""
+    stamp = time.strftime("%Y%m%d_%H%M%S")
+    name = ""
+    try:
+        if pdf_path and HAVE_PYMUPDF and pymupdf is not None:
+            doc = pymupdf.open(str(pdf_path))
+            name = (doc.metadata or {}).get("title") or ""
+            if not name.strip() and len(doc):
+                name = (doc[0].get_text("text") or "").strip().split("\n")[0]
+            doc.close()
+    except Exception:
+        name = ""
+    keep = []
+    for ch in name.strip():
+        keep.append(ch if (ch.isalnum() or ch in " -_.()") else "_")
+    name = "".join(keep).strip(" ._")[:60]
+    return (name or "Yazdirma_" + stamp) + ".udf"
+
+
+def ask_save_path(default_name):
+    """
+    'Farklı Kaydet' penceresini açar (Print to PDF gibi). İptal edilirse None döner.
+    Pencere açılamazsa (ör. ekransız ortam) Belgeler klasörüne kaydeder ve yolu bildirir.
+    """
+    start_dir = default_save_dir()
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        try:
+            root.attributes("-topmost", True)
+        except Exception:
+            pass
+        path = filedialog.asksaveasfilename(
+            parent=root,
+            title="UYAP'a Yazdır - UDF olarak kaydet",
+            defaultextension=".udf",
+            filetypes=[("UYAP Doküman (*.udf)", "*.udf")],
+            initialdir=start_dir,
+            initialfile=default_name,
+        )
+        root.destroy()
+        if not path:
+            return None
+    except Exception:
+        path = os.path.join(start_dir, default_name)
+    if not path.lower().endswith(".udf"):
+        path += ".udf"
+    cfg = _load_config()
+    cfg["last_dir"] = os.path.dirname(path)
+    _save_config(cfg)
+    return path
+
+
+def reveal_in_folder(path):
+    """Kaydedilen dosyayı dosya yöneticisinde gösterir (Windows: seçili olarak)."""
+    try:
+        if CURRENT_OS == "Windows":
+            subprocess.Popen(["explorer", "/select," + os.path.normpath(path)])
+        elif CURRENT_OS == "Darwin":
+            subprocess.Popen(["open", "-R", path])
+        else:
+            subprocess.Popen(["xdg-open", os.path.dirname(path)])
+    except Exception:
+        pass
+
+
+def notify_saved(path):
+    """Kullanıcıya kaydedilen yeri açıkça bildirir."""
+    print("    [BAŞARILI] UDF kaydedildi: " + path)
+    if CURRENT_OS == "Windows":
+        try:
+            from tkinter import messagebox
+            import tkinter as tk
+            root = tk.Tk()
+            root.withdraw()
+            try:
+                root.attributes("-topmost", True)
+            except Exception:
+                pass
+            if messagebox.askyesno("UYAP'a Yazdır", "UDF kaydedildi:\n" + path + "\n\nKlasörde gösterilsin mi?", parent=root):
+                reveal_in_folder(path)
+            root.destroy()
+            return
+        except Exception:
+            pass
+    reveal_in_folder(path)
+
+
+def handle_print_job(spool_path):
+    """Yakalanan yazdırma işini kullanıcıya sorarak UDF'e çevirir. Başarılıysa yolu döndürür."""
+    name = suggest_file_name(spool_path)
+    out_udf = ask_save_path(name)
+    if not out_udf:
+        print("    Kaydetme iptal edildi; yazdırma işi atlandı.")
+        return None
+    convert_pdf_to_udf(spool_path, out_udf)
+    notify_saved(out_udf)
+    return out_udf
+
+
 def run_spool_daemon():
     """
     Sanal yazıcıya herhangi bir programdan gönderilen yazdırma işlerini
@@ -795,30 +1146,9 @@ def run_spool_daemon():
                     # Spooler'ın dosyayı kapatmasını bekle
                     time.sleep(0.5)
 
-                    timestamp = time.strftime("%Y%m%d_%H%M%S")
-                    desktop_dir = os.path.join(os.path.expanduser("~"), "Desktop")
-                    out_udf = os.path.join(desktop_dir, f"UYAP_Yazdir_{timestamp}.udf")
-
-                    print(f"\n[+] Yazdırma İşi Yakalandı! ({size} bayt)")
-                    print(f"    Dönüştürülüyor -> {out_udf}")
-
+                    print(f"[+] Yazdırma İşi Yakalandı! ({size} bayt)")
                     try:
-                        convert_pdf_to_udf(SPOOL_FILE, out_udf)
-                        print(f"    [BAŞARILI] UDF Dosyası Oluşturuldu: {out_udf}")
-
-                        # Kullanıcıya Toast Bildirimi göster (Windows)
-                        if CURRENT_OS == "Windows":
-                            notify_ps = f"""
-                            [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-                            [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
-                            $template = '<toast><visual><binding template="ToastText02"><text id="1">UYAP\'a Yazdır Tamamlandı</text><text id="2">Masaüstüne kaydedildi: {os.path.basename(out_udf)}</text></binding></visual></toast>'
-                            $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-                            $xml.LoadXml($template)
-                            $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
-                            [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("UYAP Kelime Islemci").Show($toast)
-                            """
-                            subprocess.run(["powershell", "-NoProfile", "-Command", notify_ps], check=False)
-
+                        handle_print_job(SPOOL_FILE)
                     except Exception as e:
                         print(f"    [HATA] Dönüştürme başarısız: {e}")
 
@@ -978,6 +1308,192 @@ def launch_gui():
 
 
 # ==============================================================================
+# 5b. YERLEŞİK HTTP WEB VE REST API SUNUCUSU (DOCKER & LOCAL SERVER)
+# ==============================================================================
+
+def run_http_server(port=8080, host="0.0.0.0"):
+    """
+    Yerleşik HTTP Sunucusu ve REST API Motoru (Docker & Yerel Web Çalıştırma).
+    Hem modern web editörünü (index.html ve tüm statik varlıkları) sunar,
+    hem de /api/convert ve /api/health REST uç noktalarını sağlar.
+    """
+    import json
+    import urllib.parse
+    from http.server import SimpleHTTPRequestHandler, HTTPServer
+    from email.parser import BytesParser
+    from email.policy import default as default_policy
+
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+
+    class UdfRequestHandler(SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=root_dir, **kwargs)
+
+        def end_headers(self):
+            # CORS & Güvenlik Başlıkları
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Filename")
+            super().end_headers()
+
+        def do_OPTIONS(self):
+            self.send_response(204)
+            self.end_headers()
+
+        def do_GET(self):
+            parsed = urllib.parse.urlparse(self.path)
+            if parsed.path == "/api/sozluk" or parsed.path.startswith("/api/sozluk/kelime/"):
+                from dictionary_api import lookup
+                word = urllib.parse.parse_qs(parsed.query).get('kelime', [''])[0]
+                if parsed.path.startswith('/api/sozluk/kelime/'):
+                    word = urllib.parse.unquote(parsed.path.rsplit('/', 1)[-1])
+                try:
+                    result = lookup(word)
+                    status = 200
+                except ValueError as exc:
+                    result, status = {'error': str(exc)}, 400
+                except Exception:
+                    result, status = {'error': 'TDK kaynağına ulaşılamadı. Daha sonra deneyin.'}, 502
+                self.send_response(status)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Cache-Control', 'public, max-age=3600' if status == 200 else 'no-store')
+                self.end_headers()
+                self.wfile.write(json.dumps(result, ensure_ascii=False).encode('utf-8'))
+                return
+            if parsed.path == "/api/health":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                res = {
+                    "status": "ok",
+                    "app": "UYAP Kelime İşlemci & Print to UDF",
+                    "version": "1.8",
+                    "features": {
+                        "pdf": HAVE_PYMUPDF,
+                        "docx": True,
+                        "table": True,
+                        "markdown": True,
+                        "ocr": True,
+                        "virtual_printer": CURRENT_OS == "Windows"
+                    }
+                }
+                self.wfile.write(json.dumps(res, ensure_ascii=False, indent=2).encode("utf-8"))
+                return
+            if parsed.path.startswith("/linkac="):
+                self.path = "/index.html"
+            super().do_GET()
+
+        def do_POST(self):
+            parsed = urllib.parse.urlparse(self.path)
+            if parsed.path == "/api/convert":
+                try:
+                    qparams = urllib.parse.parse_qs(parsed.query)
+                    target_fmt = qparams.get("format", ["udf"])[0].lower()
+                    in_name = qparams.get("filename", ["document.pdf"])[0]
+
+                    length = int(self.headers.get("Content-Length", 0))
+                    if length <= 0:
+                        self.send_error(400, "Boş istek gövdesi (Content-Length missing or 0)")
+                        return
+
+                    body = self.rfile.read(length)
+                    content_type = self.headers.get("Content-Type", "")
+
+                    file_bytes = None
+                    file_name = self.headers.get("X-Filename", in_name)
+
+                    if "multipart/form-data" in content_type:
+                        msg_headers = f"Content-Type: {content_type}\r\n\r\n".encode("utf-8")
+                        msg = BytesParser(policy=default_policy).parsebytes(msg_headers + body)
+                        for part in msg.iter_parts():
+                            p_disp = part.get("Content-Disposition", "")
+                            if "filename=" in p_disp:
+                                file_name = part.get_filename() or file_name
+                                file_bytes = part.get_payload(decode=True)
+                                break
+                        if not file_bytes:
+                            for part in msg.iter_parts():
+                                file_bytes = part.get_payload(decode=True)
+                                if file_bytes:
+                                    break
+                    else:
+                        file_bytes = body
+
+                    if not file_bytes:
+                        self.send_error(400, "Dönüştürülecek dosya içeriği bulunamadı.")
+                        return
+
+                    ext = os.path.splitext(file_name)[1].lower() or ".pdf"
+                    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp_in:
+                        tmp_in.write(file_bytes)
+                        tmp_in_path = tmp_in.name
+
+                    try:
+                        base = os.path.splitext(os.path.basename(file_name))[0]
+                        if target_fmt in ("md", "markdown") or ext == ".udf":
+                            out_ext = ".md"
+                            out_mime = "text/markdown; charset=utf-8"
+                            with tempfile.NamedTemporaryFile(suffix=out_ext, delete=False) as tmp_out:
+                                tmp_out_path = tmp_out.name
+                            convert_udf_to_markdown(tmp_in_path, tmp_out_path)
+                            download_name = f"{base}.md"
+                        else:
+                            out_ext = ".udf"
+                            out_mime = "application/octet-stream"
+                            with tempfile.NamedTemporaryFile(suffix=out_ext, delete=False) as tmp_out:
+                                tmp_out_path = tmp_out.name
+                            convert_any_to_udf(tmp_in_path, tmp_out_path)
+                            download_name = f"{base}.udf"
+
+                        with open(tmp_out_path, "rb") as out_f:
+                            result_data = out_f.read()
+
+                        try:
+                            os.remove(tmp_out_path)
+                        except Exception:
+                            pass
+
+                        self.send_response(200)
+                        self.send_header("Content-Type", out_mime)
+                        self.send_header("Content-Length", str(len(result_data)))
+                        self.send_header("Content-Disposition", f'attachment; filename="{download_name}"')
+                        self.end_headers()
+                        self.wfile.write(result_data)
+                    finally:
+                        try:
+                            os.remove(tmp_in_path)
+                        except Exception:
+                            pass
+
+                except Exception as err:
+                    err_msg = json.dumps({"error": str(err)}, ensure_ascii=False)
+                    self.send_response(500)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.send_header("Content-Length", str(len(err_msg.encode("utf-8"))))
+                    self.end_headers()
+                    self.wfile.write(err_msg.encode("utf-8"))
+                return
+
+            super().do_POST()
+
+    server_address = (host, port)
+    httpd = HTTPServer(server_address, UdfRequestHandler)
+    display_host = "localhost" if host in ("0.0.0.0", "") else host
+    print("=" * 70)
+    print(f" UYAP Kelime İşlemci & REST API Sunucusu Çalışıyor!")
+    print(f" -> Web Arayüzü: http://{display_host}:{port}")
+    print(f" -> REST API:    http://{display_host}:{port}/api/convert")
+    print(f" -> Sağlık Testi:http://{display_host}:{port}/api/health")
+    print(" Durdurmak için Ctrl+C tuşlarına basın.")
+    print("=" * 70)
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nSunucu kapatıldı.")
+        httpd.server_close()
+
+
+# ==============================================================================
 # 6. KOMUT SATIRI VE GİRİŞ NOKTASI (MAIN CLI)
 # ==============================================================================
 
@@ -989,8 +1505,15 @@ def main():
     parser.add_argument("--uninstall", action="store_true", help="Sanal yazıcıyı sistemden kaldırır")
     parser.add_argument("--daemon", action="store_true", help="Arka planda Ctrl+P yazdırma işlerini yakalar")
     parser.add_argument("--gui", action="store_true", help="Grafik kullanıcı arayüzünü açar")
+    parser.add_argument("--to-md", action="store_true", help="UDF belgesini Markdown (.md) formatına dönüştürür")
+    parser.add_argument("--serve", nargs="?", const=8080, type=int, help="Web editörü ve REST API sunucusunu başlatır (varsayılan port: 8080)")
+    parser.add_argument("--host", default="0.0.0.0", help="Sunucu dinleme IP adresi (varsayılan: 0.0.0.0)")
 
     args = parser.parse_args()
+
+    if args.serve is not None:
+        run_http_server(port=args.serve, host=args.host)
+        return
 
     if args.install:
         install_system_virtual_printer()
@@ -1014,6 +1537,20 @@ def main():
         return
 
     if args.input:
+        in_path = args.input
+        in_ext = os.path.splitext(in_path)[1].lower()
+        out_path = args.output
+        out_ext = os.path.splitext(out_path)[1].lower() if out_path else ""
+
+        # UDF -> Markdown Dönüşümü
+        if args.to_md or (in_ext == ".udf" and out_ext in (".md", ".markdown")):
+            if not out_path:
+                out_path = os.path.splitext(in_path)[0] + ".md"
+            print(f"[*] UDF -> Markdown Dönüştürülüyor: {in_path} -> {out_path}")
+            convert_udf_to_markdown(in_path, out_path)
+            print(f"[✓] Başarıyla Markdown formatına dönüştürüldü: {out_path}")
+            return
+
         convert_any_to_udf(args.input, args.output)
     elif not sys.stdin.isatty():
         # Pipe ile stdin'den akıtılan girdi

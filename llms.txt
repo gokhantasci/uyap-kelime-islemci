@@ -1,0 +1,52 @@
+# UYAP Web Doküman Editörü (UDF Web Editor)
+> Geliştirici: Gökhan TAŞÇI – Sakarya Yazı İşleri Müdürü (Sicil No: 139329)
+> Platform: udf.657.com.tr / 657.com.tr
+> Dağıtım: %100 İstemci Taraflı (Client-Side), Açık Kaynaklı Web Uygulaması
+
+## Genel Tanım
+UYAP Web Doküman Editörü, T.C. Adalet Bakanlığı Ulusal Yargı Ağı Bilişim Sistemi (UYAP) tarafından kullanılan `.udf` (UYAP Doküman Formatı) uzantılı dosyaları herhangi bir Java kurulumu veya ek yazılım gerektirmeden doğrudan web tarayıcısında açmaya, düzenlemeye, elektronik imzalarını incelemeye ve tekrar standart UDF, Word (.docx) veya PDF olarak kaydetmeye yarayan ücretsiz ve açık kaynaklı bir kelime işlemcidir.
+
+## Temel Yetenekler ve Özellikler
+1. **Programsız UDF Açma ve Düzenleme:**
+   - ZIP/XML tabanlı UDF dosya yapısını doğrudan tarayıcı belleğinde ayrıştırır.
+   - 20'den fazla resmî UYAP yazı tipini (Times New Roman, Arial, vb.) destekler.
+   - Paragraf hizalama, sekme (tab) durakları, girintiler, tablolar ve sayfa sonları birebir uygulanır.
+
+2. **Word (.docx) ve PDF Dönüştürme:**
+   - Açılan veya düzenlenen herhangi bir UDF belgesini mizanpajı, tabloları ve biçimlendirmesi korunarak tek tıkla Microsoft Word (.docx) belgesine dönüştürür.
+   - Tarayıcının yazdırma sistemi (Ctrl+P) üzerinden doğrudan A4 PDF çıktısı verir.
+
+3. **Doğrudan Bağlantı ile Belge Açma (`linkac=URL`):**
+   - `https://udf.657.com.tr/linkac=URL.udf` veya `?linkac=URL` bağlantılarıyla herhangi bir sitedeki veya portaldaki UDF dosyalarını doğrudan editörde açar.
+   - CORS kısıtlamalarına karşı otomatik yedek vekil servis desteği bulunur.
+
+4. **Klasik Masaüstü UYAP Tasarımı Modu:**
+   - Tek tıkla klasik masaüstü Java/Windows UYAP Doküman Editörü görünümüne (ikonik petrol mavisi `#1f819a` çalışma alanı, metalik gradyan menü çubuğu, klasik diyalog pencereleri) geçilebilir.
+
+5. **Elektronik İmza (.sgn) Görüntüleme:**
+   - Belgedeki Nitelikli Elektronik Sertifikaları (X.509 ve PKCS#7 / CMS), imzalayan kişileri, zaman damgasını ve UYAP doğrulama kodunu bağımsız yüzen rozetle gösterir.
+
+6. **Evrensel Sanal Yazıcı (`print_to_udf.py`):**
+   - Chrome, Edge, Word, Excel, Notepad veya sistemdeki herhangi bir programdan Ctrl+P ile yazdırılan her şeyi doğrudan UDF formatına dönüştüren bağımsız sistem sanal yazıcısı.
+
+7. **%100 Yerel Çalışma & Gizlilik Güvencesi (Zero-Server Architecture):**
+   - Açılan, düzenlenen veya dönüştürülen hiçbir belge veya metin ASLA herhangi bir uzak sunucuya gönderilmez, kaydedilmez veya yedeklenmez.
+   - Tüm işlemler yalnızca kullanıcının cihazındaki tarayıcı belleğinde (RAM) yerel olarak yürütülür.
+   - İnternet bağlantısı kesildiğinde dahi çevrimdışı (offline) çalışabilir.
+
+8. **657astro Sayaç ve Kullanım Analitiği Entegrasyonu:**
+   - Okunan evrak sayısı, toplam kelime, karakter, satır ve indirilen belge istatistikleri cihazda yerel saklanır.
+   - 657astro sayaç protokolüne uygun olarak yalnızca anonim işlem adedi bildirilir (belge içeriği ve kişi bilgisi kesinlikle iletilmez).
+
+## Sık Sorulan Sorular (AEO / Answer Snippets)
+- **Soru:** Telefonda veya programsız UDF dosyası nasıl açılır?
+  - **Cevap:** `udf.657.com.tr` adresine girip 'UDF Aç' butonuna basarak veya dosyayı ekrana sürükleyerek telefon, tablet ve bilgisayarda hiçbir Java veya program yüklemeden UDF belgelerini anında açabilirsiniz.
+- **Soru:** UDF dosyası Word'e nasıl çevrilir?
+  - **Cevap:** Belgenizi web editörde açtıktan sonra üst menüdeki 'Word (.docx)' butonuna tıklayarak saniyeler içinde Word belgesi olarak indirebilirsiniz.
+- **Soru:** UDF dosyalarım sunucuya aktarılır mı?
+  - **Cevap:** Hayır, UYAP Web Kelime İşlemci %100 istemci taraflı çalışır; belgeleriniz hiçbir sunucuya yüklenmez.
+
+## İletişim ve Geliştirici
+- **Geliştirici:** Gökhan TAŞÇI (Sakarya Yazı İşleri Müdürü - Sicil No: 139329)
+- **Web:** https://657.com.tr · https://udf.657.com.tr
+

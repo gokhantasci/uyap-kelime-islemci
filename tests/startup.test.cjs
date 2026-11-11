@@ -1,0 +1,36 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {JSDOM,VirtualConsole}=require('jsdom');
+test('Tam uygulama Markdown duyurusuyla açılır; OCR/Markdown yükleme, kaydetme uyarısı ve ses paneli bağlanır',async()=>{
+  const errors=[];
+  const html=fs.readFileSync('index.html','utf8');
+  const virtual=new VirtualConsole();virtual.on('jsdomError',e=>{if(e.type==='unhandled exception')errors.push(e.detail||e);});
+  const dom=new JSDOM(html,{url:'http://localhost:8080',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:virtual});
+  const w=dom.window;
+  w.JSZip=require('../assets/vendor/jszip.min.js');w.TextDecoder=TextDecoder;w.TextEncoder=TextEncoder;w.Blob=Blob;
+  w.document.queryCommandState=()=>false;w.document.queryCommandValue=()=>'';w.document.execCommand=()=>true;
+  w.HTMLElement.prototype.scrollIntoView=()=>{};
+  w.Range.prototype.getClientRects=()=>[];w.Range.prototype.getBoundingClientRect=()=>({width:0,height:0,left:0,right:0,top:0,bottom:0});
+  w.fetch=async url=>{
+    const name=String(url).replace(/^http:\/\/localhost:8080\//,'');
+    if(name.startsWith('http'))throw Error('No remote requests in test');
+    if(!fs.existsSync(name))throw Error('Unknown local resource '+name);
+    const data=fs.readFileSync(name);return {ok:true,text:async()=>data.toString(),json:async()=>JSON.parse(data),arrayBuffer:async()=>data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength)};
+  };
+  for(const m of html.matchAll(/<script src="(assets\/js\/[^"]+)"/g))w.eval(fs.readFileSync(m[1],'utf8'));
+  await new Promise(r=>setTimeout(r,150));
+  assert.deepEqual(errors.map(e=>String(e)),[]);
+  assert.ok(w.UkiApp,'Shared document pipeline');
+  assert.ok(w.document.getElementById('editor').textContent.includes('SÜRÜM'));
+  assert.equal(w.UkiApp.isDirty(),false);
+  w.UkiApp.replaceDocument('<p>OCR denemesi</p>','OCR',{source:'ocr'});
+  assert.equal(w.UkiApp.isDirty(),true);
+  assert.equal(w.document.getElementById('doc-title').value,'OCR');
+  assert.ok(w.document.querySelector('#thumbnails-list .thumbnail-card'));
+  w.UkiLanguageTools.open();
+  assert.ok(w.document.getElementById('speech-start'));
+  assert.ok(w.document.getElementById('tdk-word'));
+  w.UkiApp.markSaved();assert.equal(w.UkiApp.isDirty(),false);
+  dom.window.close();
+});

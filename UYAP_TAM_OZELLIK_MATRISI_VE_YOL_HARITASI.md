@@ -16,6 +16,7 @@ Aşağıdaki özellikler, UYAP masaüstü JAR arşivlerindeki sınıflar (`tr.co
 | **Yedeklerden Belge Aç** | Çökme kurtarma ve otomatik yedeklenen belgeleri açma | `openBackups.png` | ⏳ Faz 2 (IndexedDB yedekleme) |
 | **UDF Kaydet** | Düzenlenen içeriği UDF 1.8 standart XML arşivi olarak indirme (`Ctrl+S`) | `save.png`, `saveBig.png` |  Tamamlandı |
 | **Word (.docx) İndir** | Web editördeki kararı/metni doğrudan Microsoft Word belgesi olarak indirme | JSZip OpenXML |  Tamamlandı |
+| **Word (.docx) Aç (Tersine İçe Aktarım)** | Bilgisayardaki Word (.docx) belgelerini doğrudan web editörde açma, düzenleme ve UDF'e çevirme | JSZip OpenXML DOM |  Tamamlandı |
 | **Farklı Kaydet** | Farklı dosya adıyla kaydetme | `saveAs.png`, `saveAsBig.png` |  Tamamlandı |
 | **Sayfa Düzenleme (Page Setup)** | Dikey/Yatay yönelim, Sol (2cm), Sağ/Üst/Alt (2.5cm), Üst Yazı (0.529cm), Alt Yazı (2.117cm) | `pageSetup.png`, `horizontal.png`, `vertical.png` |  Tamamlandı (UYAP Birebir Diyalog) |
 | **Yazdır / Print to PDF** | Tarayıcı yazdırma ve PDF çıktı üretimi (`Ctrl+P`) | `print.png`, `printBig.png` |  Tamamlandı |
@@ -82,6 +83,7 @@ Aşağıdaki özellikler, UYAP masaüstü JAR arşivlerindeki sınıflar (`tr.co
 | Özellik | Açıklama | Masaüstü İkon/Kaynak | Mevcut Web Durumu |
 | :--- | :--- | :--- | :--- |
 | **Tablo Ekle** | İstenen satır ve sütun sayısında tablo ekleme | `table.png`, `tableBig.png` |  Tamamlandı |
+| **Excel & Word Tablo Yapıştırma** | Excel, Word, Google E-Tablolar ve TSV'den panoya kopyalanan tabloları doğrudan UDF tablosu olarak yapıştırma | `table.png` |  Tamamlandı (`Ctrl+V` Akıllı Ayrıştırıcı) |
 | **Satır Ekle / Sil** | Üste satır ekle, alta satır ekle, geçerli satırı sil | `insertTableRowBefore.png`, `insertTableRowAfter.png`, `deleteRow.png` |  Tamamlandı |
 | **Sütun Ekle / Sil** | Sola sütun ekle, sağa sütun ekle, geçerli sütunu sil | `insertColumnLeft.png`, `insertColumnRight.png`, `deleteColumn.png` |  Tamamlandı |
 | **Hücreleri Birleştir (Merge Cells)** | Seçili hücreleri tek hücrede birleştirme (`colspan` / `rowspan`) | `combineTableCell.png` | ⏳ Faz 2 |
@@ -205,8 +207,11 @@ flowchart TD
   8. 20+ genişletilmiş font ve punto paleti.
   9. Windows / macOS / Linux `print_to_udf.py` dönüştürücü ve sanal yazıcı kurucusu.
 
-#### Faz 2: Gelişmiş Tablo, İnceleme ve Düzenleme (Aktif Geliştirme)
-- **Hedeflenen Yetenekler:**
+#### Faz 2: Gelişmiş Tablo, İnceleme, Hukuk Sözlüğü ve Düzenleme (Aktif Geliştirme)
+- **Hedeflenen ve Tamamlanan Yetenekler:**
+  - ✅ **657.com.tr Hukuki Terimler Sözlüğü Entegrasyonu:** `Müşteki`, `Müdafi`, `Bidayet`, `Tevellüt`, `İctinap`, `Tensip`, `İlam`, `Beraat`, `HAGB` vb. yüzlerce terim; üzerine gelince (hover popover) ve sağ tıkla (bağlam menüsü) anında hukuki tanımı gösterme ve `657.com.tr/sozluk/<terim>` sayfasını tek tıkla açma.
+  - ✅ **Hukuk Sözlüğü Arama Modalı (`Alt + S`):** Kategori filtreli, canlı aramalı ve tek tıkla tanım kopyalamalı yerel sözlük motoru.
+  - ✅ **Markdown (.md) &harr; UDF (.udf) Çift Yönlü Dönüştürücü:** Markdown dosyalarını sürükle-bırak veya içe aktar ile açıp başlıklar, tablolar, listeler ve kalın/italik formatlarıyla UDF'e çevirme; düzenlenen UDF belgelerini tek tıkla temiz GitHub Flavored Markdown (.md) olarak indirme; Python motorunda `print_to_udf.py --to-md` CLI desteği.
   - Tablo hücre birleştirme (`combineTableCell.png`) ve hücre bölme (`divideTableCell.png`).
   - Değişiklik Takibi (`watchChanges.png`): Kim ne zaman ekledi/sildi renkli görselleştirme.
   - Açıklamalar / Notlar (`commentAdd2.png`): Kenar boşluğunda yorum baloncukları.
@@ -218,7 +223,6 @@ flowchart TD
 - **Hedeflenen Yetenekler:**
   - Zemberek kütüphanesinin Rust -> WebAssembly veya Pure JavaScript portu ile sıfır sunucu bağımlılığıyla tarayıcıda çalışması.
   - Hatalı kelimelerin altına kırmızı dalgalı çizgi çizilmesi.
-  - Hukuki terimler sözlüğü (`Müşteki`, `Müdafi`, `Bidayet`, `Tevellüt`, `İctinap`, vb.).
   - Tek tıkla kelime düzeltme öneri menüsü.
 
 #### Faz 4: Donanımsal Akıllı Kart E-İmza İmzalama Köprüsü

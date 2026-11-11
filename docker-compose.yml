@@ -1,0 +1,20 @@
+services:
+  uyap-editor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: uyap-kelime-islemci:latest
+    container_name: uyap-editor
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+

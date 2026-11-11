@@ -1,0 +1,30 @@
+# UYAP Web Doküman Editörü - robots.txt
+# Platform: https://udf.657.com.tr/ (657.com.tr)
+# Geliştirici: Gökhan TAŞÇI (Sakarya Yazı İşleri Müdürü - 139329)
+
+User-agent: *
+Allow: /
+Allow: /llms.txt
+
+# AI ve LLM Tarayıcıları (AIO / GEO Uyumluluğu)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+# Arama Motoru Haritası
+Sitemap: https://udf.657.com.tr/sitemap.xml
+

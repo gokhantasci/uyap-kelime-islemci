@@ -16,7 +16,7 @@
 
         init() {
             this.el.setAttribute('contenteditable', 'true');
-            this.el.setAttribute('spellcheck', 'true');
+            this.el.setAttribute('spellcheck', 'false');
 
             // Değişiklik dinleyicileri
             this.el.addEventListener('input', () => this.updateStats());
@@ -32,9 +32,30 @@
         }
 
         handlePaste(e) {
-            // Düz metin veya temiz HTML yapıştırma desteği
             e.preventDefault();
-            const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+            const clipboardData = e.clipboardData || window.clipboardData;
+            if (!clipboardData) return;
+
+            // 1. Excel, Word, Google E-Tablolar veya TSV tablo yapıştırma desteği
+            if (window.UkiTable) {
+                const tableEl = window.UkiTable.parseClipboard(clipboardData);
+                if (tableEl) {
+                    window.UkiTable.insertTableAtSelection(tableEl, this.el);
+                    this.updateStats();
+                    if (window.UkiPages && typeof window.UkiPages.repaginate === 'function') {
+                        window.UkiPages.repaginate();
+                    }
+                    if (typeof window.showToast === 'function') {
+                        const rowCount = tableEl.querySelectorAll('tr').length;
+                        const colCount = tableEl.querySelector('tr')?.querySelectorAll('td, th').length || 0;
+                        window.showToast(`Tablo başarıyla yapıştırıldı (${rowCount} satır, ${colCount} sütun).`, 'success');
+                    }
+                    return;
+                }
+            }
+
+            // 2. Normal düz metin yapıştırma
+            const text = clipboardData.getData('text/plain');
             document.execCommand('insertText', false, text);
             this.updateStats();
         }
@@ -90,18 +111,34 @@
             else if (align === 'justify') this.format('justifyFull');
         }
 
-        insertTable(rows = 3, cols = 3) {
+        insertTable(rows = 3, cols = 3, targetRange = null) {
             this.el.focus();
-            let tableHtml = '<table class="udf-table" style="width: 100%; border-collapse: collapse; margin: 10px 0;"><tbody>';
+            const table = document.createElement('table');
+            table.className = 'udf-table';
+            table.style.cssText = 'width: 100%; border-collapse: collapse; margin: 10px 0; table-layout: fixed;';
+            const tbody = document.createElement('tbody');
+            table.appendChild(tbody);
             for (let r = 0; r < rows; r++) {
-                tableHtml += '<tr>';
+                const tr = document.createElement('tr');
                 for (let c = 0; c < cols; c++) {
-                    tableHtml += '<td style="border: 1px solid #777; padding: 6px 8px; min-width: 50px;"><p><br></p></td>';
+                    const td = document.createElement('td');
+                    td.style.cssText = 'border: 1px solid #777; padding: 6px 8px; min-width: 50px;';
+                    td.innerHTML = '<p style="margin: 0; min-height: 1.2em;"><br></p>';
+                    tr.appendChild(td);
                 }
-                tableHtml += '</tr>';
+                tbody.appendChild(tr);
             }
-            tableHtml += '</tbody></table><p><br></p>';
-            this.format('insertHTML', tableHtml);
+
+            if (window.UkiTable && window.UkiTable.insertTableAtSelection) {
+                window.UkiTable.insertTableAtSelection(table, this.el, targetRange);
+            } else {
+                this.el.appendChild(table);
+            }
+
+            this.updateStats();
+            if (typeof window.recalculatePagesAndThumbnails === 'function') {
+                window.recalculatePagesAndThumbnails();
+            }
         }
 
         insertPageBreak() {
@@ -159,13 +196,19 @@
         }
 
         setContentHtml(html) {
+            // Katmanları (antet, filigran, imza rozeti, sayfa kromu) koru
+            const keep = Array.from(this.el.children).filter(c =>
+                c.id === 'antet-layer' || c.id === 'watermark-layer' ||
+                c.id === 'e-sign-seal-badge' || c.id === 'page-boundaries-layer');
             this.el.innerHTML = html;
+            keep.reverse().forEach(c => this.el.insertBefore(c, this.el.firstChild));
             this.updateStats();
             this.updateToolbarState();
         }
 
         clear() {
-            this.el.innerHTML = '<p><br></p>';
+            this.setContentHtml('<p><br></p>'); // katmanları (antet, filigran...) korur
+            return;
             this.updateStats();
         }
     }

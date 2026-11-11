@@ -23,3 +23,8 @@ tools/
 *.jar
 
 examples/*.png
+
+.playwright-mcp/
+__pycache__/
+scratch/
+
