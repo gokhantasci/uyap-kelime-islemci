@@ -110,3 +110,62 @@ test('GEREKÇELİ KARAR üstündeki altı çizili boşluk noktası (.udf-underli
     assert.ok(!pEl.querySelector('.udf-underline-dot'), 'Nokta DOMdan silinmiş olmalı');
     assert.equal(pEl.getAttribute('data-underline'), null, 'Underline attribute temizlenmiş olmalı');
 });
+
+test('Belge yüklendiğinde Ctrl+Z tüm belgeyi silmez, canUndo false döner, yapılan yazma işlemi güvenle geri alınır', async () => {
+    const dom = new JSDOM(`<!DOCTYPE html><html><body><div id="editor"></div></body></html>`, {
+        url: 'http://localhost/',
+        runScripts: 'dangerously'
+    });
+    const w = dom.window;
+    global.window = w;
+    global.document = w.document;
+    global.Node = w.Node;
+    global.NodeFilter = w.NodeFilter;
+    w.document.queryCommandState = () => false;
+    w.document.queryCommandValue = () => '';
+    w.document.execCommand = () => true;
+
+    // Load scripts
+    w.eval(fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-core.js'), 'utf8'));
+    w.eval(fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-history.js'), 'utf8'));
+    w.eval(fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-editor.js'), 'utf8'));
+
+    w.UkiHistory.init();
+
+    const ed = w.document.getElementById('editor');
+    const editor = new w.UkiEditor(ed);
+
+    // Belge yükleme simülasyonu
+    const docHtml = '<p>T.C. SAKARYA 11. ASLİYE CEZA MAHKEMESİ GEREKÇELİ KARAR</p><p>Dosya No: 2025/416 Esas</p>';
+    editor.setContentHtml(docHtml);
+
+    assert.equal(ed.querySelectorAll('p').length, 2, '2 paragraf yüklenmiş olmalı');
+    assert.equal(w.UkiHistory.canUndo(), false, 'Belge yeni yüklendiğinde geri alınacak işlem olmamalıdır (canUndo = false)');
+
+    // 1. Kullanıcı henüz düzenleme yapmadan Ctrl+Z / undo() çağırırsa: Belge SİLİNMEMELİDİR!
+    const undone = w.UkiHistory.undo();
+    assert.equal(undone, false, 'Düzenleme yapılmamışken undo işlemi gerçekleşmemelidir');
+    assert.equal(ed.querySelectorAll('p').length, 2, 'Belge silinmemeli, tüm paragraflar korunmalıdır!');
+    assert.ok(ed.textContent.includes('SAKARYA 11. ASLİYE CEZA'), 'Belge metni eksiksiz durmalıdır');
+
+    // 2. Kullanıcı metin eklerse
+    const p1 = ed.querySelectorAll('p')[0];
+    p1.textContent += ' EK METİN';
+    w.UkiHistory.record('Yazma');
+
+    assert.equal(w.UkiHistory.canUndo(), true, 'Metin yazıldıktan sonra canUndo true olmalı');
+    assert.ok(p1.textContent.includes('EK METİN'));
+
+    // 3. Kullanıcı Ctrl+Z basarsa yalnızca eklenen metin geri alınmalı, orijinal belge silinmemeli
+    const undoneEdit = w.UkiHistory.undo();
+    assert.equal(undoneEdit, true, 'Yazma işlemi geri alınmalı');
+    assert.equal(ed.querySelectorAll('p').length, 2, 'Tüm paragraflar korunmalı');
+    assert.ok(!ed.textContent.includes('EK METİN'), 'Eklenen metin silinmiş olmalı');
+    assert.ok(ed.textContent.includes('SAKARYA 11. ASLİYE CEZA'), 'Orijinal belge korunmuş olmalıdır');
+    assert.equal(w.UkiHistory.canUndo(), false, 'Orijinal belgeye dönüldükten sonra canUndo false olmalıdır');
+
+    // 4. Tekrar Ctrl+Z yapılsa bile belge asla silinmemeli
+    w.UkiHistory.undo();
+    assert.equal(ed.querySelectorAll('p').length, 2, 'İkinci kez Ctrl+Z yapılsa dahi belge silinmemelidir');
+    assert.ok(ed.textContent.includes('SAKARYA 11. ASLİYE CEZA'));
+});

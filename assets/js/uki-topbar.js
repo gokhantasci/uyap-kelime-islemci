@@ -229,15 +229,15 @@
         // Geri / ileri (en başa)
         const g = el('div', 'tool-group');
         g.appendChild(tbButton(I.undo, 'Geri al (Ctrl+Z)', () => {
-            if (window.UkiHistory && window.UkiHistory.canUndo()) {
-                window.UkiHistory.undo();
+            if (window.UkiHistory) {
+                if (window.UkiHistory.canUndo()) window.UkiHistory.undo();
             } else {
                 const ed = $('editor'); if (ed) ed.focus(); document.execCommand('undo');
             }
         }, 'btn-tb-undo'));
         g.appendChild(tbButton(I.redo, 'Yinele (Ctrl+Y)', () => {
-            if (window.UkiHistory && window.UkiHistory.canRedo()) {
-                window.UkiHistory.redo();
+            if (window.UkiHistory) {
+                if (window.UkiHistory.canRedo()) window.UkiHistory.redo();
             } else {
                 const ed = $('editor'); if (ed) ed.focus(); document.execCommand('redo');
             }

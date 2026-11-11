@@ -179,16 +179,29 @@
 
         undo() {
             const ed = getEditor();
-            if (!ed || undoStack.length <= 1) {
+            if (!ed) return false;
+            clearTimeout(typingTimer);
+
+            if (undoStack.length <= 1) {
                 // Stack'te 1 öğe var ama mevcut DOM'dan farklıysa geri dönülebilir
                 if (undoStack.length === 1) {
+                    const baseSnap = undoStack[0];
+                    if (!baseSnap || !baseSnap.html || !baseSnap.html.trim()) {
+                        // Taban durum boşsa ve editörde metin varsa, tüm belgeyi silme;
+                        // mevcut içeriği yeni taban durum yap:
+                        const curHtml = serializeContent(ed);
+                        if (curHtml && curHtml.trim()) {
+                            undoStack[0] = takeSnapshot('Başlangıç');
+                        }
+                        return false;
+                    }
                     const curHtml = serializeContent(ed);
-                    if (curHtml !== undoStack[0].html) {
+                    if (curHtml !== baseSnap.html) {
                         isPerformingUndoRedo = true;
                         try {
                             const curSnap = takeSnapshot('Güncel');
                             redoStack.push(curSnap);
-                            this._applySnapshot(undoStack[0]);
+                            this._applySnapshot(baseSnap);
                             return true;
                         } finally {
                             isPerformingUndoRedo = false;
@@ -207,6 +220,11 @@
                 // Son durumu çıkar ve bir öncekini uygula
                 undoStack.pop();
                 const prevState = undoStack[undoStack.length - 1];
+                if (prevState && (!prevState.html || !prevState.html.trim()) && curSnap && curSnap.html && curSnap.html.trim()) {
+                    // prevState boş bir açılış/taslak ise ve belgede gerçek içerik varsa, tüm belgeyi silmeyi engelle
+                    undoStack[undoStack.length - 1] = curSnap;
+                    return false;
+                }
                 this._applySnapshot(prevState);
                 return true;
             } finally {
@@ -217,6 +235,7 @@
         redo() {
             const ed = getEditor();
             if (!ed || redoStack.length === 0) return false;
+            clearTimeout(typingTimer);
 
             isPerformingUndoRedo = true;
             try {
@@ -233,7 +252,12 @@
             const ed = getEditor();
             if (!ed) return false;
             if (undoStack.length > 1) return true;
-            if (undoStack.length === 1 && serializeContent(ed) !== undoStack[0].html) return true;
+            if (undoStack.length === 1) {
+                const baseSnap = undoStack[0];
+                if (!baseSnap || !baseSnap.html || !baseSnap.html.trim()) return false;
+                const curHtml = serializeContent(ed);
+                return curHtml !== baseSnap.html;
+            }
             return false;
         },
 
@@ -242,11 +266,15 @@
         },
 
         clear() {
+            clearTimeout(typingTimer);
             undoStack = [];
             redoStack = [];
             const ed = getEditor();
             if (ed) {
-                this.record('Başlangıç');
+                const cur = serializeContent(ed);
+                if (cur && cur.trim()) {
+                    this.record('Başlangıç');
+                }
             }
         },
 
@@ -273,9 +301,12 @@
             const ed = getEditor();
             if (!ed) return;
 
-            // İlk durumu kaydet
+            // İlk durumu kaydet (editörde başlangıç içeriği varsa)
             if (undoStack.length === 0) {
-                this.record('Açılış');
+                const cur = serializeContent(ed);
+                if (cur && cur.trim()) {
+                    this.record('Açılış');
+                }
             }
 
             // Klavye kısayolları dinleyicisi (Ctrl+Z ve Ctrl+Y / Ctrl+Shift+Z)

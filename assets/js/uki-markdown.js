@@ -644,7 +644,14 @@
             const htmlContent = mdToHtml(mdText);
             const editor = document.getElementById('editor');
             if (editor) {
-                editor.innerHTML = htmlContent;
+                if (window.editor && typeof window.editor.setContentHtml === 'function') {
+                    window.editor.setContentHtml(htmlContent);
+                } else {
+                    editor.innerHTML = htmlContent;
+                    if (window.UkiHistory && typeof window.UkiHistory.clear === 'function') {
+                        window.UkiHistory.clear();
+                    }
+                }
                 if (window.UkiPages) window.UkiPages.updatePages();
             }
             closeModal();

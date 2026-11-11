@@ -204,6 +204,9 @@
             keep.reverse().forEach(c => this.el.insertBefore(c, this.el.firstChild));
             this.updateStats();
             this.updateToolbarState();
+            if (window.UkiHistory && typeof window.UkiHistory.clear === 'function') {
+                window.UkiHistory.clear();
+            }
         }
 
         clear() {

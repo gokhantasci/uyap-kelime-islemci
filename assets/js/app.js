@@ -3920,7 +3920,14 @@ function openColorPicker(pickerId, ev) {
     UkiPages.init(editorEl);
     UkiPages.onCopied = (t) => showToast('Doğrulama kodu kopyalandı: ' + t, 'success');
     const _origSetContent = editor.setContentHtml.bind(editor);
-    editor.setContentHtml = (h) => { UkiPages.reset(); return _origSetContent(h); };
+    editor.setContentHtml = (h) => {
+        UkiPages.reset();
+        const res = _origSetContent(h);
+        if (window.UkiHistory && typeof window.UkiHistory.clear === 'function') {
+            window.UkiHistory.clear();
+        }
+        return res;
+    };
     let currentActivePage = 1;
     let totalDocPages = 1;
     let isThumbnailsVisible = true;
