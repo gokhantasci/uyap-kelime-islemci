@@ -3207,10 +3207,11 @@ Sakarya Yazı İşleri Müdürü – 139329`;
         const paras = selectedParagraphs();
         if (!paras.length) return;
         const ml = parseFloat(getComputedStyle(editorEl).paddingLeft) || 0;
-        parseStops(paras[0]).forEach(st => {
+        const curP = paras[0];
+        parseStops(curP).forEach(st => {
             const el = document.createElement('div');
             el.className = 'ruler-tabstop align-' + st.align;
-            el.style.left = (ml + st.pos * 96 / 72) + 'px';
+            el.style.left = (ml + st.pos * 0.98 * 96 / 72) + 'px';
             el.title = 'Sekme durağı (' + (Math.round(st.pos / 28.3465 * 100) / 100) + ' cm) — kaldırmak için çift tıklayın';
             el.addEventListener('dblclick', (e) => {
                 e.stopPropagation();
@@ -3219,6 +3220,21 @@ Sakarya Yazı İşleri Müdürü – 139329`;
             });
             rulerScaleEl.appendChild(el);
         });
+
+        // İlk satır ve asılı girinti işaretçilerini paragraf konumuna hizala
+        const fliVal = parseFloat(curP.getAttribute('data-fli') || '0');
+        const hangVal = parseFloat(curP.getAttribute('data-hanging') || '0');
+        const liVal = parseFloat(curP.getAttribute('data-li') || '0');
+        const firstIndentMarker = document.querySelector('.ruler-first-indent');
+        const hangingIndentMarker = document.querySelector('.ruler-hanging-indent');
+        if (firstIndentMarker) {
+            const fliPx = (fliVal + liVal) * 0.98 * 96 / 72;
+            firstIndentMarker.style.transform = `translateX(${fliPx}px)`;
+        }
+        if (hangingIndentMarker) {
+            const hangPx = (hangVal + liVal) * 0.98 * 96 / 72;
+            hangingIndentMarker.style.transform = `translateX(${hangPx}px)`;
+        }
     }
     function afterTabChange() {
         if (UkiCore.layoutTabs) UkiCore.layoutTabs(editorEl);

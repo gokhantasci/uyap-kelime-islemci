@@ -439,7 +439,9 @@
                 const num = document.createElement('div');
                 num.className = 'pb-footer pb-pagenum';
                 let numStr = (k + 1) + '/' + n;
-                if (cfg.pageNumberFormat === 'single') numStr = String(k + 1);
+                if (cfg.pageNumberForeStr) {
+                    numStr = cfg.pageNumberForeStr + (k + (cfg.pageNumberStartNum || 1));
+                } else if (cfg.pageNumberFormat === 'single') numStr = String(k + 1);
                 else if (cfg.pageNumberFormat === 'dash') numStr = '- ' + (k + 1) + ' -';
                 else if (cfg.pageNumberFormat === 'bracket') numStr = '[ ' + (k + 1) + ' / ' + n + ' ]';
                 else if (cfg.pageNumberFormat === 'word') numStr = 'Sayfa ' + (k + 1) + ' / ' + n;
@@ -455,6 +457,18 @@
                 }
                 num.style.cssText = `top:${pageTop + g.H - 118}px; ${alignCss}`;
                 layer.appendChild(num);
+            }
+
+            // Özel Belge Alt Yazısı (Alt yazı)
+            if (cfg.showFooter !== false && cfg.footerParas && cfg.footerParas.length > 0) {
+                const fText = cfg.footerParas.map(p => (p.runs || []).map(r => r.text || '').join('')).join(' ').trim();
+                if (fText) {
+                    const fDiv = document.createElement('div');
+                    fDiv.className = 'pb-footer pb-footer-text';
+                    fDiv.style.cssText = `top:${pageTop + g.H - 118}px;left:${g.Ml}px;text-align:left;font-family:'Times New Roman',serif;font-size:11pt;color:#333;`;
+                    fDiv.textContent = fText;
+                    layer.appendChild(fDiv);
+                }
             }
 
             // Alt Bilgi Notu ve Doğrulama (örnek karar.pdf: Y=1081.6px -> g.H - 41px)
@@ -554,7 +568,11 @@
             cfg.footerOffsetPt = pp.footerFOffset > 0 ? pp.footerFOffset : 60;
             cfg.signed = !!(model && model.isSigned);
             cfg.qrCode = (model && model.docProperties && model.docProperties.uyapdogrulamakodu) || '';
-            cfg.footerEl = !!(model && model.footerElement);
+            const fe = model && model.footerElement;
+            cfg.footerEl = !!fe;
+            cfg.footerParas = (fe && fe.paragraphs) || [];
+            cfg.pageNumberForeStr = (fe && fe.pageNumberForeStr) || '';
+            cfg.pageNumberStartNum = (fe && fe.pageNumberStartNum) || 1;
             cfg.reserve = !!cfg.webId || cfg.footerEl;
             const saved = model && model.editorSettings || {};
             if (saved.webId !== undefined) cfg.webId = String(saved.webId);

@@ -105,6 +105,10 @@
         }
 
         const webId = (xmlDoc.querySelector('webID')?.getAttribute('id') || '').replace(/\s+/g, ' ').trim();
+        const rawWebId = xmlDoc.querySelector('webID')?.getAttribute('id') || '';
+
+        const stylesNode = xmlDoc.querySelector('template > styles');
+        const originalStylesXml = stylesNode ? stylesNode.outerHTML : '';
 
         // CDATA ham metin havuzu
         const contentNode = xmlDoc.querySelector('template > content');
@@ -112,6 +116,13 @@
 
         // Sayfa özellikleri ve marjinler
         const pageFormatNode = xmlDoc.querySelector('template > properties > pageFormat');
+        const rawLeftMargin = pageFormatNode ? pageFormatNode.getAttribute('leftMargin') : null;
+        const rawRightMargin = pageFormatNode ? pageFormatNode.getAttribute('rightMargin') : null;
+        const rawTopMargin = pageFormatNode ? pageFormatNode.getAttribute('topMargin') : null;
+        const rawBottomMargin = pageFormatNode ? pageFormatNode.getAttribute('bottomMargin') : null;
+        const rawHeaderFOffset = pageFormatNode ? pageFormatNode.getAttribute('headerFOffset') : null;
+        const rawFooterFOffset = pageFormatNode ? pageFormatNode.getAttribute('footerFOffset') : null;
+
         const leftMarginPt = pageFormatNode ? parseFloat(pageFormatNode.getAttribute('leftMargin') || '56.69') : 56.69;
         const rightMarginPt = pageFormatNode ? parseFloat(pageFormatNode.getAttribute('rightMargin') || '70.86') : 70.86;
         const topMarginPt = pageFormatNode ? parseFloat(pageFormatNode.getAttribute('topMargin') || '70.86') : 70.86;
@@ -124,6 +135,12 @@
         const pageProperties = {
             mediaSizeName,
             paperOrientation,
+            rawLeftMargin,
+            rawRightMargin,
+            rawTopMargin,
+            rawBottomMargin,
+            rawHeaderFOffset,
+            rawFooterFOffset,
             leftMargin: leftMarginPt,
             rightMargin: rightMarginPt,
             topMargin: topMarginPt,
@@ -171,6 +188,9 @@
             signatures,
             docProperties,
             webId,
+            rawWebId,
+            originalStylesXml,
+            originalXmlText: xmlText,
             sgnRawBytes,
             editorSettings,
             zipInstance: zip
@@ -275,14 +295,31 @@
     function parseParagraphNode(pNode, rawContent) {
         const alignmentCode = pNode.getAttribute('Alignment') || '0';
         const alignment = UDF_CONSTANTS.ALIGNMENTS[alignmentCode] || 'left';
-        const leftIndent = parseFloat(pNode.getAttribute('LeftIndent') || '0');
-        const rightIndent = parseFloat(pNode.getAttribute('RightIndent') || '0');
-        const firstLineIndent = parseFloat(pNode.getAttribute('FirstLineIndent') || '0');
-        const spaceAbove = parseFloat(pNode.getAttribute('SpaceAbove') || '0');
-        const spaceBelow = parseFloat(pNode.getAttribute('SpaceBelow') || '0');
-        const lineSpacing = parseFloat(pNode.getAttribute('LineSpacing') || '0');
+        const rawLeftIndent = pNode.getAttribute('LeftIndent');
+        const rawRightIndent = pNode.getAttribute('RightIndent');
+        const rawFirstLineIndent = pNode.getAttribute('FirstLineIndent');
+        const rawSpaceAbove = pNode.getAttribute('SpaceAbove');
+        const rawSpaceBelow = pNode.getAttribute('SpaceBelow');
+        const rawLineSpacing = pNode.getAttribute('LineSpacing');
+        const rawHanging = pNode.getAttribute('Hanging');
+
+        const leftIndent = parseFloat(rawLeftIndent || '0');
+        const rightIndent = parseFloat(rawRightIndent || '0');
+        const firstLineIndent = parseFloat(rawFirstLineIndent || '0');
+        const spaceAbove = parseFloat(rawSpaceAbove || '0');
+        const spaceBelow = parseFloat(rawSpaceBelow || '0');
+        const lineSpacing = parseFloat(rawLineSpacing || '0');
         const tabSet = pNode.getAttribute('TabSet') || '';
-        const hanging = parseFloat(pNode.getAttribute('Hanging') || '0');
+        const hanging = parseFloat(rawHanging || '0');
+        const repeatingLabel = pNode.getAttribute('RepeatingLabel') || '';
+        const groupName = pNode.getAttribute('GroupName') || '';
+
+        const bulleted = pNode.getAttribute('Bulleted') === 'true';
+        const bulletType = pNode.getAttribute('BulletType') || '';
+        const numbered = pNode.getAttribute('Numbered') === 'true';
+        const numberType = pNode.getAttribute('NumberType') || '';
+        const listId = pNode.getAttribute('ListId') || '';
+        const listLevel = parseInt(pNode.getAttribute('ListLevel') || '1', 10);
 
         let primaryTabStop = null;
         let tabAlign = 0; // 0=left, 1=center, 2=right
@@ -307,7 +344,9 @@
             const lengthStr = child.getAttribute('length');
             let text = '';
 
-            if (startOffsetStr !== null && lengthStr !== null) {
+            if (childTag === 'barcode') {
+                text = '';
+            } else if (startOffsetStr !== null && lengthStr !== null) {
                 const startOffset = parseInt(startOffsetStr, 10);
                 const length = parseInt(lengthStr, 10);
                 if (length > 0 && startOffset >= 0 && startOffset + length <= rawContent.length) {
@@ -325,20 +364,35 @@
             const italic = child.getAttribute('italic') === 'true';
             const underline = child.getAttribute('underline') === 'true';
             const strikethrough = child.getAttribute('strikethrough') === 'true';
+            const subscript = child.getAttribute('subscript') === 'true';
+            const superscript = child.getAttribute('superscript') === 'true';
+            const barcodeData = childTag === 'barcode' ? (child.getAttribute('barcodeData') || '') : '';
             const size = parseInt(child.getAttribute('size') || '12', 10);
             const family = child.getAttribute('family') || UDF_CONSTANTS.DEFAULT_FONT_FAMILY;
             const foreground = argbToHex(child.getAttribute('foreground'));
             const background = argbToHex(child.getAttribute('background'));
 
+            const fieldName = child.getAttribute('fieldName') || '';
+            const fieldType = child.getAttribute('fieldType') || '';
+            const isList = child.getAttribute('isList') || '';
+            const resolver = child.getAttribute('resolver') || '';
+
             const imageData = childTag === 'image' ? (child.getAttribute('imageData') || '').split(/\s/).join('') : '';
             runs.push({
                 type: childTag,
+                fieldName,
+                fieldType,
+                isList,
+                resolver,
                 imageData,
+                barcodeData,
                 text,
                 bold,
                 italic,
                 underline,
                 strikethrough,
+                subscript,
+                superscript,
                 size,
                 family,
                 foreground,
@@ -356,9 +410,24 @@
             spaceBelow,
             lineSpacing,
             hanging,
+            rawLeftIndent,
+            rawRightIndent,
+            rawFirstLineIndent,
+            rawSpaceAbove,
+            rawSpaceBelow,
+            rawLineSpacing,
+            rawHanging,
+            repeatingLabel,
+            groupName,
             tabSet,
             primaryTabStop,
             tabAlign,
+            bulleted,
+            bulletType,
+            numbered,
+            numberType,
+            listId,
+            listLevel,
             runs
         };
     }
@@ -416,10 +485,24 @@
             paragraphs.push(parseParagraphNode(pNodes[p], rawContent));
         }
 
+        const attrs = {};
+        if (node.attributes) {
+            for (let i = 0; i < node.attributes.length; i++) {
+                const a = node.attributes[i];
+                attrs[a.name] = a.value;
+            }
+        }
+
         return {
             type,
             startPage,
             pageNumberSep: node.getAttribute('pageNumber-seperator') || '/',
+            pageNumberForeStr: node.getAttribute('pageNumber-foreStr') || '',
+            pageNumberStartNum: parseInt(node.getAttribute('pageNumber-pageStartNumStr') || '1', 10),
+            pageNumberFontFace: node.getAttribute('pageNumber-fontFace') || 'Arial',
+            pageNumberFontSize: parseFloat(node.getAttribute('pageNumber-fontSize') || '11'),
+            pageNumberColor: argbToHex(node.getAttribute('pageNumber-color')),
+            attrs,
             paragraphs
         };
     }
@@ -437,11 +520,12 @@
         // 2. Üst bilgi / alt bilgi: sayfalama motoru (UkiPages) her sayfada çizer.
 
         // 3. Gövde Elemanları
+        const listCounters = {};
         udfModel.elements.forEach((elem, idx) => {
             if (elem.type === 'paragraph') {
-                container.appendChild(paragraphToDom(elem, idx));
+                container.appendChild(paragraphToDom(elem, idx, listCounters));
             } else if (elem.type === 'table') {
-                container.appendChild(tableToDom(elem));
+                container.appendChild(tableToDom(elem, listCounters));
             }
         });
 
@@ -458,51 +542,109 @@
             .replace(/'/g, '&#39;');
     }
 
+    const C128_PATTERNS = [
+        '212222','222122','222221','121223','121322','131222','122213','122312','132212','221213',
+        '221312','231212','112232','122132','122231','113222','123122','123221','223211','221132',
+        '221231','213212','223112','312131','311222','321122','321221','312212','322112','322211',
+        '212123','212321','232121','111323','131123','131321','112313','132113','132311','211313',
+        '231113','231311','112133','112331','132131','113123','113321','133121','313121','211331',
+        '231131','213113','213311','213131','311123','311321','331121','312113','312311','332111',
+        '314111','221411','431111','111224','111422','121124','121421','141122','141221','112214',
+        '112412','122114','122411','142112','142211','241211','221114','413111','241112','134111',
+        '111242','121142','121241','114212','124112','124211','411212','421112','421211','212141',
+        '214121','412121','111143','111341','131141','114113','114311','411113','411311','113141',
+        '114131','311141','411131','211412','211214','211232','2331112'
+    ];
+
+    function generateBarcodeSvg(data, heightPt = 42) {
+        if (!data) return '';
+        let sum = 104;
+        const codes = [104];
+        for (let i = 0; i < data.length; i++) {
+            const code = data.charCodeAt(i) - 32;
+            const validCode = (code >= 0 && code <= 95) ? code : 0;
+            codes.push(validCode);
+            sum += validCode * (i + 1);
+        }
+        codes.push(sum % 103);
+        codes.push(106);
+        let modules = '';
+        for (const c of codes) {
+            const pat = C128_PATTERNS[c] || '212222';
+            for (let j = 0; j < pat.length; j++) {
+                modules += (j % 2 === 0 ? '1' : '0').repeat(parseInt(pat[j], 10));
+            }
+        }
+        const modW = 1.0;
+        const totalW = Math.round(modules.length * modW);
+        const barH = heightPt - 13;
+        let rects = '';
+        let runStart = -1;
+        for (let i = 0; i < modules.length; i++) {
+            if (modules[i] === '1') {
+                if (runStart < 0) runStart = i;
+            } else {
+                if (runStart >= 0) {
+                    const w = (i - runStart) * modW;
+                    rects += `<rect x="${(runStart * modW).toFixed(1)}" y="0" width="${w.toFixed(1)}" height="${barH}" fill="#000" />`;
+                    runStart = -1;
+                }
+            }
+        }
+        if (runStart >= 0) {
+            const w = (modules.length - runStart) * modW;
+            rects += `<rect x="${(runStart * modW).toFixed(1)}" y="0" width="${w.toFixed(1)}" height="${barH}" fill="#000" />`;
+        }
+        return `<svg class="udf-barcode-svg" width="${totalW}pt" height="${heightPt}pt" viewBox="0 0 ${totalW} ${heightPt}" xmlns="http://www.w3.org/2000/svg" style="display:block;">` +
+            rects +
+            `<text x="${(totalW / 2).toFixed(1)}" y="${heightPt - 2}" text-anchor="middle" font-family="monospace, Courier, sans-serif" font-size="9pt" fill="#000">${data}</text>` +
+            `</svg>`;
+    }
+
     /**
      * Paragrafı DOM öğesine çevirir (genel amaçlı, belgeye özel hile içermez).
      * UYAP paragraf özellikleri: Alignment, LeftIndent, RightIndent, FirstLineIndent, Hanging,
      * SpaceAbove/SpaceBelow, LineSpacing ve TabSet (pozisyon:hizalama:dolgu) birebir uygulanır.
      * Sekme (tab) genişlikleri layoutTabs() ile gerçek yazı genişliğine göre hesaplanır.
      */
-    function paragraphToDom(p, pIndex = 0) {
+    function paragraphToDom(p, pIndex = 0, listCounters = {}) {
         const pEl = document.createElement('p');
         const runs = p.runs || [];
         const fullText = runs.map(r => r.text || '').join('');
 
         // Paragraf niteliklerini kayıpsız okuma ve kaydetme için data-* alanlarına yaz
-        pEl.setAttribute('data-fli', String(p.firstLineIndent || 0));
-        pEl.setAttribute('data-li', String(p.leftIndent || 0));
-        pEl.setAttribute('data-ri', String(p.rightIndent || 0));
-        pEl.setAttribute('data-hanging', String(p.hanging || 0));
-        pEl.setAttribute('data-spaceabove', String(p.spaceAbove !== undefined ? p.spaceAbove : 1.0));
-        pEl.setAttribute('data-spacebelow', String(p.spaceBelow !== undefined ? p.spaceBelow : 1.0));
-        pEl.setAttribute('data-linespacing', String(p.lineSpacing || 0.0));
+        pEl.setAttribute('data-fli', p.rawFirstLineIndent !== null && p.rawFirstLineIndent !== undefined ? p.rawFirstLineIndent : String(p.firstLineIndent || 0));
+        pEl.setAttribute('data-li', p.rawLeftIndent !== null && p.rawLeftIndent !== undefined ? p.rawLeftIndent : String(p.leftIndent || 0));
+        pEl.setAttribute('data-ri', p.rawRightIndent !== null && p.rawRightIndent !== undefined ? p.rawRightIndent : String(p.rightIndent || 0));
+        pEl.setAttribute('data-hanging', p.rawHanging !== null && p.rawHanging !== undefined ? p.rawHanging : String(p.hanging || 0));
+        pEl.setAttribute('data-spaceabove', p.rawSpaceAbove !== null && p.rawSpaceAbove !== undefined ? p.rawSpaceAbove : String(p.spaceAbove !== undefined ? p.spaceAbove : 1.0));
+        pEl.setAttribute('data-spacebelow', p.rawSpaceBelow !== null && p.rawSpaceBelow !== undefined ? p.rawSpaceBelow : String(p.spaceBelow !== undefined ? p.spaceBelow : 1.0));
+        pEl.setAttribute('data-linespacing', p.rawLineSpacing !== null && p.rawLineSpacing !== undefined ? p.rawLineSpacing : String(p.lineSpacing || 0.0));
         if (p.tabSet) pEl.setAttribute('data-tabset', p.tabSet);
+        if (p.repeatingLabel) pEl.setAttribute('data-repeatinglabel', p.repeatingLabel);
+        if (p.groupName) pEl.setAttribute('data-groupname', p.groupName);
+        if (p.bulleted) {
+            pEl.setAttribute('data-bulleted', 'true');
+            if (p.bulletType) pEl.setAttribute('data-bullettype', p.bulletType);
+        }
+        if (p.numbered) {
+            pEl.setAttribute('data-numbered', 'true');
+            if (p.numberType) pEl.setAttribute('data-numbertype', p.numberType);
+        }
+        if (p.listId) pEl.setAttribute('data-listid', p.listId);
+        if (p.listLevel) pEl.setAttribute('data-listlevel', String(p.listLevel));
 
         const firstSize = (runs.find(r => r.size) || {}).size || 12;
         const effFirstSize = +(firstSize * 0.98).toFixed(2);
         const hasUnderline = runs.some(r => r.underline);
         if (hasUnderline) pEl.setAttribute('data-underline', 'true');
-        if (fullText.replace(/[\r\n]+/g, '') === '' && !runs.some(r => r.imageData)) {
-            if (hasUnderline && p.alignment === 'center') {
-                // UYAP Java Swing / BasicTextUI: Ortalanmış boş paragraf altı çizili ise (P#10, P#13),
-                // sayfa ortasında (x=296.28pt) yuvarlak uçlu alt çizgi noktası (seqno 21 & seqno 98) çizer.
-                // Kullanıcı bunu imleçle, fareyle veya Ctrl+sol/sağ okla seçebilmeli ve Backspace/Delete ile silebilmelidir.
-                pEl.innerHTML = '<span class="udf-underline-dot" data-udf-dot="true" style="display:inline-block;cursor:text;user-select:text;">.</span>';
-            } else {
-                pEl.innerHTML = '<br>';
-            }
-            pEl.style.fontSize = effFirstSize + 'pt';
-            pEl.style.lineHeight = '1.1633';
-            pEl.style.padding = `${p.spaceAbove !== undefined ? p.spaceAbove : 1.0}pt 0 ${p.spaceBelow !== undefined ? p.spaceBelow : 1.0}pt 0`;
-            pEl.style.margin = `0 ${p.rightIndent || 0}pt 0 ${p.leftIndent || 0}pt`;
-            pEl.style.textAlign = p.alignment || 'left';
-            return pEl;
-        }
+
+        const effFli = +((p.firstLineIndent || 0) * 0.98).toFixed(2);
+        const effLi = +((p.leftIndent || 0) * 0.98).toFixed(2);
+        const effRi = +((p.rightIndent || 0) * 0.98).toFixed(2);
 
         pEl.style.textAlign = p.alignment || 'left';
-        // Üst/alt boşluk padding ile verilir: kenar boşlukları birleşmez (Java Swing davranışı)
-        pEl.style.margin = `0 ${p.rightIndent || 0}pt 0 ${p.leftIndent || 0}pt`;
+        pEl.style.margin = `0 ${effRi}pt 0 ${effLi}pt`;
         pEl.style.padding = `${p.spaceAbove !== undefined ? p.spaceAbove : 1.0}pt 0 ${p.spaceBelow !== undefined ? p.spaceBelow : 1.0}pt 0`;
         pEl.style.lineHeight = String(1.1633 + (p.lineSpacing || 0.0));
 
@@ -513,13 +655,83 @@
             // tab durağı + iki nokta genişliği (183pt + 3.12pt = 186.12pt) ile hizalanır.
             const effHang = p.primaryTabStop && Math.abs(p.primaryTabStop - hanging) <= 15 ? (p.primaryTabStop + 3.12) : hanging;
             pEl.style.paddingLeft = effHang + 'pt';
-            pEl.style.textIndent = (-effHang + (p.firstLineIndent || 0)) + 'pt';
+            pEl.style.textIndent = (-effHang + effFli) + 'pt';
         } else if (p.firstLineIndent) {
-            pEl.style.textIndent = p.firstLineIndent + 'pt';
+            pEl.style.textIndent = effFli + 'pt';
+        }
+
+        // Madde işareti veya numaralandırma ön eki
+        if (p.bulleted) {
+            let bulletChar = '●';
+            if (p.bulletType === 'BULLET_TYPE_SQUARE') bulletChar = '■';
+            else if (p.bulletType === 'BULLET_TYPE_HYPHEN' || p.bulletType === 'BULLET_TYPE_DASH') bulletChar = '-';
+            const marker = document.createElement('span');
+            marker.className = 'udf-list-marker';
+            marker.setAttribute('contenteditable', 'false');
+            marker.style.cssText = 'user-select:none;display:inline-block;width:18pt;font-weight:bold;';
+            marker.textContent = bulletChar + ' ';
+            pEl.appendChild(marker);
+        } else if (p.numbered) {
+            const lId = p.listId || ('lvl_' + (p.listLevel || 1));
+            const count = (listCounters[lId] = (listCounters[lId] || 0) + 1);
+            let numText = count + '.';
+            if (p.numberType === 'NUMBER_TYPE_NUMBER_PARANTHESE_2') numText = count + ')';
+            else if (p.numberType === 'NUMBER_TYPE_NUMBER_PARANTHESE_1') numText = '(' + count + ')';
+            else if (p.numberType === 'NUMBER_TYPE_LETTER_LOWER_DOT') numText = String.fromCharCode(96 + count) + '.';
+            else if (p.numberType === 'NUMBER_TYPE_LETTER_LOWER_PARANTHESE_2') numText = String.fromCharCode(96 + count) + ')';
+            else if (p.numberType === 'NUMBER_TYPE_LETTER_UPPER_DOT') numText = String.fromCharCode(64 + count) + '.';
+            const marker = document.createElement('span');
+            marker.className = 'udf-list-marker';
+            marker.setAttribute('contenteditable', 'false');
+            marker.style.cssText = 'user-select:none;display:inline-block;width:18pt;font-weight:bold;';
+            marker.textContent = numText + ' ';
+            pEl.appendChild(marker);
+        }
+
+        if (fullText.replace(/[\r\n]+/g, '') === '' && !runs.some(r => r.imageData || r.barcodeData || r.type === 'barcode')) {
+            const bgRun = runs.find(r => r.background);
+            if (bgRun && bgRun.background) {
+                pEl.style.backgroundColor = bgRun.background;
+                pEl.setAttribute('data-bg', bgRun.background);
+            }
+            const fgRun = runs.find(r => r.foreground);
+            if (fgRun && fgRun.foreground) {
+                pEl.setAttribute('data-fg', fgRun.foreground);
+            }
+            if (hasUnderline && p.alignment === 'center') {
+                // UYAP Java Swing / BasicTextUI: Ortalanmış boş paragraf altı çizili ise (P#10, P#13),
+                // sayfa ortasında (x=296.28pt) yuvarlak uçlu alt çizgi noktası (seqno 21 & seqno 98) çizer.
+                pEl.appendChild(document.createRange().createContextualFragment(
+                    '<span class="udf-underline-dot" data-udf-dot="true" style="display:inline-block;cursor:text;user-select:text;">.</span>'
+                ));
+            } else {
+                const specialRun = runs.find(r => r.strikethrough || r.underline || r.superscript);
+                if (specialRun) {
+                    const mark = document.createElement('span');
+                    mark.className = 'udf-empty-mark';
+                    mark.style.cssText = `display:inline-block;width:4pt;height:12pt;border-left:2px solid ${specialRun.foreground || '#f00'};vertical-align:${specialRun.superscript ? 'super' : 'baseline'};`;
+                    pEl.appendChild(mark);
+                } else if (!p.bulleted && !p.numbered) {
+                    pEl.innerHTML = '<br>';
+                }
+            }
+            pEl.style.fontSize = effFirstSize + 'pt';
+            pEl.style.lineHeight = '1.1633';
+            return pEl;
         }
 
         const lastRunIdx = runs.length - 1;
         runs.forEach((run, rIdx) => {
+            if (run.type === 'barcode' || run.barcodeData) {
+                const bcodeSpan = document.createElement('span');
+                bcodeSpan.className = 'udf-barcode';
+                bcodeSpan.setAttribute('data-barcode', run.barcodeData);
+                bcodeSpan.setAttribute('contenteditable', 'false');
+                bcodeSpan.style.cssText = 'display:inline-block;margin:4pt 0;line-height:1;user-select:none;';
+                bcodeSpan.innerHTML = generateBarcodeSvg(run.barcodeData, 44);
+                pEl.appendChild(bcodeSpan);
+                return;
+            }
             if (run.imageData) {
                 const img = document.createElement('img');
                 img.className = 'udf-img';
@@ -534,7 +746,7 @@
             if (txt === '' && run.type !== 'tab') return;
             const parts = txt.split('\t');
             parts.forEach((part, i) => {
-                if (i > 0 || (run.type === 'tab' && txt === '\t' && i === 0 && part === '' && false)) {
+                if (i > 0) {
                     pEl.appendChild(createTabSpan(run));
                 }
                 if (part !== '') pEl.appendChild(createRunSpan(Object.assign({}, run, { text: part })));
@@ -562,8 +774,10 @@
         const stops = [];
         (tabSet || '').split(',').forEach(part => {
             const f = part.split(':');
-            const pos = parseFloat(f[0]);
-            if (!isNaN(pos) && pos > 0) stops.push({ pos, align: parseInt(f[1], 10) || 0 });
+            const rawPos = parseFloat(f[0]);
+            if (!isNaN(rawPos) && rawPos > 0) {
+                stops.push({ pos: +(rawPos * 0.98).toFixed(2), rawPos, align: parseInt(f[1], 10) || 0 });
+            }
         });
         stops.sort((a, b) => a.pos - b.pos);
         return stops;
@@ -655,10 +869,18 @@
         }
         span.textContent = txt;
 
+        if (run.type && run.type !== 'content') span.setAttribute('data-tag', run.type);
+        if (run.fieldName) span.setAttribute('data-field-name', run.fieldName);
+        if (run.fieldType) span.setAttribute('data-field-type', run.fieldType);
+        if (run.isList) span.setAttribute('data-is-list', run.isList);
+        if (run.resolver) span.setAttribute('data-resolver', run.resolver);
+
         if (run.bold) span.style.fontWeight = 'bold';
         if (run.italic) span.style.fontStyle = 'italic';
         if (run.underline) span.style.textDecoration = 'underline';
         if (run.strikethrough) span.style.textDecoration = (span.style.textDecoration ? span.style.textDecoration + ' ' : '') + 'line-through';
+        if (run.subscript) span.style.verticalAlign = 'sub';
+        if (run.superscript) span.style.verticalAlign = 'super';
         if (run.size) {
             span.setAttribute('data-size', String(run.size));
             const effPt = +(run.size * 0.98).toFixed(2);
@@ -671,10 +893,10 @@
         return span;
     }
 
-    function tableToDom(tbl) {
+    function tableToDom(tbl, listCounters = {}) {
         const tableEl = document.createElement('table');
         tableEl.className = 'udf-table';
-        tableEl.setAttribute('data-table-name', tbl.tableName);
+        if (tbl.tableName) tableEl.setAttribute('data-table-name', tbl.tableName);
         tableEl.style.width = '100%';
         tableEl.style.borderCollapse = 'collapse';
         tableEl.style.margin = '8pt 0';
@@ -685,7 +907,9 @@
         // Sütun genişlikleri: columnSpans oransal ağırlıktır; yoksa eşit bölünür (sabit yerleşim)
         const nCols = Math.max(1, ...tbl.rows.map(r => r.cells.length));
         let spans = (tbl.columnSpans || []).slice(0, nCols);
-        if (spans.length !== nCols || spans.some(v => !(v > 0))) spans = new Array(nCols).fill(1);
+        if (spans.length !== nCols || spans.some(v => !(v > 0))) spans = new Array(nCols).fill(100);
+        tableEl.setAttribute('data-col-spans', spans.join(','));
+        tableEl.setAttribute('data-col-count', String(nCols));
         const spanSum = spans.reduce((a, b) => a + b, 0);
         tableEl.style.tableLayout = 'fixed';
 
@@ -700,7 +924,7 @@
                 td.style.width = (spans[idx] / spanSum * 100) + '%';
 
                 if (c.paragraphs && c.paragraphs.length > 0) {
-                    c.paragraphs.forEach(p => td.appendChild(paragraphToDom(p)));
+                    c.paragraphs.forEach(p => td.appendChild(paragraphToDom(p, 0, listCounters)));
                 } else {
                     td.innerHTML = '<p><br></p>';
                 }
@@ -837,11 +1061,11 @@
             }
 
             const tabSetAttr = pEl.getAttribute && pEl.getAttribute('data-tabset') || '';
+            const tabSetXml = tabSetAttr ? ` TabSet="${tabSetAttr}"` : '';
             let hangAttr = (pEl.getAttribute && pEl.getAttribute('data-hanging')) || '0.0';
-            const padL = parseFloat(pEl.style.paddingLeft);
-            if (!isNaN(padL) && padL > 0 && parseFloat(pEl.style.textIndent) < 0) {
-                hangAttr = String(padL);
-                const fl = parseFloat(pEl.style.textIndent) + padL;
+            if (hangAttr === '0.0' && parseFloat(pEl.style.paddingLeft) > 0 && parseFloat(pEl.style.textIndent) < 0) {
+                hangAttr = String(parseFloat(pEl.style.paddingLeft));
+                const fl = parseFloat(pEl.style.textIndent) + parseFloat(pEl.style.paddingLeft);
                 fliAttr = fl > 0 ? ` FirstLineIndent="${fl}"` : '';
             }
 
@@ -872,6 +1096,30 @@
                 lineSpacingAttr = '0.0';
             }
 
+            let extraParaAttrs = '';
+            const rep = pEl.getAttribute && pEl.getAttribute('data-repeatinglabel');
+            if (rep) extraParaAttrs += ` RepeatingLabel="${rep}"`;
+            const grp = pEl.getAttribute && pEl.getAttribute('data-groupname');
+            if (grp) extraParaAttrs += ` GroupName="${grp}"`;
+
+            if (pEl.getAttribute && pEl.getAttribute('data-bulleted') === 'true') {
+                extraParaAttrs += ` Bulleted="true"`;
+                const bt = pEl.getAttribute('data-bullettype');
+                if (bt) extraParaAttrs += ` BulletType="${bt}"`;
+                const lid = pEl.getAttribute('data-listid');
+                if (lid) extraParaAttrs += ` ListId="${lid}"`;
+                const llvl = pEl.getAttribute('data-listlevel');
+                if (llvl) extraParaAttrs += ` ListLevel="${llvl}"`;
+            } else if (pEl.getAttribute && pEl.getAttribute('data-numbered') === 'true') {
+                extraParaAttrs += ` Numbered="true"`;
+                const nt = pEl.getAttribute('data-numbertype');
+                if (nt) extraParaAttrs += ` NumberType="${nt}"`;
+                const lid = pEl.getAttribute('data-listid');
+                if (lid) extraParaAttrs += ` ListId="${lid}"`;
+                const llvl = pEl.getAttribute('data-listlevel');
+                if (llvl) extraParaAttrs += ` ListLevel="${llvl}"`;
+            }
+
             const contentsXml = [];
             const textNodes = getTextLeaves(pEl);
 
@@ -880,7 +1128,15 @@
                 const hasDot = !!pEl.querySelector('.udf-underline-dot');
                 const isCleared = pEl.getAttribute && pEl.getAttribute('data-udf-dot-cleared') === 'true';
                 const hasUnderline = (pEl.getAttribute && pEl.getAttribute('data-underline') === 'true') && (hasDot || !isCleared);
-                const uAttr = hasUnderline ? ' underline="true" bold="true"' : '';
+                let uAttr = hasUnderline ? ' underline="true" bold="true"' : '';
+                const bgVal = pEl.getAttribute && pEl.getAttribute('data-bg');
+                if (bgVal) {
+                    uAttr += ` background="${hexToArgb(bgVal)}"`;
+                }
+                const fgVal = pEl.getAttribute && pEl.getAttribute('data-fg');
+                if (fgVal) {
+                    uAttr += ` foreground="${hexToArgb(fgVal)}"`;
+                }
                 contentsXml.push(`<content resolver="hvl-default"${uAttr} startOffset="${currentOffset}" length="1" />`);
                 currentOffset += 1;
             } else {
@@ -891,6 +1147,17 @@
                     fullText += text;
                     currentOffset += len;
 
+                    if (item.tag === 'barcode' || item.barcodeData) {
+                        contentsXml.push(`<barcode barcodeData="${item.barcodeData}" startOffset="${start}" length="1" />`);
+                        continue;
+                    }
+
+                    if (item.image) {
+                        const imgResolver = item.resolver || 'hvl-default';
+                        contentsXml.push(`<image resolver="${imgResolver}" imageData="${item.image}" startOffset="${start}" length="${len}" />`);
+                        continue;
+                    }
+
                     const attrs = [];
                     attrs.push(`startOffset="${start}"`);
                     attrs.push(`length="${len}"`);
@@ -899,15 +1166,21 @@
                     if (item.italic) attrs.push('italic="true"');
                     if (item.underline) attrs.push('underline="true"');
                     if (item.strikethrough) attrs.push('strikethrough="true"');
+                    if (item.subscript) attrs.push('subscript="true"');
+                    if (item.superscript) attrs.push('superscript="true"');
                     attrs.push(`size="${item.size || 12}"`);
                     attrs.push(`family="${item.family || 'Times New Roman'}"`);
                     attrs.push(`foreground="${item.foreground || -16777216}"`);
+                    if (item.background) attrs.push(`background="${hexToArgb(item.background)}"`);
 
-                    if (item.image) {
-                        contentsXml.push(`<image resolver="hvl-default" imageData="${item.image}" startOffset="${start}" length="${len}" />`);
-                    } else {
-                        contentsXml.push(`<content resolver="hvl-default" ${attrs.join(' ')} />`);
-                    }
+                    const nodeTag = item.tag || 'content';
+                    const nodeResolver = item.resolver ? ` resolver="${item.resolver}"` : ' resolver="hvl-default"';
+                    let extraFieldAttrs = '';
+                    if (item.fieldName) extraFieldAttrs += ` fieldName="${item.fieldName}"`;
+                    if (item.fieldType) extraFieldAttrs += ` fieldType="${item.fieldType}"`;
+                    if (item.isList) extraFieldAttrs += ` isList="${item.isList}"`;
+
+                    contentsXml.push(`<${nodeTag}${nodeResolver}${extraFieldAttrs} ${attrs.join(' ')} />`);
                 }
                 fullText += '\n';
                 contentsXml.push(`<content resolver="hvl-default" startOffset="${currentOffset}" length="1" />`);
@@ -915,7 +1188,7 @@
             }
 
             return {
-                xml: `<paragraph LineSpacing="${lineSpacingAttr}" LeftIndent="${leftIndentAttr}" SpaceAbove="${spaceAboveAttr}" TabSet="${tabSetAttr}" RightIndent="${rightIndentAttr}" Alignment="${alignCode}" resolver="hvl-default" Hanging="${hangAttr}" SpaceBelow="${spaceBelowAttr}"${fliAttr}>${contentsXml.join('')}</paragraph>`
+                xml: `<paragraph LineSpacing="${lineSpacingAttr}" LeftIndent="${leftIndentAttr}" SpaceAbove="${spaceAboveAttr}"${tabSetXml} RightIndent="${rightIndentAttr}" Alignment="${alignCode}" resolver="hvl-default" Hanging="${hangAttr}" SpaceBelow="${spaceBelowAttr}"${fliAttr}${extraParaAttrs}>${contentsXml.join('')}</paragraph>`
             };
         }
 
@@ -935,6 +1208,8 @@
             const rowXmls = [];
             let maxCols = 0;
             const borderAttr = tableEl.getAttribute('data-border') || (tableEl.style.border === 'none' ? 'borderNone' : 'borderCell');
+            const tblName = tableEl.getAttribute('data-table-name') || 'Sabit';
+            const colSpansAttr = tableEl.getAttribute('data-col-spans');
 
             for (let rIdx = 0; rIdx < rows.length; rIdx++) {
                 const tr = rows[rIdx];
@@ -961,9 +1236,14 @@
                 rowXmls.push(`<row rowName="row${rIdx + 1}" rowType="dataRow">${cellXmls.join('')}</row>`);
             }
 
-            const colSpans = Array(maxCols).fill('100').join(',');
+            let tblTag = '';
+            if (colSpansAttr) {
+                tblTag = `<table tableName="${tblName}" columnCount="${maxCols}" columnSpans="${colSpansAttr}" border="${borderAttr}">${rowXmls.join('')}</table>`;
+            } else {
+                tblTag = `<table border="${borderAttr}">${rowXmls.join('')}</table>`;
+            }
             return {
-                xml: `<table tableName="Sabit" columnCount="${maxCols}" columnSpans="${colSpans}" border="${borderAttr}">${rowXmls.join('')}</table>`
+                xml: tblTag
             };
         }
 
@@ -973,13 +1253,36 @@
 
             if (node.nodeType === Node.ELEMENT_NODE) {
                 const tag = node.tagName.toLowerCase();
-                if (tag === 'span' && node.classList && node.classList.contains('udf-underline-dot')) {
-                    return leaves;
+                if (tag === 'span' && node.classList) {
+                    if (node.classList.contains('udf-underline-dot') || node.classList.contains('udf-list-marker') || node.classList.contains('udf-empty-mark')) {
+                        return leaves;
+                    }
+                    if (node.classList.contains('udf-barcode')) {
+                        leaves.push({
+                            text: String.fromCharCode(184),
+                            tag: 'barcode',
+                            barcodeData: node.getAttribute('data-barcode') || '',
+                            ...style
+                        });
+                        return leaves;
+                    }
+                }
+                if (node.getAttribute) {
+                    if (node.getAttribute('data-tag')) style.tag = node.getAttribute('data-tag');
+                    if (node.getAttribute('data-field-name')) style.fieldName = node.getAttribute('data-field-name');
+                    if (node.getAttribute('data-field-type')) style.fieldType = node.getAttribute('data-field-type');
+                    if (node.getAttribute('data-is-list')) style.isList = node.getAttribute('data-is-list');
+                    if (node.getAttribute('data-resolver')) style.resolver = node.getAttribute('data-resolver');
                 }
                 if (tag === 'b' || tag === 'strong' || node.style.fontWeight === 'bold') style.bold = true;
                 if (tag === 'i' || tag === 'em' || node.style.fontStyle === 'italic') style.italic = true;
                 if (tag === 'u' || (node.style.textDecoration && node.style.textDecoration.includes('underline'))) style.underline = true;
                 if (tag === 's' || (node.style.textDecoration && node.style.textDecoration.includes('line-through'))) style.strikethrough = true;
+                if (node.style.verticalAlign === 'sub') style.subscript = true;
+                if (node.style.verticalAlign === 'super') style.superscript = true;
+                if (node.style.backgroundColor) {
+                    style.background = rgbToHex(node.style.backgroundColor);
+                }
 
                 const dataSize = node.getAttribute && node.getAttribute('data-size');
                 if (dataSize) {
@@ -1005,11 +1308,11 @@
                     leaves.push({ text: '\n', ...style });
                     return leaves;
                 }
-                if (node.classList.contains('udf-tab')) {
+                if (node.classList && node.classList.contains('udf-tab')) {
                     leaves.push({ text: '\t', ...style });
                     return leaves;
                 }
-                if (node.classList.contains('pb-spacer')) return leaves;
+                if (node.classList && node.classList.contains('pb-spacer')) return leaves;
 
                 for (let i = 0; i < node.childNodes.length; i++) {
                     leaves.push(...getTextLeaves(node.childNodes[i], style));
@@ -1037,17 +1340,17 @@
             return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
         }
 
-        const leftM = (pageProps.leftMargin !== undefined ? pageProps.leftMargin : 56.69).toFixed(2);
-        const rightM = (pageProps.rightMargin !== undefined ? pageProps.rightMargin : 70.86).toFixed(2);
-        const topM = (pageProps.topMargin !== undefined ? pageProps.topMargin : 70.86).toFixed(2);
-        const bottomM = (pageProps.bottomMargin !== undefined ? pageProps.bottomMargin : 70.86).toFixed(2);
+        const leftM = pageProps.rawLeftMargin !== null && pageProps.rawLeftMargin !== undefined ? pageProps.rawLeftMargin : (pageProps.leftMargin !== undefined ? pageProps.leftMargin : 56.69).toFixed(2);
+        const rightM = pageProps.rawRightMargin !== null && pageProps.rawRightMargin !== undefined ? pageProps.rawRightMargin : (pageProps.rightMargin !== undefined ? pageProps.rightMargin : 70.86).toFixed(2);
+        const topM = pageProps.rawTopMargin !== null && pageProps.rawTopMargin !== undefined ? pageProps.rawTopMargin : (pageProps.topMargin !== undefined ? pageProps.topMargin : 70.86).toFixed(2);
+        const bottomM = pageProps.rawBottomMargin !== null && pageProps.rawBottomMargin !== undefined ? pageProps.rawBottomMargin : (pageProps.bottomMargin !== undefined ? pageProps.bottomMargin : 70.86).toFixed(2);
         const orient = pageProps.paperOrientation || 1;
-        const headOffset = (pageProps.headerFOffset !== undefined ? pageProps.headerFOffset : 15.0).toFixed(2);
-        const footOffset = (pageProps.footerFOffset !== undefined ? pageProps.footerFOffset : 60.0).toFixed(2);
+        const headOffset = pageProps.rawHeaderFOffset !== null && pageProps.rawHeaderFOffset !== undefined ? pageProps.rawHeaderFOffset : (pageProps.headerFOffset !== undefined ? pageProps.headerFOffset : 15.0).toFixed(2);
+        const footOffset = pageProps.rawFooterFOffset !== null && pageProps.rawFooterFOffset !== undefined ? pageProps.rawFooterFOffset : (pageProps.footerFOffset !== undefined ? pageProps.footerFOffset : 60.0).toFixed(2);
         const media = pageProps.mediaSizeName || '1';
 
         const footerInfo = pageProps.footerInfo || (window.UkiPages && window.UkiPages.getConfig ? window.UkiPages.getConfig() : {});
-        const webIdVal = pageProps.webId || (footerInfo && footerInfo.webId) || '';
+        const webIdVal = pageProps.rawWebId || pageProps.webId || (footerInfo && (footerInfo.rawWebId || footerInfo.webId)) || '';
         const hasFooter = footerInfo.showPageNumber !== false && (
             footerInfo.showPageNumber ||
             footerInfo.showFooter ||
@@ -1057,18 +1360,45 @@
         );
 
         if (hasFooter) {
-            const sep = (footerInfo.pageNumberFormat === 'dash') ? '-' : (footerInfo.pageNumberFormat === 'single' ? '' : '/');
+            const fe = pageProps.footerElement;
+            const sep = (fe && fe.pageNumberSep !== undefined) ? fe.pageNumberSep : ((footerInfo.pageNumberFormat === 'dash') ? '-' : (footerInfo.pageNumberFormat === 'single' ? '' : '/'));
+            const foreStr = (fe && fe.pageNumberForeStr) || footerInfo.pageNumberForeStr || '';
+            const startNumStr = (fe && fe.pageNumberStartNum) || footerInfo.pageNumberStartNum || '1';
             const footStart = currentOffset;
-            fullText += '\n';
-            currentOffset += 1;
+
+            let footParasXml = '';
+            if (fe && fe.paragraphs && fe.paragraphs.length > 0) {
+                fe.paragraphs.forEach(fp => {
+                    const fpInfo = serializeParagraphNodeModel(fp);
+                    footParasXml += fpInfo;
+                });
+            } else {
+                fullText += '\n';
+                currentOffset += 1;
+                footParasXml = `<paragraph size="12" LineSpacing="0.0" description="Gövde" LeftIndent="0.0" SpaceAbove="0.0" RightIndent="0.0" Alignment="0" resolver="default" family="Times New Roman" SpaceBelow="0.0"><content resolver="default" size="12" family="Times New Roman" startOffset="${footStart}" length="1" /></paragraph>`;
+            }
 
             xmlElements.push(
-                `<footer pageNumber-fontItalic="false" pageNumber-color="-16777216" foreground="-8355712" pageNumber-fontBold="false" pageNumber-spec="BSP32_2120" background="-1" pageNumber-fontFace="Arial" pageNumber-foreStr="" pageNumber-fontSize="11" pageNumber-seperator="${sep}">` +
-                `<paragraph size="12" LineSpacing="0.0" description="Gövde" LeftIndent="0.0" SpaceAbove="0.0" RightIndent="0.0" Alignment="0" resolver="default" family="Times New Roman" SpaceBelow="0.0">` +
-                `<content resolver="default" size="12" family="Times New Roman" startOffset="${footStart}" length="1" />` +
-                `</paragraph>` +
-                `</footer>`
+                `<footer pageNumber-fontItalic="false" pageNumber-color="-16777216" foreground="-8355712" pageNumber-fontBold="false" pageNumber-spec="BSP32_2120" background="-1" pageNumber-fontFace="Arial" pageNumber-foreStr="${foreStr}" pageNumber-pageStartNumStr="${startNumStr}" pageNumber-fontSize="11" pageNumber-seperator="${sep}">${footParasXml}</footer>`
             );
+        }
+
+        function serializeParagraphNodeModel(pModel) {
+            const pRunsXml = [];
+            const runs = pModel.runs || [];
+            runs.forEach(r => {
+                const txt = r.text || '';
+                const start = currentOffset;
+                fullText += txt;
+                currentOffset += txt.length;
+                pRunsXml.push(`<content resolver="${r.resolver || 'default'}" size="${r.size || 12}" family="${r.family || 'Times New Roman'}" startOffset="${start}" length="${txt.length}" />`);
+            });
+            if (runs.length === 0) {
+                fullText += '\n';
+                pRunsXml.push(`<content resolver="default" size="12" family="Times New Roman" startOffset="${currentOffset}" length="1" />`);
+                currentOffset += 1;
+            }
+            return `<paragraph size="12" LineSpacing="0.0" description="Gövde" LeftIndent="0.0" SpaceAbove="0.0" RightIndent="0.0" Alignment="0" resolver="default" family="Times New Roman" SpaceBelow="0.0">${pRunsXml.join('')}</paragraph>`;
         }
 
         const settings = {};
@@ -1078,6 +1408,9 @@
         if (webIdVal) settings.webId = webIdVal;
         zip.file('editor-settings.json', JSON.stringify(settings));
 
+        const defaultStylesXml = `<styles><style name="default" description="Geçerli" family="Dialog" size="12" bold="false" italic="false" FONT_ATTRIBUTE_KEY="javax.swing.plaf.FontUIResource[family=Dialog,name=Dialog,style=plain,size=12]" foreground="-13421773" /><style name="hvl-default" family="Times New Roman" size="12" description="Gövde" /></styles>`;
+        const stylesBlock = pageProps.originalStylesXml || defaultStylesXml;
+
         const xml = `<?xml version="1.0" encoding="UTF-8" ?>\n` +
             `<template format_id="${UDF_CONSTANTS.FORMAT_ID}">\n` +
             `<content><![CDATA[${fullText}]]></content>\n` +
@@ -1085,7 +1418,7 @@
             `<elements >\n` +
             xmlElements.join('\n') + '\n' +
             `</elements>\n` +
-            `<styles><style name="default" description="Geçerli" family="Dialog" size="12" bold="false" italic="false" FONT_ATTRIBUTE_KEY="javax.swing.plaf.FontUIResource[family=Dialog,name=Dialog,style=plain,size=12]" foreground="-13421773" /><style name="hvl-default" family="Times New Roman" size="12" description="Gövde" /></styles>\n` +
+            (stylesBlock ? (stylesBlock.endsWith('\n') ? stylesBlock : stylesBlock + '\n') : '') +
             (webIdVal ? `<webID id="${String(webIdVal).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" />\n` : '') +
             `</template>`;
 
@@ -1473,7 +1806,7 @@
                     const stops = parseTabStops(el.getAttribute('data-tabset'));
                     if (stops.length) {
                         bodyParts.push('        <w:tabs>');
-                        for (const stop of stops) bodyParts.push(`          <w:tab w:val="${stop.align===1?'right':stop.align===2?'center':'left'}" w:pos="${Math.round(stop.pos*20)}"/>`);
+                        for (const stop of stops) bodyParts.push(`          <w:tab w:val="${stop.align===1?'right':stop.align===2?'center':'left'}" w:pos="${Math.round((stop.rawPos !== undefined ? stop.rawPos : stop.pos)*20)}"/>`);
                         bodyParts.push('        </w:tabs>');
                     }
                     const asTwips = value => {
