@@ -327,7 +327,8 @@
     background-color: #171d2b !important;
     color: #f1f5f9 !important;
     box-shadow: 0 4px 28px rgba(0, 0, 0, 0.75) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border: none !important;
+    outline: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 [data-theme="dark"]:not([data-doc-theme="light"]) .a4-page p,
@@ -799,29 +800,38 @@ body {
 }
 
 .a4-page {
-    width: 595pt;
+    width: 595.32pt;
     /* A4 genişliği (210mm) */
-    min-height: 842pt;
+    min-height: 841.92pt;
     /* A4 yüksekliği (297mm) */
     background: #ffffff;
     box-shadow: var(--ax-shadow-paper);
     border-radius: var(--ax-radius-xs);
-    padding: 70.87pt 70.87pt 70.87pt 56.69pt;
-    /* UYAP standart marjinleri */
+    padding: 70.87pt 72.82pt 70.87pt 67.92pt;
+    /* UYAP standart marjinleri (Sol 24mm=67.92pt, Sağ 72.82pt -> Metin genişliği 454.58pt, Üst 25mm=70.87pt, Alt 25mm=70.87pt) */
     color: #000000;
     outline: none;
     user-select: text;
-    line-height: 1.1667;
+    line-height: 1.1633;
     font-family: var(--ax-font-serif);
-    font-size: 12pt;
+    font-size: 11.76pt;
     position: relative;
     box-sizing: border-box;
 }
 
 .a4-page p {
-    min-height: 1.15em;
+    margin: 0;
+    padding: 0;
+    line-height: 1.1633;
+    min-height: 1.1633em;
     white-space: pre-wrap;
     overflow-wrap: break-word;
+    box-sizing: border-box;
+}
+
+.a4-page p span {
+    line-height: inherit;
+    vertical-align: baseline;
 }
 
 /* Tab Hizalama Kolonları */
@@ -2972,7 +2982,7 @@ mark.find-hit.current {
 .a4-page {
     font-kerning: none;
     font-variant-ligatures: none;
-    letter-spacing: 0.05px;
+    letter-spacing: normal;
 }
 
 /* ==========================================================================
@@ -3248,9 +3258,9 @@ mark.find-hit.current {
 .a4-page .udf-tab,
 .udf-tab {
     display: inline-block !important;
-    vertical-align: baseline;
-    height: 1em;
-    min-height: 1em;
+    vertical-align: top !important;
+    height: 1.14em;
+    min-height: 0;
     box-sizing: border-box;
     white-space: pre;
     overflow: hidden;

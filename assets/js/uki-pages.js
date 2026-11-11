@@ -42,7 +42,7 @@
         qr.addData(text);
         qr.make();
         const n = qr.getModuleCount();
-        const quiet = uyapQuiet ? n * 11 / 29 : 4;
+        const quiet = uyapQuiet ? 2 : 4;
         let d = '';
         for (let r = 0; r < n; r++) {
             for (let c = 0; c < n; c++) {
@@ -143,8 +143,8 @@
             W, H, GAP, S: H + GAP,
             MtRaw: px(cs.paddingTop),
             Mt: Math.max(px(cs.paddingTop), cfg.antetTop || 0), Mb: px(cs.paddingBottom),
-            // Alt bilgi varsa metin, alt bilginin üstünde biter (UYAP: footerFOffset + alt bilgi yüksekliği)
-            MbEff: Math.max(cfg.reserve ? Math.max(px(cs.paddingBottom), cfg.footerOffsetPt * 96 / 72 + 30) : px(cs.paddingBottom), cfg.antetBottom || 0),
+            // Alt bilgi varsa metin, alt bilginin üstünde biter (UYAP: footerFOffset + alt bilgi yüksekliği ~96pt / 128px)
+            MbEff: Math.max(cfg.reserve ? Math.max(px(cs.paddingBottom), (cfg.footerOffsetPt + 36) * 96 / 72) : px(cs.paddingBottom), cfg.antetBottom || 0),
             Ml: px(cs.paddingLeft), Mr: px(cs.paddingRight)
         };
         lastGeom = g;
@@ -452,7 +452,7 @@
                 } else if (align === 'left') {
                     alignCss = `left:${g.Ml}px; text-align: left;`;
                 }
-                num.style.cssText = `top:${pageTop + g.H - 105}px; ${alignCss}`;
+                num.style.cssText = `top:${pageTop + g.H - 118}px; ${alignCss}`;
                 layer.appendChild(num);
             }
 

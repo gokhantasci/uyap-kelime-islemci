@@ -480,10 +480,12 @@
         if (p.tabSet) pEl.setAttribute('data-tabset', p.tabSet);
 
         const firstSize = (runs.find(r => r.size) || {}).size || 12;
+        const effFirstSize = +(firstSize * 0.98).toFixed(2);
         if (fullText.replace(/[\r\n]+/g, '') === '' && !runs.some(r => r.imageData)) {
             pEl.innerHTML = '<br>';
-            pEl.style.fontSize = firstSize + 'pt';
-            pEl.style.padding = `${p.spaceAbove || 0}pt 0 ${p.spaceBelow || 0}pt 0`;
+            pEl.style.fontSize = effFirstSize + 'pt';
+            pEl.style.lineHeight = '1.1633';
+            pEl.style.padding = `${p.spaceAbove !== undefined ? p.spaceAbove : 1.0}pt 0 ${p.spaceBelow !== undefined ? p.spaceBelow : 1.0}pt 0`;
             pEl.style.margin = `0 ${p.rightIndent || 0}pt 0 ${p.leftIndent || 0}pt`;
             pEl.style.textAlign = p.alignment || 'left';
             return pEl;
@@ -492,13 +494,16 @@
         pEl.style.textAlign = p.alignment || 'left';
         // Üst/alt boşluk padding ile verilir: kenar boşlukları birleşmez (Java Swing davranışı)
         pEl.style.margin = `0 ${p.rightIndent || 0}pt 0 ${p.leftIndent || 0}pt`;
-        pEl.style.padding = `${p.spaceAbove || 0}pt 0 ${p.spaceBelow || 0}pt 0`;
-        if (p.lineSpacing > 0) pEl.style.lineHeight = String(1.15 + p.lineSpacing);
+        pEl.style.padding = `${p.spaceAbove !== undefined ? p.spaceAbove : 1.0}pt 0 ${p.spaceBelow !== undefined ? p.spaceBelow : 1.0}pt 0`;
+        pEl.style.lineHeight = String(1.1633 + (p.lineSpacing || 0.0));
 
         const hanging = p.hanging || 0;
         if (hanging > 0) {
-            pEl.style.paddingLeft = hanging + 'pt';
-            pEl.style.textIndent = (-hanging + (p.firstLineIndent || 0)) + 'pt';
+            // UYAP standardı: Eğer paragrafın TabSet'i varsa (örn: 183pt), asılı girinti (hanging)
+            // sonraki satırların iki nokta sonrasındaki metinle tam hizalanması için tab durağına kilitlenir.
+            const effHang = p.primaryTabStop && Math.abs(p.primaryTabStop - hanging) <= 15 ? p.primaryTabStop : hanging;
+            pEl.style.paddingLeft = effHang + 'pt';
+            pEl.style.textIndent = (-effHang + (p.firstLineIndent || 0)) + 'pt';
         } else if (p.firstLineIndent) {
             pEl.style.textIndent = p.firstLineIndent + 'pt';
         }
@@ -534,7 +539,11 @@
         t.setAttribute('data-tab', '1');
         t.setAttribute('contenteditable', 'false');
         t.style.display = 'inline-block';
-        if (run && run.size) t.style.fontSize = run.size + 'pt';
+        if (run && run.size) {
+            t.setAttribute('data-size', String(run.size));
+            const effPt = +(run.size * 0.98).toFixed(2);
+            t.style.fontSize = effPt + 'pt';
+        }
         if (run && run.bold) t.style.fontWeight = 'bold';
         return t;
     }
@@ -612,13 +621,13 @@
                     }
                 }
                 if (stop.align === 2) {
-                    width = isColonHeader ? (stop.pos - x) : (stop.pos - x - segW / 2);
+                    width = isColonHeader ? (stop.pos - x) : Math.max(0, stop.pos - x - segW / 2);
                 } else if (stop.align === 1) {
-                    width = stop.pos - x - segW;
+                    width = Math.max(0, stop.pos - x - segW);
                 } else {
-                    width = stop.pos - x;
+                    width = Math.max(0, stop.pos - x);
                 }
-                const wPx = Math.max(12, width * PX);
+                const wPx = Math.max(0, width * PX);
                 t.style.display = 'inline-block';
                 t.style.width = wPx + 'px';
                 t.style.minWidth = wPx + 'px';
@@ -638,7 +647,11 @@
         if (run.italic) span.style.fontStyle = 'italic';
         if (run.underline) span.style.textDecoration = 'underline';
         if (run.strikethrough) span.style.textDecoration = (span.style.textDecoration ? span.style.textDecoration + ' ' : '') + 'line-through';
-        if (run.size) span.style.fontSize = `${run.size}pt`;
+        if (run.size) {
+            span.setAttribute('data-size', String(run.size));
+            const effPt = +(run.size * 0.98).toFixed(2);
+            span.style.fontSize = `${effPt}pt`;
+        }
         if (run.family) span.style.fontFamily = `"${run.family}", Times New Roman, serif`;
         if (run.foreground) span.style.color = run.foreground;
         if (run.background) span.style.backgroundColor = run.background;
@@ -949,9 +962,13 @@
                 if (tag === 'u' || (node.style.textDecoration && node.style.textDecoration.includes('underline'))) style.underline = true;
                 if (tag === 's' || (node.style.textDecoration && node.style.textDecoration.includes('line-through'))) style.strikethrough = true;
 
-                if (node.style.fontSize) {
-                    const pt = parseInt(node.style.fontSize, 10);
+                const dataSize = node.getAttribute && node.getAttribute('data-size');
+                if (dataSize) {
+                    const pt = parseInt(dataSize, 10);
                     if (!isNaN(pt)) style.size = pt;
+                } else if (node.style.fontSize) {
+                    const pt = parseFloat(node.style.fontSize);
+                    if (!isNaN(pt)) style.size = Math.round(pt / 0.98);
                 }
                 if (node.style.fontFamily) {
                     style.family = node.style.fontFamily.replace(/["']/g, '').split(',')[0].trim();

@@ -169,6 +169,7 @@
         const view = makeMenu('Görünüm', [
             { icon: I.thumbs, label: 'Sayfa önizlemeleri', kbd: 'Ctrl+G', check: isActive('btn-toggle-thumbnails'), run: () => click('btn-toggle-thumbnails') },
             { icon: I.ruler, label: 'Cetvel', check: isActive('btn-toggle-ruler'), run: () => click('btn-toggle-ruler') },
+            { icon: I.ruler, label: 'Mizanpaj denetçisi (Layout Debugger)', kbd: 'Ctrl+Alt+D', check: () => !!(window.UkiLayoutDebugger && window.UkiLayoutDebugger.isEnabled()), run: () => window.UkiLayoutDebugger && window.UkiLayoutDebugger.toggle() },
             { icon: I.watermark, label: 'Güvenlik filigranı', check: isActive('btn-toggle-watermark'), run: () => click('btn-toggle-watermark') },
             { icon: I.moon, label: 'Sayfa koyu (gece okuma)', check: isActive('btn-doc-dark'), run: () => click('btn-doc-dark') },
             '-',

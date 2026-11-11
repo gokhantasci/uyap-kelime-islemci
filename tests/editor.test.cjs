@@ -104,3 +104,19 @@ test('ODT paketi metni, vurgu stillerini ve tabloyu XML olarak saklar',async()=>
   const parsed=new e.w.DOMParser().parseFromString(xml,'application/xml');assert.equal(parsed.querySelector('parsererror'),null);
   e.close();
 });
+test('UDF 1:1 tipografi ölçeklemesi: 12pt -> 11.76pt ve UDF dışa aktarırken 12pt geri kazanılır', async () => {
+  const e=environment(); e.load('uki-core');
+  const model=await e.w.UkiCore.parseUdf(fs.readFileSync('examples/örnek karar.udf'));
+  const html=e.w.UkiCore.udfModelToHtml(model);
+  const div=e.w.document.createElement('div'); div.innerHTML=html;
+  const pWith12 = div.querySelector('[data-size="12"]');
+  assert.ok(pWith12, 'data-size="12" span bulunmalı');
+  assert.equal(pWith12.style.fontSize, '11.76pt');
+  
+  // Dışa aktarım testi: data-size="12" UDF XML'e size="12" olarak döner
+  const exportedBlob=await e.w.UkiCore.exportUdfBlob(div, {headerInfo:{}, footerInfo:{}});
+  const bytes=Buffer.from(await exportedBlob.arrayBuffer());
+  const exportedModel=await e.w.UkiCore.parseUdf(bytes);
+  assert.ok(exportedModel.elements.some(p => p.runs.some(r => r.size === 12)), 'UDF dışa aktarımında size=12 korunmalı');
+  e.close();
+});

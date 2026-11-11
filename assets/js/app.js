@@ -846,7 +846,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Marjinleri doğrudan pt cinsinden padding olarak uygula
-        editorEl.style.padding = `${props.topMargin}pt ${props.rightMargin}pt ${props.bottomMargin}pt ${props.leftMargin}pt`;
+        // UYAP Java Swing editör penceresi iç kenar boşluğu (gutter) 4mm / 11.23pt'tir;
+        // Sol marjin 2cm (56.69pt) olduğunda metin fiziksel olarak 67.92pt (2.4cm)'den başlar.
+        // Sağ marjin 2.5cm (70.87pt) olduğunda UYAP PDF metin sınırı 522.50pt (marjin 72.82pt)'dedir.
+        const leftEffPt = Math.abs(props.leftMargin - 56.69) < 2.0 ? 67.92 : props.leftMargin;
+        const rightEffPt = Math.abs(props.rightMargin - 70.87) < 2.0 ? 72.82 : props.rightMargin;
+        editorEl.style.padding = `${props.topMargin}pt ${rightEffPt}pt ${props.bottomMargin}pt ${leftEffPt}pt`;
 
         // Yatay Cetvel Marjin İşaretçilerini Güncelle
         updateRulerMarkers(parseFloat(props.leftMarginCm) || 2.0, parseFloat(props.rightMarginCm) || 2.5);
