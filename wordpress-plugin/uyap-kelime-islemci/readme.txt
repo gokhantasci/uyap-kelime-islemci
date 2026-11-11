@@ -25,3 +25,4 @@ Hiçbir belge harici sunucuya iletilmez; tüm çözümleme ve dışa aktarma iş
 1. `uyap-kelime-islemci` klasörünü `/wp-content/plugins/` dizinine yükleyin.
 2. WordPress yönetim panelinde 'Eklentiler' menüsünden eklentiyi etkinleştirin.
 3. Yazı veya sayfanıza `[uyap_editor]` veya `[uyap_viewer src="..."]` kısa kodunu ekleyin.
+

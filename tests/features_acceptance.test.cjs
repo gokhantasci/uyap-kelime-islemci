@@ -140,3 +140,4 @@ test('Yazma Hızı (WPM): Türkçe DKB ve Olimpiyat vuruş hesabı doğru çalı
     assert.equal(stats.totalWords, 4);
     assert.ok(stats.olympicWpm >= 0, 'Olimpiyat WPM hesaplanmalı');
 });
+

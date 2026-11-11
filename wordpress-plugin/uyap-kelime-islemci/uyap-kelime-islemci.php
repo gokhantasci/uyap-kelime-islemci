@@ -134,3 +134,4 @@ class UyapKelimeIslemciPlugin {
 }
 
 new UyapKelimeIslemciPlugin();
+
