@@ -481,8 +481,16 @@
 
         const firstSize = (runs.find(r => r.size) || {}).size || 12;
         const effFirstSize = +(firstSize * 0.98).toFixed(2);
+        const hasUnderline = runs.some(r => r.underline);
+        if (hasUnderline) pEl.setAttribute('data-underline', 'true');
         if (fullText.replace(/[\r\n]+/g, '') === '' && !runs.some(r => r.imageData)) {
-            pEl.innerHTML = '<br>';
+            if (hasUnderline && p.alignment === 'center') {
+                // UYAP Java Swing / BasicTextUI: Ortalanmış boş paragraf altı çizili ise (P#10, P#13),
+                // sayfa ortasında (x=296.28pt) yuvarlak uçlu alt çizgi noktası (seqno 21 & seqno 98) çizer.
+                pEl.innerHTML = '<span class="udf-underline-dot" contenteditable="false" style="display:inline-block;width:1.2pt;height:1.2pt;background-color:currentColor;border-radius:50%;vertical-align:bottom;margin-bottom:2pt;"></span><br>';
+            } else {
+                pEl.innerHTML = '<br>';
+            }
             pEl.style.fontSize = effFirstSize + 'pt';
             pEl.style.lineHeight = '1.1633';
             pEl.style.padding = `${p.spaceAbove !== undefined ? p.spaceAbove : 1.0}pt 0 ${p.spaceBelow !== undefined ? p.spaceBelow : 1.0}pt 0`;
@@ -500,8 +508,9 @@
         const hanging = p.hanging || 0;
         if (hanging > 0) {
             // UYAP standardı: Eğer paragrafın TabSet'i varsa (örn: 183pt), asılı girinti (hanging)
-            // sonraki satırların iki nokta sonrasındaki metinle tam hizalanması için tab durağına kilitlenir.
-            const effHang = p.primaryTabStop && Math.abs(p.primaryTabStop - hanging) <= 15 ? p.primaryTabStop : hanging;
+            // sonraki satırların iki nokta sonrasındaki metinle tam hizalanması için
+            // tab durağı + iki nokta genişliği (183pt + 3.12pt = 186.12pt) ile hizalanır.
+            const effHang = p.primaryTabStop && Math.abs(p.primaryTabStop - hanging) <= 15 ? (p.primaryTabStop + 3.12) : hanging;
             pEl.style.paddingLeft = effHang + 'pt';
             pEl.style.textIndent = (-effHang + (p.firstLineIndent || 0)) + 'pt';
         } else if (p.firstLineIndent) {
@@ -606,11 +615,13 @@
                 const nextNode = t.nextSibling;
                 const nextText = nextNode ? (nextNode.textContent || '') : '';
                 const isColonHeader = nextText.trim().startsWith(':');
+                // UYAP standardı: Sekme durağı iki nokta üst üste işaretinin bittiği dikey ekseni tanımlar.
+                // İki noktanın (x=247.22pt - 250.92pt) ve değerin (x=254.04pt) referansla tam eşleşmesi için
+                // sekme genişliğinden iki nokta genişliği (3.70pt) düşülür.
+                const colonWidth = isColonHeader ? 3.70 : 0;
 
                 if (stop.align !== 0) {
                     if (stop.align === 2 && isColonHeader) {
-                        // Kolon hizalaması (örn: SÜRÜM\t: 2.0 veya GELİŞTİRİCİ\t: ...):
-                        // UYAP'ta iki nokta üst üste doğrudan sekme durağında hizalanır.
                         segW = 0;
                     } else {
                         const r = document.createRange();
@@ -621,11 +632,11 @@
                     }
                 }
                 if (stop.align === 2) {
-                    width = isColonHeader ? (stop.pos - x) : Math.max(0, stop.pos - x - segW / 2);
+                    width = isColonHeader ? Math.max(0, stop.pos - x - colonWidth) : Math.max(0, stop.pos - x - segW / 2);
                 } else if (stop.align === 1) {
                     width = Math.max(0, stop.pos - x - segW);
                 } else {
-                    width = Math.max(0, stop.pos - x);
+                    width = Math.max(0, stop.pos - x - colonWidth);
                 }
                 const wPx = Math.max(0, width * PX);
                 t.style.display = 'inline-block';
@@ -865,7 +876,9 @@
 
             if (textNodes.length === 0) {
                 fullText += '\n';
-                contentsXml.push(`<content resolver="hvl-default" startOffset="${currentOffset}" length="1" />`);
+                const hasUnderline = (pEl.getAttribute && pEl.getAttribute('data-underline') === 'true') || !!pEl.querySelector('.udf-underline-dot');
+                const uAttr = hasUnderline ? ' underline="true" bold="true"' : '';
+                contentsXml.push(`<content resolver="hvl-default"${uAttr} startOffset="${currentOffset}" length="1" />`);
                 currentOffset += 1;
             } else {
                 for (const item of textNodes) {
@@ -957,6 +970,9 @@
 
             if (node.nodeType === Node.ELEMENT_NODE) {
                 const tag = node.tagName.toLowerCase();
+                if (tag === 'span' && node.classList && node.classList.contains('udf-underline-dot')) {
+                    return leaves;
+                }
                 if (tag === 'b' || tag === 'strong' || node.style.fontWeight === 'bold') style.bold = true;
                 if (tag === 'i' || tag === 'em' || node.style.fontStyle === 'italic') style.italic = true;
                 if (tag === 'u' || (node.style.textDecoration && node.style.textDecoration.includes('underline'))) style.underline = true;

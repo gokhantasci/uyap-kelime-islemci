@@ -61,5 +61,35 @@ class TestUyapParity(unittest.TestCase):
         min_x0 = min(w[0] for w in words)
         self.assertAlmostEqual(min_x0, 67.92, delta=1.5, msg="Metin başlangıcı sol marjini 67.92pt olmalı")
 
+    def test_underline_dots_coordinates(self):
+        # P#10 ve P#13 ortalanmış boş altı çizili paragraflar (GEREKÇELİ KARAR üstü ve TÜRK MİLLETİ ADINA altı)
+        page0 = self.doc[0]
+        drawings = page0.get_drawings()
+        dots = [d for d in drawings if d['lineCap'] == (1, 1, 1) and len(d['items']) == 1 and d['items'][0][0] == 'l' and d['items'][0][1] == d['items'][0][2]]
+        self.assertEqual(len(dots), 2, "GEREKÇELİ KARAR üstü ve TÜRK MİLLETİ ADINA altında 2 adet alt çizgi noktası olmalı")
+        # İlk nokta: x=296.28, y=225.24
+        d1 = dots[0]['items'][0][1]
+        self.assertAlmostEqual(d1.x, 296.28, delta=2.0)
+        self.assertAlmostEqual(d1.y, 225.24, delta=2.0)
+        # İkinci nokta: x=296.28, y=272.28
+        d2 = dots[1]['items'][0][1]
+        self.assertAlmostEqual(d2.x, 296.28, delta=2.0)
+        self.assertAlmostEqual(d2.y, 272.28, delta=2.0)
+
+    def test_colon_and_continuation_lines_alignment(self):
+        page0 = self.doc[0]
+        words = page0.get_text('words')
+        # Bilgi alanlarının iki noktaları (HAKİM, KATİP, DAVACI, SUÇ, vb.)
+        colons = [w for w in words if w[4] == ':' and 280 < w[1] < 530]
+        for c in colons:
+            self.assertAlmostEqual(c[0], 247.22, delta=1.5, msg=f"İki nokta x0 koordinatı 247.22 olmalı: {c}")
+            self.assertAlmostEqual(c[2], 251.14, delta=1.5, msg=f"İki nokta x1 koordinatı 251.14 olmalı: {c}")
+
+        # Sanık kimlik devam satırları ilk kelimeleri (20/02/2002, (Inc), MUĞLA, BİTLİS, TC)
+        cont_words = [w for w in words if w[4] in ['20/02/2002', '(Inc)', 'MUĞLA', 'BİTLİS', 'TC'] and 360 < w[1] < 460 and w[0] < 260]
+        self.assertEqual(len(cont_words), 5, "5 adet devam satırı ilk kelimesi bulunmalı")
+        for cw in cont_words:
+            self.assertAlmostEqual(cw[0], 254.04, delta=1.0, msg=f"Devam satırı başlangıç koordinatı 254.04 olmalı: {cw}")
+
 if __name__ == '__main__':
     unittest.main()
