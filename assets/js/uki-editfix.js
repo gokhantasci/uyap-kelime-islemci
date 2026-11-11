@@ -13,6 +13,8 @@
 (function (window, document) {
     'use strict';
 
+    const Node = window.Node;
+    const NodeFilter = window.NodeFilter;
     const SKIP = '.pb-spacer, .udf-tab, #page-boundaries-layer, #page-antet-layer, #antet-layer, #watermark-layer, .udf-seal-stamp, .e-sign-seal-badge, [contenteditable="false"]';
     const INDENT_STEP_PT = 36; // 1,27 cm
     let ed = null;
@@ -274,6 +276,141 @@
         try { sel.collapse(target, 0); } finally { fixingCaret = false; }
     }
 
+    // ---- Sekme boşluğuna (udf-tab) tıklanıldığında imleci doğru konuma yerleştirme ----
+    function getLastTextNode(node) {
+        if (!node) return null;
+        if (node.nodeType === Node.TEXT_NODE) return node;
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            if (node.classList && (node.classList.contains('udf-tab') || node.classList.contains('pb-spacer') || node.getAttribute('contenteditable') === 'false')) {
+                return null;
+            }
+            for (let i = node.childNodes.length - 1; i >= 0; i--) {
+                const res = getLastTextNode(node.childNodes[i]);
+                if (res) return res;
+            }
+        }
+        return null;
+    }
+
+    function getFirstTextNode(node) {
+        if (!node) return null;
+        if (node.nodeType === Node.TEXT_NODE) return node;
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            if (node.classList && (node.classList.contains('udf-tab') || node.classList.contains('pb-spacer') || node.getAttribute('contenteditable') === 'false')) {
+                return null;
+            }
+            for (let i = 0; i < node.childNodes.length; i++) {
+                const res = getFirstTextNode(node.childNodes[i]);
+                if (res) return res;
+            }
+        }
+        return null;
+    }
+
+    function positionCaretNearTab(tab, clientX) {
+        if (!tab || !tab.parentNode) return false;
+
+        let isStart = true;
+        if (typeof clientX === 'number' && !isNaN(clientX)) {
+            const rect = tab.getBoundingClientRect ? tab.getBoundingClientRect() : null;
+            const width = (rect && rect.width > 0) ? rect.width : (parseFloat(tab.style.width) || parseFloat(tab.style.minWidth) || 0);
+            const left = (rect && rect.width > 0) ? rect.left : 0;
+            if (width > 0) {
+                isStart = clientX < (left + width / 2);
+            }
+        }
+
+        let targetNode = null;
+        let targetOffset = 0;
+
+        if (isStart) {
+            // İmleci sekmenin hemen öncesine (önceki metnin sonuna) konumlandır
+            if (tab.previousSibling) {
+                const last = getLastTextNode(tab.previousSibling);
+                if (last) {
+                    targetNode = last;
+                    targetOffset = last.nodeValue ? last.nodeValue.length : 0;
+                }
+            }
+            if (!targetNode) {
+                let prev = tab.previousSibling;
+                if (prev && prev.nodeType === Node.TEXT_NODE) {
+                    targetNode = prev;
+                    targetOffset = prev.nodeValue ? prev.nodeValue.length : 0;
+                } else {
+                    const anchor = document.createTextNode('\u200B');
+                    tab.parentNode.insertBefore(anchor, tab);
+                    targetNode = anchor;
+                    targetOffset = 1;
+                }
+            }
+        } else {
+            // İmleci sekmenin hemen sonrasına (sekme durağı hizasına) konumlandır
+            if (tab.nextSibling) {
+                const first = getFirstTextNode(tab.nextSibling);
+                if (first) {
+                    targetNode = first;
+                    targetOffset = (first.nodeValue === '\u200B') ? 1 : 0;
+                }
+            }
+            if (!targetNode) {
+                let next = tab.nextSibling;
+                if (next && next.nodeType === Node.TEXT_NODE) {
+                    targetNode = next;
+                    targetOffset = (next.nodeValue === '\u200B') ? 1 : 0;
+                } else {
+                    const anchor = document.createTextNode('\u200B');
+                    tab.parentNode.insertBefore(anchor, tab.nextSibling);
+                    targetNode = anchor;
+                    targetOffset = 1;
+                }
+            }
+        }
+
+        if (targetNode) {
+            if (ed && typeof ed.focus === 'function') {
+                try { ed.focus(); } catch (_) {}
+            }
+            const range = document.createRange();
+            range.setStart(targetNode, targetOffset);
+            range.collapse(true);
+            const sel = window.getSelection();
+            if (sel) {
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+            document.dispatchEvent(new Event('selectionchange'));
+            if (window.editor && typeof window.editor.updateToolbarState === 'function') {
+                try { window.editor.updateToolbarState(); } catch (_) {}
+            }
+            return true;
+        }
+        return false;
+    }
+
+    function bindTabClickCaret() {
+        if (!ed) return;
+
+        function handleTabClick(e) {
+            const tab = e.target && e.target.closest && e.target.closest('.udf-tab');
+            if (!tab || !ed.contains(tab)) return;
+            if (e.button !== undefined && e.button !== 0) return;
+
+            e.preventDefault();
+            positionCaretNearTab(tab, e.clientX);
+        }
+
+        ed.addEventListener('mousedown', handleTabClick);
+        ed.addEventListener('click', handleTabClick);
+        ed.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'mouse') return;
+            const tab = e.target && e.target.closest && e.target.closest('.udf-tab');
+            if (!tab || !ed.contains(tab)) return;
+            e.preventDefault();
+            positionCaretNearTab(tab, e.clientX);
+        });
+    }
+
     function init() {
         ed = document.getElementById('editor');
         if (!ed) return;
@@ -285,9 +422,16 @@
         });
         patchEditor();
         bindTabStopDrag();
-        window.UkiEditFix = { selectAll: () => { ed.focus(); return selectDocumentText(); }, applyInlineStyle };
+        bindTabClickCaret();
+        window.UkiEditFix = {
+            init,
+            selectAll: () => { if (ed) ed.focus(); return selectDocumentText(); },
+            applyInlineStyle,
+            positionCaretNearTab
+        };
     }
 
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    if (document.getElementById('editor')) init();
+    else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
 })(window, document);

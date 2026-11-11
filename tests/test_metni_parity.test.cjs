@@ -148,3 +148,86 @@ test('örnek karar.udf: Roundtrip export Hanging=190.0, RepeatingLabel ve edf st
 
     env.close();
 });
+
+test('Sekme durağı (.udf-tab) tıklama: Sol yarıya tıklanınca tab başına, sağ yarıya tıklanınca tab sonuna imleç konumlanır', async () => {
+    const env = createEnv('<div id="editor" contenteditable="true"><p id="test-p"><span>DOSYA NO</span><span class="udf-tab" data-tab="1" style="width: 100px; display: inline-block;"></span><span>: 2025/416 Esas</span></p></div>');
+    env.load('uki-editfix');
+
+    const ed = env.w.document.getElementById('editor');
+    const p = env.w.document.getElementById('test-p');
+    const tab = p.querySelector('.udf-tab');
+
+    // JSDOM getBoundingClientRect mock
+    tab.getBoundingClientRect = () => ({
+        left: 100,
+        top: 20,
+        right: 200,
+        bottom: 40,
+        width: 100,
+        height: 20
+    });
+
+    // 1. Sol yarıya tıklama (clientX = 120, orta nokta = 150 -> isStart = true)
+    const mousedownLeft = new env.w.MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 120,
+        button: 0
+    });
+    tab.dispatchEvent(mousedownLeft);
+
+    const sel1 = env.w.getSelection();
+    assert.equal(sel1.rangeCount, 1, 'Seçim alanı oluşmalı');
+    const range1 = sel1.getRangeAt(0);
+    assert.equal(range1.collapsed, true, 'İmleç tek bir noktaya daralmalı');
+    // Sol yarıda: DOSYA NO metninin sonuna (offset 8) konumlanmalı
+    assert.equal(range1.startContainer.nodeValue, 'DOSYA NO');
+    assert.equal(range1.startOffset, 8);
+
+    // 2. Sağ yarıya tıklama (clientX = 180, orta nokta = 150 -> isStart = false)
+    const mousedownRight = new env.w.MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 180,
+        button: 0
+    });
+    tab.dispatchEvent(mousedownRight);
+
+    const sel2 = env.w.getSelection();
+    const range2 = sel2.getRangeAt(0);
+    assert.equal(range2.collapsed, true, 'İmleç tek bir noktaya daralmalı');
+    // Sağ yarıda: : 2025/416 Esas metninin başına (offset 0) konumlanmalı
+    assert.equal(range2.startContainer.nodeValue, ': 2025/416 Esas');
+    assert.equal(range2.startOffset, 0);
+
+    // 3. Sonrasında metin olmayan sekme (kullanıcı yeni Tab tuşuna bastığında)
+    const pSolo = env.w.document.createElement('p');
+    pSolo.innerHTML = '<span>Örnek Başlık</span><span class="udf-tab" style="width: 80px;"></span>';
+    ed.appendChild(pSolo);
+    const soloTab = pSolo.querySelector('.udf-tab');
+    soloTab.getBoundingClientRect = () => ({
+        left: 50,
+        top: 50,
+        right: 130,
+        bottom: 70,
+        width: 80,
+        height: 20
+    });
+
+    // Sağ yarıya tıklanırsa (clientX = 110, orta nokta = 90 -> isStart = false)
+    const clickRightSolo = new env.w.MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 110,
+        button: 0
+    });
+    soloTab.dispatchEvent(clickRightSolo);
+
+    const sel3 = env.w.getSelection();
+    const range3 = sel3.getRangeAt(0);
+    assert.equal(range3.collapsed, true);
+    assert.equal(soloTab.nextSibling, range3.startContainer);
+    assert.equal(range3.startOffset, 1);
+
+    env.close();
+});

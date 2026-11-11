@@ -845,6 +845,7 @@ body {
 .udf-tab {
     display: inline-block;
     height: 1em;
+    cursor: text;
 }
 
 /* Tablo Stilleri */
@@ -3276,6 +3277,7 @@ mark.find-hit.current {
     user-select: none;
     -webkit-user-select: none;
     color: transparent;
+    cursor: text;
 }
 
 /* ==========================================================================
