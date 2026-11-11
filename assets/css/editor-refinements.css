@@ -22,8 +22,8 @@ html, body { overflow-x: clip; }
 #writing-results { max-height: 220px; overflow: auto; }
 #tdk-result { overflow-wrap: anywhere; }
 [data-unsaved="true"] { border-bottom: 2px solid var(--ax-color-primary) !important; }
-.pb-header { border-bottom: 0; padding-bottom: 0; font: 12pt var(--ax-font-serif); color: var(--ax-color-neutral-600); }
-.pb-header-left { white-space: pre-line; }
+.pb-header { border-bottom: 0; padding-bottom: 0; font: 700 9.8pt 'Times New Roman', serif; color: #808080; white-space: nowrap; }
+.pb-header-left { white-space: nowrap; font-weight: 700; }
 .pb-header-right { white-space: nowrap; }
 .a4-watermark-layer, .floating-seal-widget { user-select: none; }
 input, select, textarea { accent-color: var(--ax-color-primary); }

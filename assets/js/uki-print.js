@@ -51,14 +51,14 @@
         const style = doc.createElement('style');
         style.textContent = `
             @page {
-                size: ${g.W * .75}pt ${g.H * .75}pt;
+                size: 210mm 297mm;
                 margin: 0;
             }
             html, body {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #ffffff !important;
-                width: 100% !important;
+                width: 210mm !important;
                 height: auto !important;
             }
             body {
@@ -67,25 +67,24 @@
             }
             .uki-print-page {
                 position: relative !important;
-                width: ${g.W}px !important;
-                height: ${g.H}px !important;
-                max-width: ${g.W}px !important;
-                max-height: ${g.H}px !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                max-width: 210mm !important;
+                max-height: 297mm !important;
                 overflow: hidden !important;
-                page-break-after: always !important;
-                break-after: page !important;
+                contain: strict !important;
                 background: #ffffff !important;
-                margin: 0 auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
                 box-sizing: border-box !important;
             }
-            .uki-print-page:last-child {
-                page-break-after: auto !important;
-                break-after: auto !important;
+            .uki-print-page + .uki-print-page {
+                break-before: page !important;
+                page-break-before: always !important;
             }
             .uki-print-page .a4-page {
                 position: absolute !important;
                 left: 0 !important;
-                top: 0;
                 margin: 0 !important;
                 box-shadow: none !important;
                 border: none !important;
@@ -111,21 +110,68 @@
                 background-image: none !important;
                 opacity: 0 !important;
             }
-            .uki-print-page .pb-qr {
+            .uki-print-page .pb-header {
+                font: 700 9.84pt 'Times New Roman', serif !important;
+                color: #808080 !important;
+                white-space: nowrap !important;
+                border-bottom: none !important;
+            }
+            .uki-print-page .pb-header-left {
+                white-space: nowrap !important;
+                font-size: 9.84pt !important;
+                font-weight: 700 !important;
+            }
+            .uki-print-page .pb-header-right {
+                white-space: nowrap !important;
+                font-size: 9.84pt !important;
+            }
+            .uki-print-page .pb-header-right b {
+                font-weight: 700 !important;
+            }
+            .uki-print-page .pb-qr,
+            .pb-qr {
                 position: absolute !important;
-                width: 67px !important;
-                height: 67px !important;
-                max-width: 67px !important;
-                max-height: 67px !important;
+                width: 50.04pt !important;
+                height: 50.04pt !important;
+                max-width: 50.04pt !important;
+                max-height: 50.04pt !important;
+                right: 9.00pt !important;
                 z-index: 10 !important;
                 overflow: hidden !important;
             }
-            .uki-print-page .pb-qr svg {
-                width: 67px !important;
-                height: 67px !important;
-                max-width: 67px !important;
-                max-height: 67px !important;
+            .uki-print-page .pb-qr svg,
+            .pb-qr svg {
+                width: 50.04pt !important;
+                height: 50.04pt !important;
+                max-width: 50.04pt !important;
+                max-height: 50.04pt !important;
                 display: block !important;
+            }
+            .uki-print-page .pb-footer.pb-notice,
+            .uki-print-page .pb-notice {
+                position: absolute !important;
+                border-top: 0.96pt solid #000000 !important;
+                padding-top: 2.8pt !important;
+                font-family: Arial, Helvetica, sans-serif !important;
+                font-size: 6.84pt !important;
+                line-height: 1.1 !important;
+                white-space: nowrap !important;
+                color: #000000 !important;
+                text-align: left !important;
+                letter-spacing: normal !important;
+            }
+            .uki-print-page .pb-notice b,
+            .uki-print-page .pb-notice .pb-copy-code {
+                font-family: Consolas, 'Courier New', monospace !important;
+                font-size: 9.84pt !important;
+                font-weight: 700 !important;
+                letter-spacing: 0.5px !important;
+            }
+            .uki-print-page .pb-footer.pb-pagenum {
+                font-family: Arial, sans-serif !important;
+                font-size: 10.8pt !important;
+                color: #000000 !important;
+                text-align: right !important;
             }
         `;
         doc.head.appendChild(style);
@@ -140,7 +186,7 @@
             clone.removeAttribute('spellcheck');
             clone.querySelectorAll('[id]').forEach((e) => e.removeAttribute('id'));
             clone.querySelectorAll('[contenteditable]').forEach((e) => e.removeAttribute('contenteditable'));
-            clone.style.top = '-' + (k * g.S) + 'px';
+            clone.style.setProperty('top', '-' + (k * g.S) + 'px', 'important');
             clone.style.minHeight = '0';
             sheet.appendChild(clone);
             doc.body.appendChild(sheet);

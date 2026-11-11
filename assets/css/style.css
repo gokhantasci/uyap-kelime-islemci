@@ -2502,12 +2502,27 @@ kbd {
     position: absolute;
     display: flex;
     justify-content: space-between;
+    align-items: baseline;
     gap: 16px;
-    padding-bottom: 3px;
+    padding-bottom: 0;
     border-bottom: none;
-    font: 700 10pt 'Times New Roman', serif;
+    font: 700 9.8pt 'Times New Roman', serif;
     color: #808080;
+    white-space: nowrap;
     pointer-events: none;
+}
+
+.pb-header-left {
+    white-space: nowrap;
+    font-weight: 700;
+}
+
+.pb-header-right {
+    white-space: nowrap;
+}
+
+.pb-header-right b {
+    font-weight: 700;
 }
 
 .pb-footer {
@@ -2519,18 +2534,25 @@ kbd {
 
 .pb-pagenum {
     text-align: right;
-    font: 12pt 'Times New Roman', serif;
-    margin-bottom: 4px;
+    font: 10.8pt Arial, sans-serif;
+    margin-bottom: 0;
 }
 
 .pb-notice {
-    border-top: 1px solid #111;
-    padding-top: 3px;
-    font: 6.8pt 'Times New Roman', serif;
+    border-top: 0.96pt solid #000;
+    padding-top: 2.8pt;
+    font: 6.84pt Arial, Helvetica, sans-serif;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: visible;
+    color: #000;
+    text-align: left;
+    letter-spacing: normal;
 }
 
 .pb-notice b {
-    font: 700 9pt Consolas, 'Courier New', monospace;
+    font: 700 9.84pt Consolas, 'Courier New', monospace;
+    letter-spacing: 0.5px;
 }
 
 .udf-underline-dot {
@@ -2543,22 +2565,48 @@ kbd {
 }
 
 @media print {
+    @page {
+        size: 210mm 297mm;
+        margin: 0;
+    }
+
+    body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
 
     .pb-spacer,
     .pb-gap {
         display: none !important;
     }
 
+    .pb-header {
+        font-size: 9.84pt !important;
+        white-space: nowrap !important;
+    }
+
+    .pb-notice {
+        font-size: 6.84pt !important;
+        white-space: nowrap !important;
+        border-top: 0.96pt solid #000 !important;
+    }
+
+    .pb-notice b {
+        font-size: 9.84pt !important;
+    }
+
     .pb-qr {
-        width: 67px !important;
-        height: 67px !important;
+        width: 50.04pt !important;
+        height: 50.04pt !important;
+        right: 9.00pt !important;
+        bottom: 17.88pt !important;
     }
 
     .pb-qr svg {
-        width: 67px !important;
-        height: 67px !important;
-        max-width: 67px !important;
-        max-height: 67px !important;
+        width: 50.04pt !important;
+        height: 50.04pt !important;
+        max-width: 50.04pt !important;
+        max-height: 50.04pt !important;
         display: block !important;
     }
 }
@@ -2976,16 +3024,22 @@ mark.find-hit.current {
 
 .pb-footer.pb-pagenum {
     position: absolute;
-    font: 12pt 'Times New Roman', serif;
+    font: 10.8pt Arial, sans-serif;
     text-align: right;
+    margin-bottom: 0;
 }
 
 .pb-footer.pb-notice {
     position: absolute;
-    border-top: 1px solid #111;
-    padding-top: 3px;
-    font: 6.8pt 'Times New Roman', serif;
+    border-top: 0.96pt solid #000;
+    padding-top: 2.8pt;
+    font: 6.84pt Arial, Helvetica, sans-serif;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: visible;
+    color: #000;
     text-align: left;
+    letter-spacing: normal;
 }
 
 /* UYAP (Java Swing) metin ölçüsüne yaklaşık eşitleme: kerning/ligatür yok, hafif harf aralığı */
@@ -3416,16 +3470,16 @@ mark.find-hit.current {
     position: absolute;
     pointer-events: none;
     line-height: 0;
-    width: 67px;
-    height: 67px;
+    width: 50.04pt;
+    height: 50.04pt;
     z-index: 10;
 }
 
 .pb-qr svg {
-    width: 67px !important;
-    height: 67px !important;
-    max-width: 67px !important;
-    max-height: 67px !important;
+    width: 50.04pt !important;
+    height: 50.04pt !important;
+    max-width: 50.04pt !important;
+    max-height: 50.04pt !important;
     display: block !important;
 }
 

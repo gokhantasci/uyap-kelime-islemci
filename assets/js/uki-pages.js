@@ -405,7 +405,9 @@
             if (cfg.header && (k + 1) >= cfg.startPage) {
                 const h = document.createElement('div');
                 h.className = 'pb-header';
-                h.style.cssText = `top:${pageTop + (cfg.antetBase > 0 ? cfg.antetBase + 6 : 36)}px;left:${g.Ml}px;right:${g.Mr}px;`;
+                const hTopPt = cfg.headerOffsetPt > 0 ? cfg.headerOffsetPt : 15;
+                const hTopPx = pageTop + Math.round(hTopPt * 96 / 72);
+                h.style.cssText = `top:${hTopPx}px;left:${g.Ml}px;right:${g.Mr}px;`;
 
                 const leftEl = document.createElement('div');
                 leftEl.className = 'pb-header-left';
@@ -430,11 +432,17 @@
                     }
                 }
 
+                if (cfg.header && cfg.header.tabPosPt > 0) {
+                    const tabPx = Math.round(cfg.header.tabPosPt * 96 / 72);
+                    rightEl.style.position = 'absolute';
+                    rightEl.style.left = tabPx + 'px';
+                }
+
                 h.appendChild(leftEl);
                 h.appendChild(rightEl);
                 layer.appendChild(h);
             }
-            // Sayfa Numarası (örnek karar.pdf: Y=1017.6px -> g.H - 105px, X=680px -> right: g.Mr + 4px)
+            // Sayfa Numarası (UYAP PDF standardı: Y0=753.2pt -> 1004.3px, X=right margin)
             if (cfg.showPageNumber !== false && (k > 0 || cfg.showPageNumberOnFirstPage)) {
                 const num = document.createElement('div');
                 num.className = 'pb-footer pb-pagenum';
@@ -449,13 +457,14 @@
                 num.textContent = numStr;
 
                 const align = cfg.pageNumberAlign || 'right';
-                let alignCss = `right:${g.Mr + 4}px; text-align: right;`;
+                let alignCss = `right:${g.Mr}px; text-align: right;`;
                 if (align === 'center') {
                     alignCss = `left:0; right:0; text-align: center; margin: 0 auto; width: 100%;`;
                 } else if (align === 'left') {
                     alignCss = `left:${g.Ml}px; text-align: left;`;
                 }
-                num.style.cssText = `top:${pageTop + g.H - 118}px; ${alignCss}`;
+                const numTopPx = pageTop + Math.round(753.20 * 96 / 72);
+                num.style.cssText = `top:${numTopPx}px; ${alignCss}`;
                 layer.appendChild(num);
             }
 
@@ -471,20 +480,22 @@
                 }
             }
 
-            // Alt Bilgi Notu ve Doğrulama (örnek karar.pdf: Y=1081.6px -> g.H - 41px)
+            // Alt Bilgi Notu ve Doğrulama (UYAP PDF standardı: Y0=811.20pt -> 1081.6px, X0=65.88pt -> 87.84px, W=477.36pt -> 636.48px)
             if (cfg.showFooter !== false && cfg.webId) {
                 const line = document.createElement('div');
                 line.className = 'pb-footer pb-notice';
-                line.style.cssText = `top:${pageTop + g.H - 41}px;left:${g.Ml}px;right:${g.Mr}px;`;
+                const lineTopPx = pageTop + Math.round(811.20 * 96 / 72);
+                line.style.cssText = `top:${lineTopPx}px;left:87.84px;width:636.48px;`;
                 if (cfg.qrCode) {
                     const qr = document.createElement('div');
                     qr.className = 'pb-qr pb-footer';
-                    // Doğrulama Karekodu (örnek karar.pdf: X=[715, 782] -> right: 12px; Y=[1032, 1098.7] -> top: g.H - 91px; 67x67px / 50pt)
-                    qr.style.cssText = `top:${pageTop + g.H - 91}px;right:12px;width:67px;height:67px;`;
-                    qr.innerHTML = qrSvg('https://evrakdogrula.uyap.gov.tr/' + cfg.qrCode, 67, true);
+                    // UYAP PDF standardı: width=50.04pt (66.72px), height=50.04pt (66.72px), right=9.00pt (12px), Y0=774.00pt (1032px from pageTop)
+                    const qrTopPx = pageTop + Math.round(774.00 * 96 / 72);
+                    qr.style.cssText = `top:${qrTopPx}px;right:12px;width:66.72px;height:66.72px;`;
+                    qr.innerHTML = qrSvg('https://evrakdogrula.uyap.gov.tr/' + cfg.qrCode, 66.72, true);
                     layer.appendChild(qr);
                 }
-                line.appendChild(document.createTextNode('UYAP Bilişim Sistemindeki bu dokümana http://vatandas.uyap.gov.tr adresinden '));
+                line.appendChild(document.createTextNode('UYAP Bilişim Sistemindeki bu dokümana http://vatandas.uyap.gov.tr adresinden  '));
                 const code = document.createElement('b');
                 code.textContent = cfg.webId;
                 code.className = 'pb-copy-code';
@@ -494,7 +505,7 @@
                     copyText(cfg.webId, code);
                 });
                 line.appendChild(code);
-                line.appendChild(document.createTextNode(' ile erişebilirsiniz.'));
+                line.appendChild(document.createTextNode('  ile erişebilirsiniz.'));
                 layer.appendChild(line);
             }
         }
@@ -546,8 +557,15 @@
             left = full.substring(0, i).trim();
             right = full.substring(i).trim();
         }
+        const p0 = he.paragraphs[0] || {};
+        const tabSet = p0.tabSet || '';
+        const tabParts = tabSet ? tabSet.split(',')[0].split(':') : [];
+        const tabPosPt = tabParts[0] ? parseFloat(tabParts[0]) : 255;
+        const firstRun = (p0.runs && p0.runs[0]) || {};
+        const fontSize = firstRun.size || 10;
+        const fontFamily = firstRun.family || 'Times New Roman';
         const paras = he.paragraphs.map(p => ({ tabSet: p.tabSet || '', runs: (p.runs || []).map(r => ({ text: r.text || '', bold: !!r.bold })) }));
-        return { left, right, startPage: he.startPage || 1, paras };
+        return { left, right, startPage: he.startPage || 2, paras, tabPosPt, fontSize, fontFamily };
     }
 
     const UkiPages = {
@@ -565,6 +583,7 @@
             cfg.startPage = h ? h.startPage : 2;
             cfg.webId = (model && model.webId) || '';
             const pp = (model && model.pageProperties) || {};
+            cfg.headerOffsetPt = pp.headerFOffset > 0 ? pp.headerFOffset : 15;
             cfg.footerOffsetPt = pp.footerFOffset > 0 ? pp.footerFOffset : 60;
             cfg.signed = !!(model && model.isSigned);
             cfg.qrCode = (model && model.docProperties && model.docProperties.uyapdogrulamakodu) || '';

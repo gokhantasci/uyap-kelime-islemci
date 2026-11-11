@@ -91,5 +91,54 @@ class TestUyapParity(unittest.TestCase):
         for cw in cont_words:
             self.assertAlmostEqual(cw[0], 254.04, delta=1.0, msg=f"Devam satırı başlangıç koordinatı 254.04 olmalı: {cw}")
 
+    def test_actual_print_geometry_and_parity(self):
+        actual_pdf_path = os.path.join(os.path.dirname(__file__), '..', 'scratch', 'actual_print.pdf')
+        if not os.path.exists(actual_pdf_path):
+            self.skipTest("scratch/actual_print.pdf henüz oluşturulmamış, atlanıyor")
+
+        actual_doc = pymupdf.open(actual_pdf_path)
+        self.assertEqual(len(actual_doc), 3, "Web baskı PDF çıktısı tam 3 sayfa olmalıdır")
+
+        # 1. Sayfa sonu ve 2. sayfa başı/sonu kelime eşleşmesi
+        p0_text = actual_doc[0].get_text()
+        self.assertIn('" aç', p0_text, "Baskı 1. sayfa '\" aç' ile bitmeli")
+
+        p1_body_lines = [l.strip() for l in actual_doc[1].get_text().splitlines() if l.strip() and 'vatandas' not in l and '2/3' not in l and 'SAKARYA 11.' not in l and 'Dosya-Karar' not in l]
+        self.assertTrue(p1_body_lines[0].startswith('köpek"'), f"Baskı 2. sayfa 'köpek\"' ile başlamalı: {p1_body_lines[0]}")
+        self.assertEqual(p1_body_lines[-1], 'BERAATİNE,', "Baskı 2. sayfa gövde metni 'BERAATİNE,' ile bitmeli")
+
+        # 2. Sayfa üstbilgisi tek satırda ve 9.84pt olmalı
+        p1 = actual_doc[1]
+        p1_spans = []
+        for b in p1.get_text('dict')['blocks']:
+            for line in b.get('lines', []):
+                for s in line.get('spans', []):
+                    if 'SAKARYA 11.' in s['text']:
+                        p1_spans.append(s)
+        self.assertTrue(len(p1_spans) > 0, "2. sayfada mahkeme başlığı bulunmalı")
+        for s in p1_spans:
+            self.assertAlmostEqual(s['size'], 9.84, delta=0.5, msg="Üstbilgi fontu ~9.84pt olmalıdır")
+            self.assertAlmostEqual(s['bbox'][0], 67.91, delta=1.0, msg="Üstbilgi x0 konumu ~67.92pt olmalıdır")
+
+        # Altbilgi doğrulama metni tek satırda ve x0=65.88pt olmalı
+        for p_idx in range(3):
+            p = actual_doc[p_idx]
+            notice_blocks = [b for b in p.get_text('blocks') if 'vatandas.uyap' in b[4]]
+            self.assertEqual(len(notice_blocks), 1, f"Sayfa {p_idx+1}'de tam 1 doğrulama metni olmalıdır")
+            nb = notice_blocks[0]
+            self.assertAlmostEqual(nb[0], 65.88, delta=1.5, msg="Doğrulama metni x0 ~65.88pt olmalıdır")
+            self.assertNotIn('\n', nb[4].strip(), "Doğrulama metni tek satır olmalıdır")
+
+        # QR kodu fiziksel ölçüleri: 50.04pt x 50.04pt, sağ kenara 9pt, alt kenara 17.88pt
+        for p_idx in range(3):
+            p = actual_doc[p_idx]
+            qr_drawings = [d['rect'] for d in p.get_drawings() if d['rect'].x0 > 500 and d['rect'].y0 > 750]
+            self.assertTrue(len(qr_drawings) > 0, f"Sayfa {p_idx+1}'de QR kodu çizimi bulunmalıdır")
+            outer_qr = min(qr_drawings, key=lambda r: (r.x0, r.y0))
+            self.assertAlmostEqual(outer_qr.width, 50.04, delta=1.0, msg="QR genişliği ~50.04pt (17.65mm) olmalı")
+            self.assertAlmostEqual(outer_qr.height, 50.04, delta=1.0, msg="QR yüksekliği ~50.04pt (17.65mm) olmalı")
+            self.assertAlmostEqual(p.rect.width - outer_qr.x1, 9.00, delta=1.5, msg="QR sağ kenar mesafesi ~9.00pt olmalı")
+            self.assertAlmostEqual(p.rect.height - outer_qr.y1, 17.88, delta=1.5, msg="QR alt kenar mesafesi ~17.88pt olmalı")
+
 if __name__ == '__main__':
     unittest.main()
