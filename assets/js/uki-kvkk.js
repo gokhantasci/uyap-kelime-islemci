@@ -33,6 +33,7 @@
             phone: '[TELEFON GİZLENDİ]',
             iban: '[IBAN GİZLENDİ]',
             plate: '[PLAKA GİZLENDİ]',
+            email: '[E-POSTA GİZLENDİ]',
             person: 'initials', // 'initials' (A*** Y***) veya özel metin
             address: '[ADRES GİZLENDİ]'
         },
@@ -99,6 +100,13 @@
                     addFinding('person', 'Taraf / Şahıs Adı', name, rep);
                 }
             }
+
+            // 6. E-posta Adresleri
+            const emailRegex = /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/g;
+            const emailMatches = text.match(emailRegex) || [];
+            emailMatches.forEach(email => {
+                addFinding('email', 'E-posta Adresi', email.trim(), UkiKvkk.defaultMasks.email || '[E-POSTA GİZLENDİ]');
+            });
 
             UkiKvkk.lastScanResults = findings;
             return findings;

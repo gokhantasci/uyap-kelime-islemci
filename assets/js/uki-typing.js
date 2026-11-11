@@ -78,21 +78,37 @@
     let totalWordsTyped = 0;
     let lastKeyTime = 0;
     let activeTypingMs = 0;
+    let isInitialized = false;
 
     const UkiTyping = {
         init(editorEl) {
-            if (!editorEl) return;
+            if (!editorEl) {
+                editorEl = document.getElementById('editor');
+            }
+            if (!editorEl || isInitialized) return;
+            isInitialized = true;
 
-            editorEl.addEventListener('keydown', (e) => {
-                // Yalnızca karakter tuşlarında ses çal ve ölç
-                if (e.key && e.key.length === 1) {
+            const handleTypingKey = (e) => {
+                const editor = document.getElementById('editor');
+                if (!editor) return;
+                const isInsideEditor = (e.target === editor || editor.contains(e.target));
+                if (!isInsideEditor) return;
+
+                if (e.key && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
                     playMechanicalClick();
                     UkiTyping.recordKeystroke(e.key);
-                } else if (e.key === 'Backspace' || e.key === 'Enter' || e.key === 'Tab') {
+                } else if (e.key === 'Backspace' || e.key === 'Delete') {
                     playMechanicalClick();
+                } else if (e.key === 'Enter') {
+                    playMechanicalClick();
+                    UkiTyping.recordKeystroke(' ');
+                } else if (e.key === 'Tab') {
+                    playMechanicalClick();
+                    UkiTyping.recordKeystroke(' ');
                 }
-            });
+            };
 
+            document.addEventListener('keydown', handleTypingKey, true);
             UkiTyping.updateUi();
         },
 
@@ -121,16 +137,16 @@
         },
 
         getStats() {
-            const minutes = Math.max(0.1, activeTypingMs / 60000);
+            const minutes = Math.max(0.08, activeTypingMs / 60000);
             
-            // 1. Türkçe Kelime Bazlı WPM (DKB)
-            const turkishWpm = Math.round(totalWordsTyped / minutes);
+            // 1. Türkçe Kelime Bazlı WPM (DKB - Dakika Başına Net Kelime)
+            const turkishWpm = totalCharsTyped < 5 ? 0 : Math.round(totalWordsTyped / minutes);
 
             // 2. Uluslararası Olimpiyat / Intersteno Standardı (5 vuruş = 1 kelime)
-            const olympicWpm = Math.round((totalCharsTyped / 5) / minutes);
+            const olympicWpm = totalCharsTyped < 5 ? 0 : Math.round((totalCharsTyped / 5) / minutes);
 
             // 3. Karakter / Vuruş Hızı (CPM - Vuruş/dk)
-            const cpm = Math.round(totalCharsTyped / minutes);
+            const cpm = totalCharsTyped < 5 ? 0 : Math.round(totalCharsTyped / minutes);
 
             return {
                 turkishWpm: isNaN(turkishWpm) ? 0 : turkishWpm,
@@ -162,6 +178,9 @@
             totalWordsTyped = 0;
             activeTypingMs = 0;
             UkiTyping.updateUi();
+            if (typeof window.showToast === 'function') {
+                window.showToast('Yazma hızı sayacı sıfırlandı.', 'info');
+            }
         },
 
         updateUi() {
@@ -170,7 +189,7 @@
             const stats = UkiTyping.getStats();
             const soundIcon = isSoundEnabled ? '🔊' : '🔈';
 
-            widget.innerHTML = `<span title="Yazma Hızı: Türkçe Dakika Başına Kelime ve Dünya Klavye Olimpiyatı (Intersteno) Ölçümü">⚡ <b>${stats.turkishWpm}</b> WPM (TR) | <b>${stats.olympicWpm}</b> WPM (Olimpiyat)</span> <button type="button" id="btn-toggle-keysound" class="wpm-sound-btn" title="Mekanik Klavye Sesini Aç/Kapat" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 4px;">${soundIcon}</button>`;
+            widget.innerHTML = `<span title="Yazma Hızı:\n• Türkçe DKB (Kelime/dk): Zabıt Katipliği ve Türkçe standartları\n• Olimpiyat WPM (Intersteno): Uluslararası 5 vuruş = 1 kelime kuralı" style="cursor:help;">⚡ <b>${stats.turkishWpm}</b> WPM (TR) | <b>${stats.olympicWpm}</b> WPM (Olimpiyat)</span> <button type="button" id="btn-toggle-keysound" class="wpm-sound-btn" title="${isSoundEnabled ? 'Mekanik Klavye Sesini Kapat' : 'Mekanik Klavye Sesini Aç'}" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 3px;">${soundIcon}</button> <button type="button" id="btn-reset-wpm" title="Sayacı Sıfırla" style="background:none;border:none;cursor:pointer;font-size:11px;opacity:0.6;padding:0 2px;">🔄</button>`;
 
             const soundBtn = document.getElementById('btn-toggle-keysound');
             if (soundBtn) {
@@ -179,9 +198,30 @@
                     UkiTyping.toggleSound();
                 };
             }
+
+            const resetBtn = document.getElementById('btn-reset-wpm');
+            if (resetBtn) {
+                resetBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    UkiTyping.resetStats();
+                };
+            }
         }
     };
 
     window.UkiTyping = UkiTyping;
+
+    // Otomatik Başlatma
+    if (typeof document !== 'undefined') {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                const ed = document.getElementById('editor');
+                if (ed) UkiTyping.init(ed);
+            });
+        } else {
+            const ed = document.getElementById('editor');
+            if (ed) UkiTyping.init(ed);
+        }
+    }
 })(window);
 

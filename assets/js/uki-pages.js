@@ -450,14 +450,63 @@
             if (cfg.showPageNumber !== false && (k > 0 || cfg.showPageNumberOnFirstPage)) {
                 const num = document.createElement('div');
                 num.className = 'pb-footer pb-pagenum';
-                let numStr = (k + 1) + '/' + n;
+                
+                const curr = k + (cfg.pageNumberStartNum || 1);
+                const total = n;
+
+                function toRoman(val) {
+                    if (val <= 0) return String(val);
+                    const romanLookup = [
+                        [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+                        [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+                        [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']
+                    ];
+                    let s = '';
+                    let temp = val;
+                    for (const [v, sym] of romanLookup) {
+                        while (temp >= v) {
+                            s += sym;
+                            temp -= v;
+                        }
+                    }
+                    return s;
+                }
+
+                function toLetter(val) {
+                    if (val <= 0) return String(val);
+                    let s = '';
+                    let temp = val;
+                    while (temp > 0) {
+                        const rem = (temp - 1) % 26;
+                        s = String.fromCharCode(65 + rem) + s;
+                        temp = Math.floor((temp - 1) / 26);
+                    }
+                    return s;
+                }
+
+                let baseFormatted = curr + '/' + total; // UYAP standartı
+                if (cfg.pageNumberFormat === 'single') baseFormatted = String(curr);
+                else if (cfg.pageNumberFormat === 'dash') baseFormatted = '- ' + curr + ' -';
+                else if (cfg.pageNumberFormat === 'bracket') baseFormatted = '[ ' + curr + ' / ' + total + ' ]';
+                else if (cfg.pageNumberFormat === 'word') baseFormatted = 'Sayfa ' + curr + ' / ' + total;
+                else if (cfg.pageNumberFormat === 'page_of') baseFormatted = curr + ' of ' + total;
+                else if (cfg.pageNumberFormat === 'dot') baseFormatted = curr + '.';
+                else if (cfg.pageNumberFormat === 'bullet') baseFormatted = '• ' + curr + ' •';
+                else if (cfg.pageNumberFormat === 'tilde') baseFormatted = '~ ' + curr + ' ~';
+                else if (cfg.pageNumberFormat === 'roman') baseFormatted = toRoman(curr) + ' / ' + toRoman(total);
+                else if (cfg.pageNumberFormat === 'roman_single') baseFormatted = toRoman(curr);
+                else if (cfg.pageNumberFormat === 'letter') baseFormatted = toLetter(curr) + ' / ' + toLetter(total);
+
+                let numStr = baseFormatted;
                 if (cfg.pageNumberForeStr) {
-                    numStr = cfg.pageNumberForeStr + (k + (cfg.pageNumberStartNum || 1));
-                } else if (cfg.pageNumberFormat === 'single') numStr = String(k + 1);
-                else if (cfg.pageNumberFormat === 'dash') numStr = '- ' + (k + 1) + ' -';
-                else if (cfg.pageNumberFormat === 'bracket') numStr = '[ ' + (k + 1) + ' / ' + n + ' ]';
-                else if (cfg.pageNumberFormat === 'word') numStr = 'Sayfa ' + (k + 1) + ' / ' + n;
-                else if (cfg.pageNumberFormat === 'page_of') numStr = (k + 1) + ' of ' + n;
+                    if (cfg.pageNumberForeStr.includes('{page}')) {
+                        numStr = cfg.pageNumberForeStr
+                            .replace(/\{page\}/g, String(curr))
+                            .replace(/\{total\}/g, String(total));
+                    } else {
+                        numStr = cfg.pageNumberForeStr + baseFormatted;
+                    }
+                }
                 num.textContent = numStr;
 
                 const align = cfg.pageNumberAlign || 'right';
@@ -597,13 +646,14 @@
             cfg.qrCode = (model && model.docProperties && model.docProperties.uyapdogrulamakodu) || '';
             const fe = model && model.footerElement;
             cfg.footerEl = !!fe;
+            const saved = model && model.editorSettings || {};
             cfg.footerParas = (fe && fe.paragraphs) || [];
-            cfg.pageNumberForeStr = (fe && fe.pageNumberForeStr) || '';
+            cfg.pageNumberForeStr = (fe && fe.pageNumberForeStr) || (saved && saved.pageNumberForeStr) || '';
             cfg.pageNumberStartNum = (fe && fe.pageNumberStartNum) || 1;
             cfg.reserve = !!cfg.webId || cfg.footerEl;
-            const saved = model && model.editorSettings || {};
             if (saved.webId !== undefined) cfg.webId = String(saved.webId);
             if (saved.qrCode !== undefined) cfg.qrCode = String(saved.qrCode);
+            if (saved.pageNumberForeStr !== undefined) cfg.pageNumberForeStr = String(saved.pageNumberForeStr);
             cfg.reserve = !!cfg.webId || cfg.footerEl;
             cfg.showFooter = saved.showFooter !== false;
             cfg.showPageNumber = saved.showPageNumber !== undefined ? saved.showPageNumber : !!cfg.footerEl;
@@ -629,12 +679,12 @@
                 cfg.header = { left, right, startPage, paras };
                 cfg.startPage = startPage;
             }
-            document.dispatchEvent(new Event('uki-document-change'));
+            try { document.dispatchEvent(new (window.Event || Event)('uki-document-change')); } catch(e) {}
             repaginate();
         },
         removeHeader() {
             cfg.header = null;
-            document.dispatchEvent(new Event('uki-document-change'));
+            try { document.dispatchEvent(new (window.Event || Event)('uki-document-change')); } catch(e) {}
             repaginate();
         },
         setFooter(fData) {
@@ -646,7 +696,7 @@
                 if (fData.qrCode !== undefined) cfg.qrCode = fData.qrCode;
                 cfg.reserve = !!cfg.webId;
             }
-            document.dispatchEvent(new Event('uki-document-change'));
+            try { document.dispatchEvent(new (window.Event || Event)('uki-document-change')); } catch(e) {}
             repaginate();
         },
         removeFooter() {
@@ -654,7 +704,7 @@
             cfg.webId = '';
             cfg.qrCode = '';
             cfg.reserve = false;
-            document.dispatchEvent(new Event('uki-document-change'));
+            try { document.dispatchEvent(new (window.Event || Event)('uki-document-change')); } catch(e) {}
             repaginate();
         },
         setPageNumber(pData) {
@@ -664,9 +714,10 @@
                 cfg.showPageNumber = pData.showPageNumber !== undefined ? !!pData.showPageNumber : true;
                 if (pData.pageNumberFormat) cfg.pageNumberFormat = pData.pageNumberFormat;
                 if (pData.pageNumberAlign) cfg.pageNumberAlign = pData.pageNumberAlign;
+                if (pData.pageNumberForeStr !== undefined) cfg.pageNumberForeStr = pData.pageNumberForeStr;
                 if (pData.showPageNumberOnFirstPage !== undefined) cfg.showPageNumberOnFirstPage = !!pData.showPageNumberOnFirstPage;
             }
-            document.dispatchEvent(new Event('uki-document-change'));
+            try { document.dispatchEvent(new (window.Event || Event)('uki-document-change')); } catch(e) {}
             repaginate();
         },
         togglePageNumber() {
@@ -677,7 +728,7 @@
         getConfig() { return Object.assign({}, cfg); },
         qrSvg,
         copyText,
-        reset() { cfg.header = null; cfg.webId = ''; cfg.startPage = 2; cfg.signed = false; cfg.qrCode = ''; cfg.reserve = false; cfg.footerEl = false; cfg.footerOffsetPt = 60; cfg.showFooter = true; cfg.showPageNumber = false; cfg.pageNumberFormat = 'slash'; cfg.showPageNumberOnFirstPage = true; },
+        reset() { cfg.header = null; cfg.webId = ''; cfg.startPage = 2; cfg.signed = false; cfg.qrCode = ''; cfg.reserve = false; cfg.footerEl = false; cfg.footerOffsetPt = 60; cfg.showFooter = true; cfg.showPageNumber = false; cfg.pageNumberFormat = 'slash'; cfg.pageNumberAlign = 'right'; cfg.pageNumberForeStr = ''; cfg.showPageNumberOnFirstPage = true; },
         repaginate,
         updatePages() { return window.UkiApp ? window.UkiApp.refresh() : repaginate(); },
         geometry() { return lastGeom || (ed ? geom() : null); },

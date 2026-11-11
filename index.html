@@ -236,6 +236,8 @@
                     <div class="uyap-dropdown-divider"></div>
                     <div class="uyap-dropdown-item" onclick="document.getElementById('btn-page-setup').click()"><span>Sayfa Düzenleme...</span><kbd>Shift+Alt+N</kbd></div>
                     <div class="uyap-dropdown-item" onclick="window.print()"><span>Yazdır...</span><kbd>Ctrl+P</kbd></div>
+                    <div class="uyap-dropdown-divider"></div>
+                    <div class="uyap-dropdown-item" onclick="window.openEmbedGuideModal && window.openEmbedGuideModal()"><span>🌐 Sitenize Gömün &amp; WordPress...</span></div>
                 </div>
             </div>
             <div class="uyap-menu-item" tabindex="0">
@@ -248,6 +250,8 @@
                     <div class="uyap-dropdown-divider"></div>
                     <div class="uyap-dropdown-item" onclick="document.getElementById('btn-find-replace').click()"><span>Bul ve Değiştir...</span><kbd>Ctrl+F</kbd></div>
                     <div class="uyap-dropdown-item" onclick="window.dispatchEvent(new KeyboardEvent('keydown',{key:'g',ctrlKey:true,bubbles:true,cancelable:true}))"><span>Sayfaya Git...</span><kbd>Ctrl+G</kbd></div>
+                    <div class="uyap-dropdown-divider"></div>
+                    <div class="uyap-dropdown-item" onclick="window.openKvkkModal && window.openKvkkModal()"><span>🔒 Kişisel Verileri Arındır (KVKK)...</span></div>
                 </div>
             </div>
             <div class="uyap-menu-item" tabindex="0">
@@ -315,6 +319,11 @@
                     <div class="uyap-dropdown-item" onclick="document.getElementById('btn-view-signatures').click()"><span>Elektronik İmzaları İncele...</span><kbd>Shift+Ctrl+G</kbd></div>
                     <div class="uyap-dropdown-item" onclick="document.getElementById('btn-header-stats').click()"><span>Kullanım İstatistikleri &amp; Sayaç</span></div>
                     <div class="uyap-dropdown-item" onclick="document.getElementById('btn-privacy-info').click()"><span>Gizlilik &amp; Güvenlik Güvencesi</span></div>
+                    <div class="uyap-dropdown-divider"></div>
+                    <div class="uyap-dropdown-item" onclick="window.openKvkkModal && window.openKvkkModal()"><span>🔒 Kişisel Verilerden Arındırma (KVKK)...</span></div>
+                    <div class="uyap-dropdown-item" onclick="window.openTemplateShareModal && window.openTemplateShareModal()"><span>🔗 Şablon Olarak Paylaş...</span></div>
+                    <div class="uyap-dropdown-item" onclick="window.openTemplatesManagerModal && window.openTemplatesManagerModal()"><span>📋 Şablon Kütüphanesi &amp; Paylaşılanlar...</span></div>
+                    <div class="uyap-dropdown-item" onclick="window.openEmbedGuideModal && window.openEmbedGuideModal()"><span>🌐 Sitenize Gömün &amp; WordPress...</span></div>
                 </div>
             </div>
             <div class="uyap-menu-item" tabindex="0">
@@ -556,7 +565,13 @@
                     <option value="ornek_karar">📄 Örnek Gerekçeli Karar (Test UDF)</option>
                     <option value="bilirkisi">📋 Bilirkişi Raporu Şablonu</option>
                     <option value="neler_yeni_doc">📢 UYAP Web Editör Sürüm Notları Belgesi</option>
+                    <optgroup id="template-custom-optgroup" label="⭐ Özel &amp; Paylaşılan Şablonlar"></optgroup>
+                    <option value="__action_share__">🔗 Mevcut Belgeyi Şablon Olarak Paylaş...</option>
+                    <option value="__action_manage__">📂 Şablon Kütüphanesi &amp; Paylaşılanlar...</option>
                 </select>
+                <button type="button" id="btn-quick-kvkk" class="tool-btn" onclick="window.openKvkkModal &amp;&amp; window.openKvkkModal()" title="Kişisel Verilerden Arındır / Maskele (KVKK)">
+                    <span>🔒 KVKK</span>
+                </button>
             </div>
 
             <!-- Kağıt / Sayfa Modu ve Yakınlaştırma -->
@@ -879,6 +894,10 @@
                         </label>
                     </div>
                     <div class="ax-form-row" style="margin-bottom: 8px;">
+                        <label for="input-pagenum-forestr" style="width: 120px;">Ön Metin (Önek):</label>
+                        <input type="text" id="input-pagenum-forestr" class="ax-input" placeholder="Örn: 'Sayfa ' veya 'Ek: ' (Boş bırakılabilir)" style="flex: 1;" title="Numaranın başına eklenecek metin. Değişken kalıbı: {page} veya {total} kullanılabilir">
+                    </div>
+                    <div class="ax-form-row" style="margin-bottom: 8px;">
                         <label for="select-pagenum-format" style="width: 120px;">Numara Biçimi:</label>
                         <select id="select-pagenum-format" class="ax-select" style="flex: 1;">
                             <option value="slash" selected>1/3 (UYAP Standartı - Sayfa/Toplam)</option>
@@ -887,6 +906,12 @@
                             <option value="bracket">[ 1 / 3 ] (Köşeli Parantez)</option>
                             <option value="word">Sayfa 1 / 3 (Metinli)</option>
                             <option value="page_of">1 of 3 (Uluslararası)</option>
+                            <option value="dot">1. (Sıra Noktalı)</option>
+                            <option value="bullet">• 1 • (Noktalı Vurgulu)</option>
+                            <option value="tilde">~ 1 ~ (Tildeli)</option>
+                            <option value="roman">I / III (Romen Rakamı)</option>
+                            <option value="roman_single">I (Romen Rakamı Tekil)</option>
+                            <option value="letter">A / C (Alfabetik Harfli)</option>
                         </select>
                     </div>
                     <div class="ax-form-row" style="margin-bottom: 8px;">
@@ -1661,13 +1686,16 @@
                     <!-- Dinamik form alanları buraya yüklenir -->
                 </div>
             </div>
-            <div class="ax-modal-footer" style="display: flex; justify-content: space-between;">
+            <div class="ax-modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
                 <button type="button" id="btn-wizard-skip" class="tool-btn-secondary" title="Boşlukları doldurmadan ham şablonu açar">
                     Sihirbazı Atla (Boş Şablonu Aç)
                 </button>
-                <button type="button" id="btn-wizard-apply" class="tool-btn-primary">
-                    Şablonu Doldur ve Aç
-                </button>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="btn-wizard-save-lib" class="tool-btn-secondary" style="display:none;" title="Bu şablonu yerel kütüphaneye ve açılır menüye ekle">⭐ Sisteme Entegre Et</button>
+                    <button type="button" id="btn-wizard-apply" class="tool-btn-primary">
+                        Şablonu Doldur ve Aç
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -2071,7 +2099,7 @@
             <div class="ax-modal-body" style="padding: 14px 16px;">
                 <fieldset class="ax-fieldset" style="margin-bottom: 12px;">
                     <legend>Özel Maskeleme Kalıpları</legend>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
                         <div>
                             <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 2px;">TC Kimlik Maskesi:</label>
                             <input type="text" id="kvkk-mask-tc" class="ax-input" value="[TC NO GİZLENDİ]" style="width: 100%; box-sizing: border-box; font-size: 11px;">
@@ -2083,6 +2111,14 @@
                         <div>
                             <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 2px;">IBAN Maskesi:</label>
                             <input type="text" id="kvkk-mask-iban" class="ax-input" value="[IBAN GİZLENDİ]" style="width: 100%; box-sizing: border-box; font-size: 11px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 2px;">Plaka Maskesi:</label>
+                            <input type="text" id="kvkk-mask-plate" class="ax-input" value="[PLAKA GİZLENDİ]" style="width: 100%; box-sizing: border-box; font-size: 11px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 2px;">E-Posta Maskesi:</label>
+                            <input type="text" id="kvkk-mask-email" class="ax-input" value="[E-POSTA GİZLENDİ]" style="width: 100%; box-sizing: border-box; font-size: 11px;">
                         </div>
                         <div>
                             <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 2px;">Taraf / Şahıs Adı Maskesi:</label>
@@ -2130,8 +2166,12 @@
             </div>
             <div class="ax-modal-body" style="padding: 14px 16px;">
                 <p style="font-size: 11.5px; color: var(--ax-color-neutral-600); margin: 0 0 12px 0;">
-                    Belgenizdeki değişken alanlar (örn: <code>{{MAHKEME}}</code>, <code>{{DAVACI}}</code>, <code>{{TC_NO}}</code>) tespit edilir ve bu linki açan kişiye doldurma sihirbazı olarak sunulur.
+                    Belgenizdeki değişken alanlar (örn: <code>{{MAHKEME}}</code>, <code>{{DAVACI}}</code>, <code>{{TC_NO}}</code> veya <code>[DAVACI]</code>) otomatik tespit edilir ve bu linki açan kişiye doldurma sihirbazı olarak sunulur.
                 </p>
+                <div class="ax-form-row" style="margin-bottom: 8px;">
+                    <label for="input-tpl-title" style="width: 110px;">Şablon Başlığı:</label>
+                    <input type="text" id="input-tpl-title" class="ax-input" value="Doldurulabilir Hukuk Şablonu" style="flex: 1; font-size: 11.5px;">
+                </div>
                 <div id="tpl-detected-vars" style="font-size: 11.5px; margin-bottom: 12px; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;"></div>
                 <div class="ax-form-row" style="margin-bottom: 10px;">
                     <label for="input-share-link" style="width: 110px;">Paylaşım Linki:</label>
@@ -2144,6 +2184,108 @@
                     <button type="button" class="tool-btn-secondary" onclick="document.getElementById('modal-template-share').style.display='none'">Kapat</button>
                     <button type="button" id="btn-copy-tpl-link" class="tool-btn-primary">📋 Bağlantıyı Kopyala</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         MODAL: ŞABLON KÜTÜPHANESİ & PAYLAŞILAN ŞABLONLAR
+         ========================================================================== -->
+    <div id="modal-templates-manager" class="ax-modal-backdrop" style="display: none;">
+        <div class="ax-modal-dialog" style="max-width: 660px;">
+            <div class="ax-modal-header">
+                <div>
+                    <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <span>📋 Şablon Kütüphanesi &amp; Paylaşılan Şablonlar</span>
+                    </h3>
+                    <div style="font-size: 11px; color: var(--ax-color-neutral-500); margin-top: 2px;">
+                        Paylaşılan şablonları görüntüleyin, tek tıkla sisteme entegre edin ve yeni linkleri içe aktarın.
+                    </div>
+                </div>
+                <button type="button" class="ax-modal-close" onclick="document.getElementById('modal-templates-manager').style.display='none'">&times;</button>
+            </div>
+            <div class="ax-modal-body" style="padding: 14px 16px;">
+                <fieldset class="ax-fieldset" style="margin-bottom: 12px;">
+                    <legend>🔗 Paylaşılan Şablon Bağlantısını İçe Aktar</legend>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="input-import-tpl-url" class="ax-input" placeholder="https://...#template=... veya #template=... kodunu yapıştırın" style="flex: 1; font-size: 11px;">
+                        <button type="button" id="btn-import-tpl-url" class="tool-btn-primary" style="font-size: 11px; white-space: nowrap;">📥 İçe Aktar</button>
+                    </div>
+                </fieldset>
+
+                <fieldset class="ax-fieldset">
+                    <legend>Kayıtlı &amp; Entegre Edilen Şablonlar</legend>
+                    <div id="tpl-library-list" style="max-height: 250px; overflow-y: auto; font-size: 11.5px;">
+                        <!-- Şablon kartları JS ile buraya basılır -->
+                    </div>
+                </fieldset>
+            </div>
+            <div class="ax-modal-footer" style="display: flex; justify-content: space-between;">
+                <button type="button" class="tool-btn-secondary" onclick="window.openTemplateShareModal && window.openTemplateShareModal()">➕ Mevcut Belgeyi Paylaş</button>
+                <button type="button" class="tool-btn-secondary" onclick="document.getElementById('modal-templates-manager').style.display='none'">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         MODAL: SİTENİZE GÖMÜN (EMBED SDK) & WORDPRESS EKLENTİSİ
+         ========================================================================== -->
+    <div id="modal-embed-guide" class="ax-modal-backdrop" style="display: none;">
+        <div class="ax-modal-dialog" style="max-width: 680px;">
+            <div class="ax-modal-header">
+                <div>
+                    <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <span>🌐 Web Sitenize Gömün &amp; WordPress Eklentisi</span>
+                    </h3>
+                    <div style="font-size: 11px; color: var(--ax-color-neutral-500); margin-top: 2px;">
+                        Tek komutla hafif UYAP düzenleyici ve görüntüleyiciyi sitenize ekleyin.
+                    </div>
+                </div>
+                <button type="button" class="ax-modal-close" onclick="document.getElementById('modal-embed-guide').style.display='none'">&times;</button>
+            </div>
+            <div class="ax-modal-body" style="padding: 14px 18px; max-height: 70vh; overflow-y: auto;">
+                <fieldset class="ax-fieldset" style="margin-bottom: 14px;">
+                    <legend>1. Tek Satır Komutla Web Sitenize Gömme (Embed SDK)</legend>
+                    <p style="font-size: 11.5px; color: #475569; margin: 2px 0 8px 0;">
+                        Sitenizin herhangi bir sayfasına tek bir <code>&lt;script&gt;</code> etiketi ekleyerek UYAP editörünü gömebilirsiniz. Ziyaretçileriniz hafif editör üzerinde metin düzenleyebilir, yazdırabilir ve doğrudan UDF olarak indirebilir.
+                    </p>
+                    <div style="position: relative;">
+                        <textarea id="embed-code-script" class="ax-input" readonly rows="2" style="width: 100%; box-sizing: border-box; font-family: monospace; font-size: 11px; background: #f8fafc; padding: 8px; resize: none;">&lt;!-- UYAP Hafif Düzenleyici --&gt;
+&lt;script src="https://udf.657.com.tr/embed.js" data-mode="editor" data-theme="light"&gt;&lt;/script&gt;</textarea>
+                        <button type="button" class="tool-btn-secondary" onclick="window.copyEmbedScript && window.copyEmbedScript()" style="position: absolute; right: 8px; top: 8px; font-size: 10.5px; padding: 3px 8px;">📋 Kopyala</button>
+                    </div>
+                    <div style="position: relative; margin-top: 8px;">
+                        <textarea id="embed-code-viewer" class="ax-input" readonly rows="2" style="width: 100%; box-sizing: border-box; font-family: monospace; font-size: 11px; background: #f8fafc; padding: 8px; resize: none;">&lt;!-- UYAP Belge Görüntüleyici (Belirli Bir UDF Dosyasını Gösterme) --&gt;
+&lt;script src="https://udf.657.com.tr/embed.js" data-mode="viewer" data-src="https://orneksite.com/karar.udf"&gt;&lt;/script&gt;</textarea>
+                        <button type="button" class="tool-btn-secondary" onclick="window.copyEmbedViewerScript && window.copyEmbedViewerScript()" style="position: absolute; right: 8px; top: 8px; font-size: 10.5px; padding: 3px 8px;">📋 Kopyala</button>
+                    </div>
+                </fieldset>
+
+                <fieldset class="ax-fieldset" style="margin-bottom: 14px;">
+                    <legend>2. Standart iFrame ile Gömme</legend>
+                    <div style="position: relative;">
+                        <textarea id="embed-code-iframe" class="ax-input" readonly rows="2" style="width: 100%; box-sizing: border-box; font-family: monospace; font-size: 11px; background: #f8fafc; padding: 8px; resize: none;">&lt;iframe src="https://udf.657.com.tr/embed.html?mode=editor" width="100%" height="700px" style="border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.08);" allowfullscreen&gt;&lt;/iframe&gt;</textarea>
+                        <button type="button" class="tool-btn-secondary" onclick="window.copyEmbedIframe && window.copyEmbedIframe()" style="position: absolute; right: 8px; top: 8px; font-size: 10.5px; padding: 3px 8px;">📋 Kopyala</button>
+                    </div>
+                </fieldset>
+
+                <fieldset class="ax-fieldset">
+                    <legend>3. WordPress Eklentisi (Görüntüleyici ve Düzenleyici)</legend>
+                    <p style="font-size: 11.5px; color: #475569; margin: 2px 0 8px 0;">
+                        WordPress sitenizde Gutenberg bloklarında veya klasik yazılarda aşağıdaki kısa kodları kullanabilirsiniz:
+                    </p>
+                    <div style="background: #f1f5f9; padding: 8px 12px; border-radius: 6px; font-size: 11.5px; margin-bottom: 8px;">
+                        <div style="margin-bottom: 4px;"><b>Düzenleyici Kısa Kodu:</b> <code>[uyap_editor width="100%" height="700px"]</code></div>
+                        <div><b>Görüntüleyici Kısa Kodu:</b> <code>[uyap_viewer src="https://site.com/belge.udf" height="650px"]</code></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                        <span style="font-size: 11px; color: #64748b;">WordPress Eklentisi: <code>wordpress-plugin/uyap-kelime-islemci/</code></span>
+                        <button type="button" id="btn-download-wp-plugin" class="tool-btn-primary" style="font-size: 11.5px; padding: 4px 12px;">📦 WP Eklentisini İndir (.php)</button>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="ax-modal-footer" style="display: flex; justify-content: flex-end;">
+                <button type="button" class="tool-btn-secondary" onclick="document.getElementById('modal-embed-guide').style.display='none'">Kapat</button>
             </div>
         </div>
     </div>

@@ -23,17 +23,31 @@
 
     const UkiTemplates = {
         /**
-         * Belgedeki tüm {{DEĞİŞKEN}} ve [[DEĞİŞKEN]] kalıplarını bulur
+         * Belgedeki tüm {{DEĞİŞKEN}}, [[DEĞİŞKEN]] ve belirgin [DEĞİŞKEN] kalıplarını bulur
          */
         extractVariables(contentHtml) {
-            const regex = /\{\{([^}]+)\}\}|\[\[([^\]]+)\]\]/g;
+            const regex = /\{\{([^}]+)\}\}|\[\[([^\]]+)\]\]|\[([A-ZÇĞİÖŞÜ0-9_]{3,30})\]/g;
             const vars = new Set();
             let m;
             while ((m = regex.exec(contentHtml)) !== null) {
-                const name = (m[1] || m[2]).trim();
-                if (name) vars.add(name);
+                const name = (m[1] || m[2] || m[3]).trim();
+                if (name && !/^(URL|IMG|REF|DOC|DIV|SPAN|FONT|STYLE|P)$/i.test(name)) {
+                    vars.add(name);
+                }
             }
             return Array.from(vars);
+        },
+
+        cleanLabel(varName) {
+            if (!varName) return '';
+            // Örn: DAVACI_TC -> Davacı T.C.
+            return varName
+                .replace(/_/g, ' ')
+                .toLowerCase()
+                .replace(/(?:^|\s)\S/g, a => a.toLocaleUpperCase('tr-TR'))
+                .replace(/\bTc\b/g, 'T.C. No')
+                .replace(/\bIban\b/g, 'IBAN')
+                .replace(/\bTl\b/g, 'TL');
         },
 
         /**
@@ -54,13 +68,23 @@
         },
 
         /**
-         * Paylaşılan şablon bağlantısını çözümler
+         * Paylaşılan şablon bağlantısını çözümler (hash veya query param)
          */
         parseHashTemplate() {
+            let encoded = '';
             const hash = window.location.hash || '';
-            if (!hash.startsWith('#template=')) return null;
+            if (hash.startsWith('#template=')) {
+                encoded = hash.substring('#template='.length);
+            } else {
+                try {
+                    const search = new URLSearchParams(window.location.search);
+                    if (search.get('template')) {
+                        encoded = search.get('template');
+                    }
+                } catch (e) {}
+            }
+            if (!encoded) return null;
             try {
-                const encoded = hash.substring('#template='.length);
                 const jsonStr = base64DecodeUnicode(encoded);
                 return JSON.parse(jsonStr);
             } catch (e) {
@@ -78,7 +102,8 @@
                 const cleanVal = String(val !== undefined ? val : '').trim();
                 const re1 = new RegExp('\\{\\{' + key + '\\}\\}', 'g');
                 const re2 = new RegExp('\\[\\[' + key + '\\]\\]', 'g');
-                res = res.replace(re1, cleanVal).replace(re2, cleanVal);
+                const re3 = new RegExp('\\[\\b' + key + '\\b\\]', 'g');
+                res = res.replace(re1, cleanVal).replace(re2, cleanVal).replace(re3, cleanVal);
             }
             return res;
         },
@@ -96,6 +121,17 @@
                     saved.unshift(templateData);
                 }
                 localStorage.setItem('uki-user-templates', JSON.stringify(saved));
+                return true;
+            } catch (e) {
+                return false;
+            }
+        },
+
+        removeFromLibrary(title) {
+            try {
+                const saved = JSON.parse(localStorage.getItem('uki-user-templates') || '[]');
+                const filtered = saved.filter(t => t.title !== title);
+                localStorage.setItem('uki-user-templates', JSON.stringify(filtered));
                 return true;
             } catch (e) {
                 return false;

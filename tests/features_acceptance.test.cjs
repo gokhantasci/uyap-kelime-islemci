@@ -5,12 +5,30 @@ const path = require('node:path');
 const { JSDOM } = require('jsdom');
 
 function initDom() {
-    const dom = new JSDOM('<!DOCTYPE html><html><body><div id="editor" contenteditable="true"><p>Test</p></div></body></html>');
+    const store = {};
+    const dom = new JSDOM('<!DOCTYPE html><html><body><div id="editor" contenteditable="true"><p>Test</p></div></body></html>', {
+        url: 'http://localhost:8080/'
+    });
     global.window = dom.window;
     global.document = dom.window.document;
+    global.Event = dom.window.Event;
     global.Node = dom.window.Node;
     global.DOMParser = dom.window.DOMParser;
     global.XMLSerializer = dom.window.XMLSerializer;
+    const memoryStorage = {
+        getItem: (k) => store[k] !== undefined ? store[k] : null,
+        setItem: (k, v) => { store[k] = String(v); },
+        removeItem: (k) => { delete store[k]; },
+        clear: () => { Object.keys(store).forEach(k => delete store[k]); }
+    };
+    try {
+        if (!dom.window.localStorage || typeof dom.window.localStorage.getItem !== 'function') {
+            dom.window.localStorage = memoryStorage;
+        }
+    } catch (e) {
+        dom.window.localStorage = memoryStorage;
+    }
+    global.localStorage = dom.window.localStorage;
     const jszip = require('../assets/vendor/jszip.min.js');
     global.JSZip = jszip;
     dom.window.JSZip = jszip;
@@ -143,5 +161,107 @@ test('Yazma Hızı (WPM): Türkçe DKB ve Olimpiyat vuruş hesabı doğru çalı
     assert.equal(stats.totalChars, 26);
     assert.equal(stats.totalWords, 4);
     assert.ok(stats.olympicWpm >= 0, 'Olimpiyat WPM hesaplanmalı');
+});
+
+test('Kullanıcı Özel Maskeleme (KVKK): Kullanıcı her verinin yerine konacak metni kendisi belirleyebilir', () => {
+    const dom = initDom();
+    const kvkkCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-kvkk.js'), 'utf8');
+    eval(kvkkCode);
+
+    const editorEl = dom.window.document.getElementById('editor');
+    editorEl.innerHTML = '<p>Sanık Ali KAYA, TC: 98765432101, Araç: 34 ABC 789, E-posta: avukat@test.com</p>';
+
+    const findings = dom.window.UkiKvkk.scanDocument(editorEl);
+    assert.ok(findings.some(f => f.type === 'tc'));
+    assert.ok(findings.some(f => f.type === 'plate'));
+    assert.ok(findings.some(f => f.type === 'email'));
+
+    // Kullanıcının her bulgu için özel belirlediği maskeler
+    const userCustomSelections = [
+        { original: '98765432101', replacement: '[ÖZEL-TCKN-987]' },
+        { original: '34 ABC 789', replacement: '[34-PLAKA-MASKE]' },
+        { original: 'avukat@test.com', replacement: '[GİZLİ-EPOSTA]' }
+    ];
+
+    const replaced = dom.window.UkiKvkk.applyRedaction(editorEl, userCustomSelections);
+    assert.equal(replaced, 3);
+    assert.ok(editorEl.textContent.includes('[ÖZEL-TCKN-987]'));
+    assert.ok(editorEl.textContent.includes('[34-PLAKA-MASKE]'));
+    assert.ok(editorEl.textContent.includes('[GİZLİ-EPOSTA]'));
+    assert.ok(!editorEl.textContent.includes('98765432101'));
+});
+
+test('Sayfa Numarası Genişletilmiş Stiller, Hizalama ve Ön Metin (Prefix)', () => {
+    const dom = initDom();
+    const pagesCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-pages.js'), 'utf8');
+    eval(pagesCode);
+
+    // 1. Romen rakamı ve 'Sayfa ' önek testi
+    dom.window.UkiPages.setPageNumber({
+        showPageNumber: true,
+        pageNumberFormat: 'roman',
+        pageNumberAlign: 'center',
+        pageNumberForeStr: 'Sayfa ',
+        showPageNumberOnFirstPage: true
+    });
+
+    const cfg = dom.window.UkiPages.getConfig();
+    assert.equal(cfg.pageNumberFormat, 'roman');
+    assert.equal(cfg.pageNumberAlign, 'center');
+    assert.equal(cfg.pageNumberForeStr, 'Sayfa ');
+
+    // 2. Noktalı sıra no ve sol hizalama testi
+    dom.window.UkiPages.setPageNumber({
+        showPageNumber: true,
+        pageNumberFormat: 'dot',
+        pageNumberAlign: 'left',
+        pageNumberForeStr: 'Ek: '
+    });
+
+    const cfg2 = dom.window.UkiPages.getConfig();
+    assert.equal(cfg2.pageNumberFormat, 'dot');
+    assert.equal(cfg2.pageNumberAlign, 'left');
+    assert.equal(cfg2.pageNumberForeStr, 'Ek: ');
+});
+
+test('Şablon Kütüphanesi ve Bağlantı Çözümleme: Sisteme entegrasyon ve paylaşım', () => {
+    const dom = initDom();
+    const tplCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-templates.js'), 'utf8');
+    eval(tplCode);
+
+    const rawTpl = '<p>Sayın {{HAKIMLIK}}, Müvekkil {{DAVACI}} adına {{TUTAR}} TL alacak talebi.</p>';
+    const link = dom.window.UkiTemplates.createShareableLink('İcra Takip Şablonu', rawTpl);
+    assert.ok(link.includes('#template='), 'Bağlantı #template= içermeli');
+
+    // Hash simülasyonu
+    dom.window.location.hash = link.substring(link.indexOf('#template='));
+    const parsed = dom.window.UkiTemplates.parseHashTemplate();
+    assert.ok(parsed, 'Paylaşılan şablon hash üzerinden çözümlenmeli');
+    assert.equal(parsed.title, 'İcra Takip Şablonu');
+    assert.deepEqual(parsed.variables, ['HAKIMLIK', 'DAVACI', 'TUTAR']);
+
+    // Kütüphaneye kaydetme ve entegrasyon testi
+    const savedOk = dom.window.UkiTemplates.saveToLibrary(parsed);
+    assert.equal(savedOk, true);
+
+    const library = dom.window.UkiTemplates.getLibrary();
+    assert.ok(library.some(t => t.title === 'İcra Takip Şablonu'));
+
+    // Kütüphaneden silme testi
+    dom.window.UkiTemplates.removeFromLibrary('İcra Takip Şablonu');
+    const libraryAfter = dom.window.UkiTemplates.getLibrary();
+    assert.ok(!libraryAfter.some(t => t.title === 'İcra Takip Şablonu'));
+});
+
+test('Embed SDK ve WordPress Eklentisi: Tek komutla gömme ve eklenti dosyaları eksiksizdir', () => {
+    assert.ok(fs.existsSync(path.resolve(__dirname, '../embed.html')), 'embed.html mevcut olmalı');
+    assert.ok(fs.existsSync(path.resolve(__dirname, '../embed.js')), 'embed.js mevcut olmalı');
+    
+    const wpPluginPath = path.resolve(__dirname, '../wordpress-plugin/uyap-kelime-islemci/uyap-kelime-islemci.php');
+    assert.ok(fs.existsSync(wpPluginPath), 'WordPress eklentisi uyap-kelime-islemci.php mevcut olmalı');
+
+    const wpPhpContent = fs.readFileSync(wpPluginPath, 'utf8');
+    assert.ok(wpPhpContent.includes('add_shortcode(\'uyap_editor\''), '[uyap_editor] kısa kodu tanımlanmalı');
+    assert.ok(wpPhpContent.includes('add_shortcode(\'uyap_viewer\''), '[uyap_viewer] kısa kodu tanımlanmalı');
 });
 

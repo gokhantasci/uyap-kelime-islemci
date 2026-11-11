@@ -729,6 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkPageNumEnabled = document.getElementById('check-pagenum-enabled');
     const selectPageNumFormat = document.getElementById('select-pagenum-format');
     const selectPageNumAlign = document.getElementById('select-pagenum-align');
+    const inputPageNumForeStr = document.getElementById('input-pagenum-forestr');
     const checkPageNumFirstPage = document.getElementById('check-pagenum-firstpage');
     const previewPageNumDisplay = document.getElementById('preview-pagenum-display');
     const btnPageNumSave = document.getElementById('btn-pagenum-save');
@@ -737,12 +738,28 @@ document.addEventListener('DOMContentLoaded', () => {
     function updatePageNumPreview() {
         const fmt = (selectPageNumFormat && selectPageNumFormat.value) || 'slash';
         const al = (selectPageNumAlign && selectPageNumAlign.value) || 'right';
+        const fore = (inputPageNumForeStr && inputPageNumForeStr.value) || '';
         let txt = '1/3';
         if (fmt === 'single') txt = '1';
         else if (fmt === 'dash') txt = '- 1 -';
         else if (fmt === 'bracket') txt = '[ 1 / 3 ]';
         else if (fmt === 'word') txt = 'Sayfa 1 / 3';
         else if (fmt === 'page_of') txt = '1 of 3';
+        else if (fmt === 'dot') txt = '1.';
+        else if (fmt === 'bullet') txt = '• 1 •';
+        else if (fmt === 'tilde') txt = '~ 1 ~';
+        else if (fmt === 'roman') txt = 'I / III';
+        else if (fmt === 'roman_single') txt = 'I';
+        else if (fmt === 'letter') txt = 'A / C';
+
+        if (fore) {
+            if (fore.includes('{page}')) {
+                txt = fore.replace(/\{page\}/g, '1').replace(/\{total\}/g, '3');
+            } else {
+                txt = fore + txt;
+            }
+        }
+
         if (previewPageNumDisplay) {
             previewPageNumDisplay.textContent = txt;
             if (previewPageNumDisplay.parentElement) {
@@ -752,12 +769,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (selectPageNumFormat) selectPageNumFormat.addEventListener('change', updatePageNumPreview);
     if (selectPageNumAlign) selectPageNumAlign.addEventListener('change', updatePageNumPreview);
+    if (inputPageNumForeStr) inputPageNumForeStr.addEventListener('input', updatePageNumPreview);
 
     window.openPageNumSetupModal = function() {
         const cfg = (window.UkiPages && window.UkiPages.getConfig && window.UkiPages.getConfig()) || {};
         if (checkPageNumEnabled) checkPageNumEnabled.checked = cfg.showPageNumber !== false;
         if (selectPageNumFormat) selectPageNumFormat.value = cfg.pageNumberFormat || 'slash';
         if (selectPageNumAlign) selectPageNumAlign.value = cfg.pageNumberAlign || 'right';
+        if (inputPageNumForeStr) inputPageNumForeStr.value = cfg.pageNumberForeStr || '';
         if (checkPageNumFirstPage) checkPageNumFirstPage.checked = cfg.showPageNumberOnFirstPage !== false;
         updatePageNumPreview();
         openModal(modalPageNumSetup);
@@ -776,12 +795,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const enabled = checkPageNumEnabled ? checkPageNumEnabled.checked : true;
             const format = (selectPageNumFormat && selectPageNumFormat.value) || 'slash';
             const align = (selectPageNumAlign && selectPageNumAlign.value) || 'right';
+            const foreStr = (inputPageNumForeStr && inputPageNumForeStr.value) || '';
             const firstPage = checkPageNumFirstPage ? checkPageNumFirstPage.checked : true;
             if (window.UkiPages && window.UkiPages.setPageNumber) {
                 window.UkiPages.setPageNumber({
                     showPageNumber: enabled,
                     pageNumberFormat: format,
                     pageNumberAlign: align,
+                    pageNumberForeStr: foreStr,
                     showPageNumberOnFirstPage: firstPage
                 });
             }
@@ -2037,7 +2058,18 @@ Sakarya Yazı İşleri Müdürü – 139329`;
             const val = templateSelect.value;
             if (!val) return;
 
-            if (val === 'ornek_karar') {
+            if (val === '__action_share__') {
+                window.openTemplateShareModal && window.openTemplateShareModal();
+            } else if (val === '__action_manage__') {
+                window.openTemplatesManagerModal && window.openTemplatesManagerModal();
+            } else if (val.startsWith('user_tpl_')) {
+                const idx = parseInt(val.replace('user_tpl_', ''), 10);
+                const lib = (window.UkiTemplates && window.UkiTemplates.getLibrary && window.UkiTemplates.getLibrary()) || [];
+                const tpl = lib[idx];
+                if (tpl) {
+                    openDynamicTemplateWizard(tpl);
+                }
+            } else if (val === 'ornek_karar') {
                 try {
                     setStatus('Örnek karar yükleniyor...');
                     let resp = await fetch(['localhost','127.0.0.1'].includes(location.hostname) ? 'examples/örnek karar.udf' : 'assets/data/ornek-belge.udf');
@@ -2060,6 +2092,51 @@ Sakarya Yazı İşleri Müdürü – 139329`;
             }
             templateSelect.value = '';
         });
+    }
+
+    function openDynamicTemplateWizard(tpl) {
+        currentWizardTemplate = tpl;
+        if (!wizardFormContainer) return;
+        if (wizardTitle) wizardTitle.textContent = (tpl.title || 'Şablon') + ' Doldurma Sihirbazı';
+
+        const saveLibBtn = document.getElementById('btn-wizard-save-lib');
+        if (saveLibBtn) {
+            const lib = (window.UkiTemplates && window.UkiTemplates.getLibrary && window.UkiTemplates.getLibrary()) || [];
+            const exists = lib.some(t => t.title === tpl.title);
+            saveLibBtn.style.display = exists ? 'none' : 'inline-block';
+            saveLibBtn.onclick = () => {
+                if (window.UkiTemplates && window.UkiTemplates.saveToLibrary) {
+                    window.UkiTemplates.saveToLibrary(tpl);
+                    refreshTemplateSelectOptions();
+                    saveLibBtn.style.display = 'none';
+                    showToast('Şablon kütüphanenize ve açılır menüye eklendi.', 'success');
+                }
+            };
+        }
+
+        const vars = tpl.variables && tpl.variables.length ? tpl.variables : (window.UkiTemplates ? window.UkiTemplates.extractVariables(tpl.content) : []);
+
+        if (!vars || !vars.length) {
+            wizardFormContainer.innerHTML = '<p style="color:#64748b; font-size:12px; margin:12px 0; text-align:center;">Bu şablonda otomatik değişken alanı bulunamadı. Doğrudan şablonu açabilirsiniz.</p>';
+        } else {
+            let gridHtml = '<div class="wizard-form-grid">';
+            vars.forEach(v => {
+                const label = window.UkiTemplates && window.UkiTemplates.cleanLabel ? window.UkiTemplates.cleanLabel(v) : v;
+                const isFull = v.toLowerCase().includes('adres') || v.toLowerCase().includes('mahkeme') || v.toLowerCase().includes('konu');
+                const isDate = v.toLowerCase().includes('tarih');
+                const isTc = v.toLowerCase().includes('tc');
+                gridHtml += `
+                    <div class="${isFull ? 'wizard-field-full' : ''}">
+                        <label class="wizard-label">${label}:</label>
+                        <input type="${isDate ? 'date' : 'text'}" class="wizard-input dynamic-wz-input" data-var="${v}" ${isTc ? 'maxlength="11"' : ''} placeholder="${label} girin">
+                    </div>
+                `;
+            });
+            gridHtml += '</div>';
+            wizardFormContainer.innerHTML = gridHtml;
+        }
+
+        openModal(modalTemplateWizard);
     }
 
     function openTemplateWizard(templateType) {
@@ -2157,6 +2234,23 @@ Sakarya Yazı İşleri Müdürü – 139329`;
 
     if (btnWizardApply) {
         btnWizardApply.addEventListener('click', () => {
+            if (typeof currentWizardTemplate === 'object' && currentWizardTemplate !== null) {
+                const valuesMap = {};
+                const inputs = wizardFormContainer ? wizardFormContainer.querySelectorAll('.dynamic-wz-input') : [];
+                inputs.forEach(inp => {
+                    const vName = inp.getAttribute('data-var');
+                    if (vName) valuesMap[vName] = inp.value;
+                });
+                const filledHtml = window.UkiTemplates && window.UkiTemplates.fillTemplate ? window.UkiTemplates.fillTemplate(currentWizardTemplate.content, valuesMap) : currentWizardTemplate.content;
+                if (window.UkiHistory && window.UkiHistory.recordSnapshot) {
+                    window.UkiHistory.recordSnapshot();
+                }
+                editor.setContentHtml(filledHtml);
+                recalculatePagesAndThumbnails();
+                closeModal(modalTemplateWizard);
+                showToast(`"${currentWizardTemplate.title || 'Şablon'}" dolduruldu ve editörde açıldı.`, 'success');
+                return;
+            }
             applyWizardForm();
             closeModal(modalTemplateWizard);
         });
@@ -2164,6 +2258,16 @@ Sakarya Yazı İşleri Müdürü – 139329`;
 
     if (btnWizardSkip) {
         btnWizardSkip.addEventListener('click', () => {
+            if (typeof currentWizardTemplate === 'object' && currentWizardTemplate !== null) {
+                if (window.UkiHistory && window.UkiHistory.recordSnapshot) {
+                    window.UkiHistory.recordSnapshot();
+                }
+                editor.setContentHtml(currentWizardTemplate.content);
+                recalculatePagesAndThumbnails();
+                closeModal(modalTemplateWizard);
+                showToast(`"${currentWizardTemplate.title || 'Şablon'}" ham şablon olarak açıldı.`, 'info');
+                return;
+            }
             applyWizardBlank();
             closeModal(modalTemplateWizard);
         });
@@ -4271,7 +4375,430 @@ function openColorPicker(pickerId, ev) {
         throw new Error('Kaynak site, başka sitelerden doğrudan indirmeye izin vermiyor (CORS). Dosyayı indirip "Dosya > Bilgisayardan belge aç" ile açabilirsiniz; site sahibiyse Access-Control-Allow-Origin başlığını ekleyin.');
     }
 
+    // =========================================================================
+    // MODÜL: KVKK KİŞİSEL VERİLERDEN ARINDIRMA (MASKELEME)
+    // =========================================================================
+    const modalKvkkSetup = document.getElementById('modal-kvkk-setup');
+    const btnKvkkScan = document.getElementById('btn-kvkk-scan');
+    const btnKvkkApply = document.getElementById('btn-kvkk-apply');
+    const kvkkScanStatus = document.getElementById('kvkk-scan-status');
+    const kvkkFindingsList = document.getElementById('kvkk-findings-list');
+    const kvkkCheckAll = document.getElementById('kvkk-check-all');
+
+    window.openKvkkModal = function() {
+        if (!modalKvkkSetup) return;
+        openModal(modalKvkkSetup);
+        runKvkkScan();
+    };
+
+    function getKvkkMaskConfig() {
+        return {
+            tc: (document.getElementById('kvkk-mask-tc') && document.getElementById('kvkk-mask-tc').value) || '[TC NO GİZLENDİ]',
+            phone: (document.getElementById('kvkk-mask-phone') && document.getElementById('kvkk-mask-phone').value) || '[TELEFON GİZLENDİ]',
+            iban: (document.getElementById('kvkk-mask-iban') && document.getElementById('kvkk-mask-iban').value) || '[IBAN GİZLENDİ]',
+            plate: (document.getElementById('kvkk-mask-plate') && document.getElementById('kvkk-mask-plate').value) || '[PLAKA GİZLENDİ]',
+            email: (document.getElementById('kvkk-mask-email') && document.getElementById('kvkk-mask-email').value) || '[E-POSTA GİZLENDİ]',
+            person: (document.getElementById('kvkk-mask-person') && document.getElementById('kvkk-mask-person').value) || 'initials',
+            address: '[ADRES GİZLENDİ]'
+        };
+    }
+
+    function runKvkkScan() {
+        if (!window.UkiKvkk || !kvkkFindingsList) return;
+        const editorEl = document.getElementById('editor');
+        if (!editorEl) return;
+
+        window.UkiKvkk.defaultMasks = getKvkkMaskConfig();
+        const findings = window.UkiKvkk.scanDocument(editorEl);
+
+        if (kvkkScanStatus) {
+            kvkkScanStatus.textContent = findings.length ? `${findings.length} adet kişisel veri türü tespit edildi.` : 'Kişisel veri tespit edilmedi.';
+            kvkkScanStatus.style.color = findings.length ? '#b45309' : '#059669';
+        }
+
+        if (!findings.length) {
+            kvkkFindingsList.innerHTML = '<p style="color:#059669; margin:12px 0; text-align:center; font-weight:500;">✅ Belgede T.C. Kimlik, telefon, IBAN, plaka veya kişi adı gibi kişisel veriye rastlanmadı.</p>';
+            return;
+        }
+
+        let tableHtml = `
+            <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
+                <thead>
+                    <tr style="background:#f1f5f9; text-align:left; border-bottom:1px solid #cbd5e1;">
+                        <th style="padding:4px 6px; width:28px;"></th>
+                        <th style="padding:4px 6px; width:110px;">Veri Türü</th>
+                        <th style="padding:4px 6px;">Orijinal Değer</th>
+                        <th style="padding:4px 6px; width:200px;">Maske Değeri (Düzenlenebilir)</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        findings.forEach((f, idx) => {
+            const badgeColor = f.type === 'tc' ? '#dc2626' : (f.type === 'phone' ? '#2563eb' : (f.type === 'iban' ? '#7c3aed' : (f.type === 'plate' ? '#0891b2' : '#d97706')));
+            tableHtml += `
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:4px 6px; text-align:center;">
+                        <input type="checkbox" class="kvkk-item-chk" data-idx="${idx}" checked>
+                    </td>
+                    <td style="padding:4px 6px;">
+                        <span style="display:inline-block; padding:1px 6px; border-radius:3px; background:${badgeColor}15; color:${badgeColor}; font-weight:600; font-size:10.5px;">${f.label}</span>
+                    </td>
+                    <td style="padding:4px 6px; font-family:monospace; color:#334155;">
+                        <b>${f.original}</b> <span style="font-size:10px; color:#94a3b8;">(${f.count} adet)</span>
+                    </td>
+                    <td style="padding:4px 6px;">
+                        <input type="text" class="ax-input kvkk-row-rep" data-idx="${idx}" value="${f.replacement}" style="width:100%; box-sizing:border-box; font-size:11px; padding:2px 6px;">
+                    </td>
+                </tr>
+            `;
+        });
+
+        tableHtml += '</tbody></table>';
+        kvkkFindingsList.innerHTML = tableHtml;
+    }
+
+    if (btnKvkkScan) {
+        btnKvkkScan.addEventListener('click', runKvkkScan);
+    }
+
+    if (kvkkCheckAll) {
+        kvkkCheckAll.addEventListener('change', () => {
+            const chks = document.querySelectorAll('.kvkk-item-chk');
+            chks.forEach(c => c.checked = kvkkCheckAll.checked);
+        });
+    }
+
+    if (btnKvkkApply) {
+        btnKvkkApply.addEventListener('click', () => {
+            if (!window.UkiKvkk || !window.UkiKvkk.lastScanResults) return;
+            const editorEl = document.getElementById('editor');
+            if (!editorEl) return;
+
+            const chks = document.querySelectorAll('.kvkk-item-chk');
+            const selectedReplacements = [];
+
+            chks.forEach(chk => {
+                if (chk.checked) {
+                    const idx = parseInt(chk.getAttribute('data-idx'), 10);
+                    const item = window.UkiKvkk.lastScanResults[idx];
+                    if (item) {
+                        const repInput = document.querySelector(`.kvkk-row-rep[data-idx="${idx}"]`);
+                        const customRep = repInput ? repInput.value.trim() : item.replacement;
+                        selectedReplacements.push({
+                            original: item.original,
+                            replacement: customRep || item.replacement
+                        });
+                    }
+                }
+            });
+
+            if (!selectedReplacements.length) {
+                showToast('Maskelenecek veri seçilmedi.', 'warning');
+                return;
+            }
+
+            if (window.UkiHistory && window.UkiHistory.recordSnapshot) {
+                window.UkiHistory.recordSnapshot();
+            }
+
+            const count = window.UkiKvkk.applyRedaction(editorEl, selectedReplacements);
+            closeModal(modalKvkkSetup);
+            showToast(`${count} adet kişisel veri başarıyla maskelendi.`, 'success');
+        });
+    }
+
+    // =========================================================================
+    // MODÜL: ŞABLON PAYLAŞIMI VE ŞABLON KÜTÜPHANESİ YÖNETİMİ
+    // =========================================================================
+    const modalTemplateShare = document.getElementById('modal-template-share');
+    const modalTemplatesManager = document.getElementById('modal-templates-manager');
+    const inputTplTitle = document.getElementById('input-tpl-title');
+    const tplDetectedVars = document.getElementById('tpl-detected-vars');
+    const inputShareLink = document.getElementById('input-share-link');
+    const btnCopyTplLink = document.getElementById('btn-copy-tpl-link');
+    const btnSaveTplLib = document.getElementById('btn-save-tpl-lib');
+    const tplLibraryList = document.getElementById('tpl-library-list');
+    const inputImportTplUrl = document.getElementById('input-import-tpl-url');
+    const btnImportTplUrl = document.getElementById('btn-import-tpl-url');
+
+    function refreshTemplateSelectOptions() {
+        const optgroup = document.getElementById('template-custom-optgroup');
+        if (!optgroup || !window.UkiTemplates) return;
+        optgroup.innerHTML = '';
+        const lib = window.UkiTemplates.getLibrary() || [];
+        if (!lib.length) {
+            const emptyOpt = document.createElement('option');
+            emptyOpt.disabled = true;
+            emptyOpt.textContent = '(Henüz özel şablon yok)';
+            optgroup.appendChild(emptyOpt);
+            return;
+        }
+        lib.forEach((tpl, idx) => {
+            const opt = document.createElement('option');
+            opt.value = 'user_tpl_' + idx;
+            opt.textContent = `⭐ ${tpl.title} (${(tpl.variables || []).length} değişken)`;
+            optgroup.appendChild(opt);
+        });
+    }
+
+    window.openTemplateShareModal = function() {
+        if (!modalTemplateShare || !window.UkiTemplates) return;
+        const html = editor.getContentHtml();
+        const vars = window.UkiTemplates.extractVariables(html);
+
+        if (inputTplTitle && (!inputTplTitle.value || inputTplTitle.value === 'Doldurulabilir Hukuk Şablonu')) {
+            inputTplTitle.value = 'Hukuk Dilekçesi Şablonu';
+        }
+
+        if (tplDetectedVars) {
+            if (vars.length) {
+                tplDetectedVars.innerHTML = `<b>Tespit Edilen Değişkenler (${vars.length}):</b> ` + vars.map(v => `<code style="background:#e2e8f0; padding:1px 4px; border-radius:3px; margin:2px;">{{${v}}}</code>`).join(' ');
+            } else {
+                tplDetectedVars.innerHTML = `<span style="color:#64748b;">Belgenizde otomatik değişken (örn: <code>{{DAVACI}}</code>, <code>{{TC_NO}}</code>, <code>{{MAHKEME}}</code>) bulunamadı. Şablon tam metin içeriğiyle paylaşılacaktır.</span>`;
+            }
+        }
+
+        const title = inputTplTitle ? inputTplTitle.value : 'Hukuk Şablonu';
+        const link = window.UkiTemplates.createShareableLink(title, html);
+        if (inputShareLink) inputShareLink.value = link;
+
+        if (inputTplTitle) {
+            inputTplTitle.oninput = () => {
+                const newLink = window.UkiTemplates.createShareableLink(inputTplTitle.value, html);
+                if (inputShareLink) inputShareLink.value = newLink;
+            };
+        }
+
+        openModal(modalTemplateShare);
+    };
+
+    if (btnCopyTplLink) {
+        btnCopyTplLink.addEventListener('click', () => {
+            if (!inputShareLink || !inputShareLink.value) return;
+            navigator.clipboard.writeText(inputShareLink.value).then(() => {
+                showToast('Şablon paylaşım bağlantısı panoya kopyalandı! Bu linki takip edenler doldurma sihirbazıyla açacaktır.', 'success');
+            }).catch(() => {
+                inputShareLink.select();
+                document.execCommand('copy');
+                showToast('Şablon paylaşım bağlantısı kopyalandı.', 'success');
+            });
+        });
+    }
+
+    if (btnSaveTplLib) {
+        btnSaveTplLib.addEventListener('click', () => {
+            if (!window.UkiTemplates) return;
+            const html = editor.getContentHtml();
+            const vars = window.UkiTemplates.extractVariables(html);
+            const title = (inputTplTitle && inputTplTitle.value.trim()) || 'Özel Şablon';
+            window.UkiTemplates.saveToLibrary({
+                title,
+                variables: vars,
+                content: html,
+                created: Date.now()
+            });
+            refreshTemplateSelectOptions();
+            showToast(`"${title}" şablonu kütüphanenize ve açılır menüye başarıyla eklendi.`, 'success');
+            closeModal(modalTemplateShare);
+        });
+    }
+
+    window.openTemplatesManagerModal = function() {
+        if (!modalTemplatesManager || !window.UkiTemplates) return;
+        renderTemplatesLibrary();
+        openModal(modalTemplatesManager);
+    };
+
+    function renderTemplatesLibrary() {
+        if (!tplLibraryList || !window.UkiTemplates) return;
+        const lib = window.UkiTemplates.getLibrary() || [];
+
+        if (!lib.length) {
+            tplLibraryList.innerHTML = '<p style="color:#64748b; text-align:center; margin:16px 0;">Henüz kaydedilmiş veya içe aktarılmış bir şablon bulunmuyor.<br><span style="font-size:11px;">Yukarıdan bir bağlantı yapıştırabilir veya mevcut belgenizi şablon olarak paylaşabilirsiniz.</span></p>';
+            return;
+        }
+
+        let html = '';
+        lib.forEach((tpl, idx) => {
+            const dateStr = tpl.created ? new Date(tpl.created).toLocaleDateString('tr-TR') : 'Kayıtlı';
+            const varCount = (tpl.variables || []).length;
+            html += `
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:600; font-size:12px; color:#1e293b;">⭐ ${tpl.title}</div>
+                        <div style="font-size:10.5px; color:#64748b; margin-top:2px;">
+                            ${varCount} Değişken Alan · ${dateStr}
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button type="button" class="tool-btn-primary btn-tpl-fill" data-idx="${idx}" style="font-size:11px; padding:3px 8px;">Doldur ve Aç</button>
+                        <button type="button" class="tool-btn-secondary btn-tpl-raw" data-idx="${idx}" style="font-size:11px; padding:3px 8px;">Ham Aç</button>
+                        <button type="button" class="tool-btn-secondary btn-tpl-copy" data-idx="${idx}" style="font-size:11px; padding:3px 8px;" title="Paylaşım Linkini Kopyala">🔗 Link</button>
+                        <button type="button" class="tool-btn-secondary btn-tpl-del" data-idx="${idx}" style="font-size:11px; padding:3px 8px; color:#dc2626;" title="Kütüphaneden Sil">🗑️</button>
+                    </div>
+                </div>
+            `;
+        });
+        tplLibraryList.innerHTML = html;
+
+        tplLibraryList.querySelectorAll('.btn-tpl-fill').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const tpl = lib[idx];
+                if (tpl) {
+                    closeModal(modalTemplatesManager);
+                    openDynamicTemplateWizard(tpl);
+                }
+            });
+        });
+
+        tplLibraryList.querySelectorAll('.btn-tpl-raw').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const tpl = lib[idx];
+                if (tpl) {
+                    if (window.UkiHistory && window.UkiHistory.recordSnapshot) window.UkiHistory.recordSnapshot();
+                    editor.setContentHtml(tpl.content);
+                    recalculatePagesAndThumbnails();
+                    closeModal(modalTemplatesManager);
+                    showToast(`"${tpl.title}" editöre yüklendi.`, 'success');
+                }
+            });
+        });
+
+        tplLibraryList.querySelectorAll('.btn-tpl-copy').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const tpl = lib[idx];
+                if (tpl && window.UkiTemplates) {
+                    const link = window.UkiTemplates.createShareableLink(tpl.title, tpl.content);
+                    navigator.clipboard.writeText(link).then(() => {
+                        showToast('Şablon paylaşım linki kopyalandı.', 'success');
+                    });
+                }
+            });
+        });
+
+        tplLibraryList.querySelectorAll('.btn-tpl-del').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const tpl = lib[idx];
+                if (tpl && confirm(`"${tpl.title}" şablonunu kütüphaneden silmek istediğinize emin misiniz?`)) {
+                    window.UkiTemplates.removeFromLibrary(tpl.title);
+                    renderTemplatesLibrary();
+                    refreshTemplateSelectOptions();
+                    showToast('Şablon silindi.', 'info');
+                }
+            });
+        });
+    }
+
+    if (btnImportTplUrl) {
+        btnImportTplUrl.addEventListener('click', () => {
+            if (!inputImportTplUrl || !inputImportTplUrl.value.trim() || !window.UkiTemplates) return;
+            const raw = inputImportTplUrl.value.trim();
+            let parsed = null;
+            try {
+                let encoded = '';
+                if (raw.includes('#template=')) {
+                    encoded = raw.split('#template=')[1].split('&')[0];
+                } else if (raw.includes('template=')) {
+                    encoded = raw.split('template=')[1].split('&')[0].split('#')[0];
+                } else {
+                    encoded = raw;
+                }
+                const jsonStr = decodeURIComponent(Array.prototype.map.call(atob(encoded), function (c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                parsed = JSON.parse(jsonStr);
+            } catch (e) {
+                showToast('Geçersiz şablon bağlantısı veya formatı.', 'error');
+                return;
+            }
+
+            if (parsed && parsed.content) {
+                window.UkiTemplates.saveToLibrary(parsed);
+                renderTemplatesLibrary();
+                refreshTemplateSelectOptions();
+                inputImportTplUrl.value = '';
+                showToast(`"${parsed.title || 'Şablon'}" kütüphanenize ve açılır menüye başarıyla entegre edildi.`, 'success');
+            }
+        });
+    }
+
+    // =========================================================================
+    // MODÜL: SİTENİZE GÖMÜN & WORDPRESS EKLENTİSİ
+    // =========================================================================
+    const modalEmbedGuide = document.getElementById('modal-embed-guide');
+    window.openEmbedGuideModal = function() {
+        if (!modalEmbedGuide) return;
+        openModal(modalEmbedGuide);
+    };
+
+    window.copyEmbedScript = function() {
+        const txt = document.getElementById('embed-code-script');
+        if (txt) {
+            navigator.clipboard.writeText(txt.value).then(() => {
+                showToast('Tek satır gömme kodu panoya kopyalandı.', 'success');
+            });
+        }
+    };
+
+    window.copyEmbedViewerScript = function() {
+        const txt = document.getElementById('embed-code-viewer');
+        if (txt) {
+            navigator.clipboard.writeText(txt.value).then(() => {
+                showToast('Görüntüleyici gömme kodu panoya kopyalandı.', 'success');
+            });
+        }
+    };
+
+    window.copyEmbedIframe = function() {
+        const txt = document.getElementById('embed-code-iframe');
+        if (txt) {
+            navigator.clipboard.writeText(txt.value).then(() => {
+                showToast('iFrame gömme kodu panoya kopyalandı.', 'success');
+            });
+        }
+    };
+
+    const btnDownloadWpPlugin = document.getElementById('btn-download-wp-plugin');
+    if (btnDownloadWpPlugin) {
+        btnDownloadWpPlugin.addEventListener('click', async () => {
+            try {
+                const resp = await fetch('wordpress-plugin/uyap-kelime-islemci/uyap-kelime-islemci.php');
+                if (!resp.ok) throw new Error('Dosya indirilemedi');
+                const blob = await resp.blob();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'uyap-kelime-islemci.php';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showToast('WordPress eklenti dosyası (uyap-kelime-islemci.php) indirildi.', 'success');
+            } catch (e) {
+                window.open('wordpress-plugin/uyap-kelime-islemci/uyap-kelime-islemci.php', '_blank');
+            }
+        });
+    }
+
     async function checkUrlParamsAndInit() {
+        refreshTemplateSelectOptions();
+
+        if (window.UkiTyping && window.UkiTyping.init) {
+            window.UkiTyping.init(document.getElementById('editor'));
+        }
+
+        // 0. Paylaşılan şablon bağlantısı (#template=... veya ?template=...)
+        const hashTemplate = window.UkiTemplates && window.UkiTemplates.parseHashTemplate && window.UkiTemplates.parseHashTemplate();
+        if (hashTemplate) {
+            setStatus('Paylaşılan şablon algılandı: ' + (hashTemplate.title || ''));
+            showToast(`"${hashTemplate.title || 'Paylaşılan Şablon'}" yüklendi. Değişkenleri doldurabilirsiniz.`, 'info');
+            openDynamicTemplateWizard(hashTemplate);
+            return;
+        }
+
         const remoteUrl = extractRemoteDocumentUrl();
 
         if (remoteUrl) {
@@ -4316,4 +4843,11 @@ function openColorPicker(pickerId, ev) {
     }
 
     checkUrlParamsAndInit();
+
+    window.addEventListener('hashchange', () => {
+        const tpl = window.UkiTemplates && window.UkiTemplates.parseHashTemplate && window.UkiTemplates.parseHashTemplate();
+        if (tpl) {
+            openDynamicTemplateWizard(tpl);
+        }
+    });
 });
