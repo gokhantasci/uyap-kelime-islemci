@@ -183,6 +183,10 @@
         const sel = window.getSelection();
         if (!sel || !sel.rangeCount) return;
 
+        if (window.UkiHistory && typeof window.UkiHistory.record === 'function') {
+            window.UkiHistory.record('Biçim Boyacısı Öncesi');
+        }
+
         // 1. Karakter stillerini seçili metne uygula
         if (!sel.isCollapsed) {
             // Seçim boş değilse inline span ile sar veya stillendir
@@ -259,6 +263,9 @@
             document.dispatchEvent(new Event('uki-document-change'));
             if (typeof window.recalculatePagesAndThumbnails === 'function') {
                 window.recalculatePagesAndThumbnails();
+            }
+            if (window.UkiHistory && typeof window.UkiHistory.record === 'function') {
+                window.UkiHistory.record('Biçim Boyacısı');
             }
         }
     }

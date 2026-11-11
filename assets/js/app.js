@@ -1210,6 +1210,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const paras = typeof selectedParagraphs === 'function' ? selectedParagraphs() : [];
             const targets = paras.length ? paras : (editorEl ? Array.from(editorEl.querySelectorAll('p')) : []);
 
+            if (window.UkiHistory && typeof window.UkiHistory.record === 'function') {
+                window.UkiHistory.record('Paragraf Ayarları Öncesi');
+            }
+
             targets.forEach(p => {
                 p.setAttribute('data-fli', String(fliPt));
                 p.setAttribute('data-hanging', String(hangPt));
@@ -1244,6 +1248,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (typeof recalculatePagesAndThumbnails === 'function') {
                 recalculatePagesAndThumbnails();
+            }
+            if (window.UkiHistory && typeof window.UkiHistory.record === 'function') {
+                window.UkiHistory.record('Paragraf Ayarları');
             }
 
             closeModal(modalParaSetup);

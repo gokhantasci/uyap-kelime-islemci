@@ -241,8 +241,8 @@
             <div class="uyap-menu-item" tabindex="0">
                 <span>Dü<u>z</u>en</span>
                 <div class="uyap-dropdown-menu">
-                    <div class="uyap-dropdown-item" onclick="document.execCommand('undo')"><span>Geri Al</span><kbd>Ctrl+Z</kbd></div>
-                    <div class="uyap-dropdown-item" onclick="document.execCommand('redo')"><span>Yinele</span><kbd>Ctrl+Y</kbd></div>
+                    <div class="uyap-dropdown-item" onclick="if(window.UkiHistory&&window.UkiHistory.canUndo()){window.UkiHistory.undo();}else{document.execCommand('undo');}"><span>Geri Al</span><kbd>Ctrl+Z</kbd></div>
+                    <div class="uyap-dropdown-item" onclick="if(window.UkiHistory&&window.UkiHistory.canRedo()){window.UkiHistory.redo();}else{document.execCommand('redo');}"><span>Yinele</span><kbd>Ctrl+Y</kbd></div>
                     <div class="uyap-dropdown-divider"></div>
                     <div class="uyap-dropdown-item" onclick="document.getElementById('btn-format-painter').click()"><span>Biçim Kopyala (Biçim Boyacısı)</span><kbd>Ctrl+Shift+C</kbd></div>
                     <div class="uyap-dropdown-divider"></div>
@@ -2158,6 +2158,7 @@
     <script src="assets/js/site-config.js"></script>
     <script src="assets/js/uki-stats.js"></script>
     <script src="assets/js/uki-webmaster.js"></script>
+    <script src="assets/js/uki-history.js"></script>
     <script src="assets/js/uki-editor.js"></script>
     <script src="assets/js/uki-embed.js"></script>
     <script src="assets/vendor/qrcode-generator.js"></script>

@@ -2532,6 +2532,15 @@ kbd {
     font: 700 9pt Consolas, 'Courier New', monospace;
 }
 
+.udf-underline-dot {
+    display: inline-block;
+    cursor: text;
+    user-select: text;
+    color: inherit;
+    font-size: inherit;
+    line-height: 1;
+}
+
 @media print {
 
     .pb-spacer,

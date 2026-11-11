@@ -487,7 +487,8 @@
             if (hasUnderline && p.alignment === 'center') {
                 // UYAP Java Swing / BasicTextUI: Ortalanmış boş paragraf altı çizili ise (P#10, P#13),
                 // sayfa ortasında (x=296.28pt) yuvarlak uçlu alt çizgi noktası (seqno 21 & seqno 98) çizer.
-                pEl.innerHTML = '<span class="udf-underline-dot" contenteditable="false" style="display:inline-block;width:1.2pt;height:1.2pt;background-color:currentColor;border-radius:50%;vertical-align:bottom;margin-bottom:2pt;"></span><br>';
+                // Kullanıcı bunu imleçle, fareyle veya Ctrl+sol/sağ okla seçebilmeli ve Backspace/Delete ile silebilmelidir.
+                pEl.innerHTML = '<span class="udf-underline-dot" data-udf-dot="true" style="display:inline-block;cursor:text;user-select:text;">.</span>';
             } else {
                 pEl.innerHTML = '<br>';
             }
@@ -876,7 +877,9 @@
 
             if (textNodes.length === 0) {
                 fullText += '\n';
-                const hasUnderline = (pEl.getAttribute && pEl.getAttribute('data-underline') === 'true') || !!pEl.querySelector('.udf-underline-dot');
+                const hasDot = !!pEl.querySelector('.udf-underline-dot');
+                const isCleared = pEl.getAttribute && pEl.getAttribute('data-udf-dot-cleared') === 'true';
+                const hasUnderline = (pEl.getAttribute && pEl.getAttribute('data-underline') === 'true') && (hasDot || !isCleared);
                 const uAttr = hasUnderline ? ' underline="true" bold="true"' : '';
                 contentsXml.push(`<content resolver="hvl-default"${uAttr} startOffset="${currentOffset}" length="1" />`);
                 currentOffset += 1;

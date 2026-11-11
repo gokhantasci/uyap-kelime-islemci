@@ -42,7 +42,8 @@
         qr.addData(text);
         qr.make();
         const n = qr.getModuleCount();
-        const quiet = uyapQuiet ? 2 : 4;
+        // UYAP karekod standardı: 29x29 modül QR, 51x51 piksel kare içinde 11 modül sessiz alan (quiet zone) ile yerleşir.
+        const quiet = uyapQuiet ? Math.round(n * 11 / 29) : 4;
         let d = '';
         for (let r = 0; r < n; r++) {
             for (let c = 0; c < n; c++) {

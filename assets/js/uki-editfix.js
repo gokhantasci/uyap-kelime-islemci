@@ -119,6 +119,9 @@
                 this.el.focus();
                 const paras = selectedParagraphs();
                 if (paras.length) {
+                    if (window.UkiHistory && typeof window.UkiHistory.record === 'function') {
+                        window.UkiHistory.record('Biçim Öncesi');
+                    }
                     paras.forEach((p) => {
                         if (align) {
                             p.style.textAlign = align;
@@ -132,10 +135,20 @@
                     if (this.updateToolbarState) this.updateToolbarState();
                     if (this.updateStats) this.updateStats();
                     notifyChange();
+                    if (window.UkiHistory && typeof window.UkiHistory.record === 'function') {
+                        window.UkiHistory.record(align ? 'Hizalama' : command);
+                    }
                     return;
                 }
             }
-            return origFormat.call(this, command, value);
+            if (window.UkiHistory && typeof window.UkiHistory.record === 'function') {
+                window.UkiHistory.record(command + ' Öncesi');
+            }
+            const res = origFormat.call(this, command, value);
+            if (window.UkiHistory && typeof window.UkiHistory.record === 'function') {
+                window.UkiHistory.record(command);
+            }
+            return res;
         };
 
         const origSize = proto.setFontSize;
