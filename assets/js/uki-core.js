@@ -379,6 +379,8 @@
             const resolver = child.getAttribute('resolver') || '';
 
             const imageData = childTag === 'image' ? (child.getAttribute('imageData') || '').split(/\s/).join('') : '';
+            const imgWidth = childTag === 'image' ? (child.getAttribute('width') || '') : '';
+            const imgHeight = childTag === 'image' ? (child.getAttribute('height') || '') : '';
             runs.push({
                 type: childTag,
                 fieldName,
@@ -386,6 +388,8 @@
                 isList,
                 resolver,
                 imageData,
+                imgWidth,
+                imgHeight,
                 barcodeData,
                 text,
                 bold,
@@ -757,9 +761,11 @@
             if (run.imageData) {
                 const img = document.createElement('img');
                 img.className = 'udf-img';
-                img.src = 'data:image/png;base64,' + run.imageData;
-                img.alt = '';
+                img.src = run.imageData.startsWith('data:') ? run.imageData : ('data:image/png;base64,' + run.imageData);
+                img.alt = 'Resim';
                 img.setAttribute('contenteditable', 'false');
+                if (run.imgWidth) img.style.width = /^\d+$/.test(run.imgWidth) ? (run.imgWidth + 'px') : run.imgWidth;
+                if (run.imgHeight) img.style.height = /^\d+$/.test(run.imgHeight) ? (run.imgHeight + 'px') : run.imgHeight;
                 pEl.appendChild(img);
                 return;
             }
@@ -1044,6 +1050,11 @@
                 const tag = block.tagName.toLowerCase();
 
                 // E-İmza Mührü, Filigran, Sayfa 1 Alt Çubuğu dışa aktarılırken atlanır
+                if (tag === 'img') {
+                    const pInfo = serializeParagraph(block);
+                    xmlElements.push(pInfo.xml);
+                    continue;
+                }
                 if (block.getAttribute('contenteditable') === 'false' || block.classList.contains('pb-spacer')) continue;
                 if (block.classList && (
                     block.classList.contains('udf-seal-stamp') ||
@@ -1184,7 +1195,9 @@
 
                     if (item.image) {
                         const imgResolver = item.resolver || 'hvl-default';
-                        contentsXml.push(`<image resolver="${imgResolver}" imageData="${item.image}" startOffset="${start}" length="${len}" />`);
+                        const wAttr = item.imgWidth ? ` width="${parseInt(item.imgWidth, 10)}"` : '';
+                        const hAttr = item.imgHeight ? ` height="${parseInt(item.imgHeight, 10)}"` : '';
+                        contentsXml.push(`<image resolver="${imgResolver}" imageData="${item.image}"${wAttr}${hAttr} startOffset="${start}" length="${len}" />`);
                         continue;
                     }
 
@@ -1329,8 +1342,20 @@
                     style.foreground = hexToArgb(rgbToHex(node.style.color));
                 }
 
-                if (tag === 'img' && node.src && node.src.indexOf('base64,') > 0) {
-                    leaves.push({ text: String.fromCharCode(184), image: node.src.split('base64,')[1], ...style });
+                if (tag === 'img' && node.src) {
+                    let b64 = '';
+                    if (node.src.indexOf('base64,') > 0) {
+                        b64 = node.src.split('base64,')[1];
+                    }
+                    const w = node.style.width || node.getAttribute('width') || '';
+                    const h = node.style.height || node.getAttribute('height') || '';
+                    leaves.push({
+                        text: String.fromCharCode(184),
+                        image: b64,
+                        imgWidth: w,
+                        imgHeight: h,
+                        ...style
+                    });
                     return leaves;
                 }
                 if (tag === 'br') {
@@ -2240,7 +2265,8 @@
         udfModelToHtml,
         layoutTabs,
         exportUdfBlob,
-        exportDocxBlob
+        exportDocxBlob,
+        generateBarcodeSvg
     };
 
 })(window);

@@ -163,7 +163,11 @@
             { icon: I.find, label: 'Sayfaya git…', kbd: 'Ctrl+G', run: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', ctrlKey: true, bubbles: true, cancelable: true })) },
             '-',
             { icon: I.table, label: 'Tablo ekle…', run: () => click('btn-insert-table') },
-            { icon: I.image, label: 'Antet / arka plan resmi…', run: () => click('btn-antet-setup') }
+            { icon: I.image, label: 'Resim ekle / düzenle…', run: () => window.UkiImage && window.UkiImage.triggerImageAction() },
+            { icon: I.image, label: 'Antet / arka plan resmi…', run: () => click('btn-antet-setup') },
+            { icon: I.tip, label: 'Sembol ekle…', run: () => window.UkiImage && window.UkiImage.openSymbolPicker() },
+            { icon: I.sign, label: 'Barkod ekle…', run: () => window.UkiImage && window.UkiImage.openBarcodeModal() },
+            { icon: I.full, label: 'Köprü ekle…', run: () => window.UkiImage && window.UkiImage.openLinkModal() }
         ]);
 
         const view = makeMenu('Görünüm', [

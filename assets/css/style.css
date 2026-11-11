@@ -3662,9 +3662,204 @@ mark.find-hit.current {
     background: rgba(22, 163, 74, 0.25);
 }
 
-.a4-page img.udf-img {
+/* UYAP Görsel / Resim Elemanları & İnteraktif Seçim */
+.a4-page img.udf-img,
+#editor img.udf-img {
     vertical-align: middle;
     display: inline-block;
+    max-width: 100%;
+    cursor: pointer;
+    transition: outline 0.15s, box-shadow 0.15s;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.a4-page img.udf-img:hover,
+#editor img.udf-img:hover {
+    outline: 1.5px dashed #3b82f6;
+    outline-offset: 2px;
+}
+
+.a4-page img.udf-img.udf-img-selected,
+#editor img.udf-img.udf-img-selected {
+    outline: 2px solid #2563eb !important;
+    outline-offset: 2px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+/* İnteraktif Resim Boyutlandırma Katmanı (Overlay & Handles) */
+.uki-img-overlay {
+    position: absolute;
+    pointer-events: none;
+    border: 1.5px solid #2563eb;
+    box-sizing: border-box;
+    z-index: 45;
+}
+
+.img-handle {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    background-color: #ffffff;
+    border: 1.5px solid #2563eb;
+    border-radius: 1.5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    pointer-events: auto;
+    z-index: 46;
+}
+
+.img-handle-nw { top: -5px; left: -5px; cursor: nwse-resize; }
+.img-handle-n  { top: -5px; left: calc(50% - 4.5px); cursor: ns-resize; }
+.img-handle-ne { top: -5px; right: -5px; cursor: nesw-resize; }
+.img-handle-e  { top: calc(50% - 4.5px); right: -5px; cursor: ew-resize; }
+.img-handle-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.img-handle-s  { bottom: -5px; left: calc(50% - 4.5px); cursor: ns-resize; }
+.img-handle-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.img-handle-w  { top: calc(50% - 4.5px); left: -5px; cursor: ew-resize; }
+
+/* Resim Üstü Kayan Eylem Hapı (Floating Pill Toolbar) */
+.uki-img-toolbar {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #1e293b;
+    padding: 3px 6px;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+    pointer-events: auto;
+    z-index: 50;
+    white-space: nowrap;
+}
+
+.img-pill-btn {
+    background: #334155;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.img-pill-btn:hover {
+    background: #475569;
+}
+
+.btn-pill-edit {
+    background: #2563eb;
+}
+.btn-pill-edit:hover {
+    background: #1d4ed8;
+}
+
+.btn-pill-delete:hover {
+    background: #dc2626;
+}
+
+/* ==========================================================================
+   UYAP GRAFİK ŞERİT GRUBU (RIBBON GRAFIK GROUP - SCREENSHOT PARİTESİ)
+   ========================================================================== */
+.uyap-ribbon-grafik {
+    min-width: 178px;
+}
+
+.grafik-icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2px;
+}
+
+.uyap-grafik-subgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 6px;
+    align-items: center;
+}
+
+.uyap-grafik-sub-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 2px 5px;
+    font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+    font-size: 9.5px;
+    color: #1e293b;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+    text-align: left;
+}
+
+.uyap-grafik-sub-btn:hover {
+    background: linear-gradient(to bottom, #fffde8 0%, #ffeaab 50%, #ffd66b 100%);
+    border-color: #d19a2e;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* Sembol Seçici Butonları */
+.symbol-btn {
+    background: var(--ax-surface-subtle);
+    border: 1px solid var(--ax-border-subtle);
+    border-radius: 4px;
+    font-family: "Times New Roman", serif;
+    font-size: 16px;
+    height: 38px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    color: var(--ax-color-neutral-900);
+}
+
+.symbol-btn:hover {
+    background: var(--ax-color-primary-subtle);
+    border-color: var(--ax-color-primary);
+    color: var(--ax-color-primary);
+    transform: scale(1.12);
+}
+
+/* Karanlık Tema (Dark Mode) Uyumu */
+[data-theme="dark"] .uyap-grafik-sub-btn {
+    color: #f1f5f9;
+}
+[data-theme="dark"] .uyap-grafik-sub-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: #64748b;
+}
+[data-theme="dark"] .symbol-btn {
+    background: #1e293b;
+    border-color: #334155;
+    color: #f8fafc;
+}
+[data-theme="dark"] .symbol-btn:hover {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+/* Yazdırma (Print) Esnasında Kulp ve Araç Çubuğunu Gizle */
+@media print {
+    .uki-img-overlay,
+    .uki-img-toolbar,
+    .img-handle {
+        display: none !important;
+    }
+    .a4-page img.udf-img,
+    #editor img.udf-img {
+        outline: none !important;
+        box-shadow: none !important;
+    }
 }
 
 /* Cetvel, sayfa kaydırılırken üstte sabit kalır (gerçek editör gibi) */

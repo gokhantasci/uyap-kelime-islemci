@@ -15,6 +15,7 @@ function initDom() {
     global.Node = dom.window.Node;
     global.DOMParser = dom.window.DOMParser;
     global.XMLSerializer = dom.window.XMLSerializer;
+    global.Image = dom.window.Image;
     global.getComputedStyle = dom.window.getComputedStyle ? dom.window.getComputedStyle.bind(dom.window) : () => ({});
     const memoryStorage = {
         getItem: (k) => store[k] !== undefined ? store[k] : null,
@@ -380,5 +381,80 @@ test('udf.657.com.tr Varsayılan Görünüm: İlk açılışta ve varsayılan ol
     // D) URL parametresi (?theme=light) gelirse dark tercihi olsa dahi light uygulanmalı
     const t4 = testThemeInit('?theme=light');
     assert.equal(t4, 'light', '?theme=light parametresi uygulanmalı');
+});
+
+test('Resim Ekle/Düzenle (UkiImage) ve Grafik Şerit Paritesi: Görsel ekleme, boyutlandırma, UDF roundtrip, sembol ve barkod', async () => {
+    const dom = initDom();
+    const doc = dom.window.document;
+    const coreCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-core.js'), 'utf8');
+    eval(coreCode);
+    const imgCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-image.js'), 'utf8');
+    eval(imgCode);
+
+    const editorEl = doc.getElementById('editor');
+    assert.ok(editorEl, 'Editör öğesi mevcut olmalı');
+
+    // 1. Resim Ekleme (insertImage)
+    const testDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    const insertedImg = dom.window.UkiImage.insertImage(testDataUrl);
+    assert.ok(insertedImg, 'Resim öğesi oluşturulmalı');
+    assert.ok(insertedImg.classList.contains('udf-img'), 'Resim .udf-img sınıfına sahip olmalı');
+    assert.equal(insertedImg.getAttribute('contenteditable'), 'false');
+    assert.ok(editorEl.contains(insertedImg), 'Resim editör içine yerleştirilmeli');
+
+    // 2. Resim Seçme (selectImage) ve Kulp/Araç Çubuğu Kontrolü
+    dom.window.UkiImage.selectImage(insertedImg);
+    assert.ok(insertedImg.classList.contains('udf-img-selected'), 'Seçilen resim .udf-img-selected almalı');
+    const overlay = doc.querySelector('.uki-img-overlay');
+    assert.ok(overlay, 'Overlay katmanı oluşturulmalı');
+    const handles = overlay.querySelectorAll('.img-handle');
+    assert.equal(handles.length, 8, '8 adet boyutlandırma kulpu bulunmalı (nw, n, ne, e, se, s, sw, w)');
+
+    // 3. Resim Boyut ve Stil Özellikleri
+    insertedImg.style.width = '240px';
+    insertedImg.style.height = '180px';
+    insertedImg.style.float = 'left';
+    insertedImg.style.border = '2px solid rgb(0, 0, 0)';
+    insertedImg.style.filter = 'grayscale(100%)';
+
+    assert.equal(insertedImg.style.width, '240px');
+    assert.equal(insertedImg.style.float, 'left');
+
+    // 4. UDF Dışa Aktarım (exportUdfBlob) ve Yeniden Açma (Roundtrip)
+    const udfBlob = await dom.window.UkiCore.exportUdfBlob(editorEl, {});
+    assert.ok(udfBlob, 'UDF bloğu başarıyla üretilmeli');
+    const buf = await udfBlob.arrayBuffer();
+    const parsedModel = await dom.window.UkiCore.parseUdf(buf);
+    
+    // Modelde image öğesi bulunmalı
+    let foundImageRun = false;
+    for (const el of parsedModel.elements || []) {
+        if (el.type === 'paragraph') {
+            for (const r of el.runs || []) {
+                if (r.type === 'image' || r.imageData) {
+                    foundImageRun = true;
+                    assert.ok(r.imageData.length > 10, 'Görsel base64 verisi korunmalı');
+                    assert.equal(r.imgWidth, '240', 'Görsel genişliği korunmalı');
+                    assert.equal(r.imgHeight, '180', 'Görsel yüksekliği korunmalı');
+                }
+            }
+        }
+    }
+    assert.ok(foundImageRun, 'UDF XML içinde <image> etiketi başarıyla oluşturulmalı ve ayrıştırılmalı');
+
+    // 5. Sembol Ekleme (insertSymbol)
+    dom.window.UkiImage.insertSymbol('§');
+    assert.ok(editorEl.innerHTML.includes('§'), 'Kanun maddesi sembolü (§) eklenmeli');
+
+    // 6. Barkod Ekleme (insertBarcode)
+    dom.window.UkiImage.insertBarcode('12345678911');
+    const barcodeEl = editorEl.querySelector('.udf-barcode');
+    assert.ok(barcodeEl, 'Barkod öğesi oluşturulmalı');
+    assert.equal(barcodeEl.getAttribute('data-barcode'), '12345678911');
+
+    // 7. Resim Silme (deleteSelectedImage)
+    dom.window.UkiImage.selectImage(insertedImg);
+    dom.window.UkiImage.deleteSelectedImage();
+    assert.ok(!editorEl.contains(insertedImg), 'Resim belgeden silinmeli');
 });
 
