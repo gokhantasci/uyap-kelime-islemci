@@ -34,7 +34,7 @@ async function exportXml(w, html) {
 
 test('Dışa aktarımda alan öznitelikleri kaçışlanır (öznitelik enjeksiyonu yok)', async () => {
     const w = env();
-    const xml = await exportXml(w, '<p><span data-tag="field" data-field-name='x" length="99" y="'>Metin</span></p>');
+    const xml = await exportXml(w, `<p><span data-tag="field" data-field-name='x" length="99" y="'>Metin</span></p>`);
     const run = xml.match(/<field[^>]*\/>/);
     assert.ok(run, 'alan parçası bulunmalı');
     assert.ok(!/fieldName="x" length="99"/.test(run[0]), 'öznitelik kırılmamalı: ' + run[0]);
