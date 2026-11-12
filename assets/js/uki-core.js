@@ -764,8 +764,21 @@
                 img.src = run.imageData.startsWith('data:') ? run.imageData : ('data:image/png;base64,' + run.imageData);
                 img.alt = 'Resim';
                 img.setAttribute('contenteditable', 'false');
-                if (run.imgWidth) img.style.width = /^\d+$/.test(run.imgWidth) ? (run.imgWidth + 'px') : run.imgWidth;
-                if (run.imgHeight) img.style.height = /^\d+$/.test(run.imgHeight) ? (run.imgHeight + 'px') : run.imgHeight;
+                img.style.maxWidth = '100%';
+                img.style.maxHeight = '750px';
+                img.style.objectFit = 'contain';
+                if (run.imgWidth) {
+                    let wVal = parseInt(run.imgWidth, 10);
+                    if (wVal > 540) wVal = 540;
+                    img.style.width = wVal + 'px';
+                    img.setAttribute('width', String(wVal));
+                }
+                if (run.imgHeight) {
+                    let hVal = parseInt(run.imgHeight, 10);
+                    if (hVal > 750) hVal = 750;
+                    img.style.height = hVal + 'px';
+                    img.setAttribute('height', String(hVal));
+                }
                 pEl.appendChild(img);
                 return;
             }

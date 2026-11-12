@@ -406,6 +406,7 @@ test('Resim Ekle/Düzenle (UkiImage) ve Grafik Şerit Paritesi: Görsel ekleme, 
     // 2. Resim Seçme (selectImage) ve Kulp/Araç Çubuğu Kontrolü
     const pageWrapper = doc.getElementById('page-wrapper');
     pageWrapper.getBoundingClientRect = () => ({ top: 40, left: 300, width: 794, height: 1122 });
+    editorEl.getBoundingClientRect = () => pageWrapper.getBoundingClientRect();
     insertedImg.getBoundingClientRect = () => ({ top: 120, left: 390, width: 240, height: 180 });
 
     dom.window.UkiImage.selectImage(insertedImg);
@@ -790,10 +791,10 @@ test('UYAP Hukuk Asistanı (Yapay Zeka): Karar özeti, Esas No, CMK kanun yolu v
     assert.ok(facts.verdictSummary.includes('BERAAT'), 'Hüküm özetinde BERAAT belirtilmeli');
     assert.ok(facts.verdictSummary.includes('Cezalandırma yoktur') || facts.verdictSummary.includes('Mahkumiyet verilmemiştir'), 'Sanığın cezalandırılmadığı netleşmeli');
 
-    // Kanun yolu: Ceza mahkemesi olduğu için CMK İstinaf olmalı, HMK olmamalı
+    // Kanun yolu: Ceza mahkemesi olduğu için CMK İstinaf/İtiraz olmalı, HMK olmamalı
     assert.ok(facts.legalRemedy.includes('CMK'), 'Ceza mahkemesi için CMK kanun yolu tespit edilmeli');
     assert.ok(!facts.legalRemedy.includes('HMK m. 345'), 'Ceza mahkemesinde HMK m. 345 kanun yolu yazılmamalı');
-    assert.ok(facts.legalRemedy.includes('İSTİNAF') || facts.legalRemedy.includes('İstinaf'), 'İstinaf yolu belirtilmeli');
+    assert.ok(facts.legalRemedy.includes('İSTİNAF') || facts.legalRemedy.includes('İstinaf') || facts.legalRemedy.includes('İtiraz') || facts.legalRemedy.includes('İTİRAZ'), 'İstinaf veya İtiraz kanun yolu belirtilmeli');
 
     // 2. generateAccurateLegalNarrative Testi
     const narrative = dom.window.UkiAI.generateAccurateLegalNarrative(facts, docText);

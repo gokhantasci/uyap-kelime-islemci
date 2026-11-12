@@ -12,7 +12,7 @@
 
     const GAP = 28; // iki sayfa arasındaki görsel boşluk (px)
     const SKIP_CLASSES = ['page-boundaries-layer', 'a4-antet-layer', 'a4-watermark-layer',
-        'e-sign-seal-badge', 'udf-seal-stamp', 'pb-spacer'];
+        'e-sign-seal-badge', 'udf-seal-stamp', 'pb-spacer', 'uki-img-overlay', 'uki-img-toolbar'];
 
     let ed = null;
     let layer = null;

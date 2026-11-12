@@ -3669,7 +3669,9 @@ mark.find-hit.current {
 #editor img.udf-img {
     vertical-align: middle;
     display: inline-block;
-    max-width: 100%;
+    max-width: 100% !important;
+    max-height: 750px !important;
+    object-fit: contain;
     cursor: pointer;
     transition: outline 0.15s, box-shadow 0.15s;
     user-select: none;
@@ -3800,6 +3802,115 @@ mark.find-hit.current {
 [data-theme="dark"] .symbol-btn:hover {
     background: #2563eb;
     color: #ffffff;
+}
+
+/* ==========================================================================
+   UYAP 1:1 "GRAFİK" ŞERİT GRUBU (RESİM, ARKA PLAN, SEMBOL, BARKOD, KÖPRÜ)
+   ========================================================================== */
+.uyap-grafik-box {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid var(--ax-border-subtle);
+    border-radius: var(--ax-radius-sm);
+    background: var(--ax-surface-subtle);
+    padding: 2px 4px 1px 4px;
+    vertical-align: middle;
+}
+
+.grafik-tools-body {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tool-btn-large {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    min-height: 48px;
+    padding: 2px 6px;
+    text-align: center;
+}
+
+.btn-text-multiline {
+    font-size: 10px;
+    line-height: 1.15;
+    margin-top: 2px;
+    font-weight: 600;
+}
+
+.tool-divider-v {
+    width: 1px;
+    height: 38px;
+    background: var(--ax-border-subtle);
+    margin: 0 2px;
+}
+
+.grafik-sub-grid {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    gap: 2px 6px;
+}
+
+.tool-btn-mini {
+    height: 22px;
+    padding: 0 5px;
+    font-size: 11px;
+    gap: 4px;
+    justify-content: flex-start;
+}
+
+.group-label-bottom {
+    font-size: 9.5px;
+    color: var(--ax-color-neutral-500);
+    text-align: center;
+    margin-top: 1px;
+    line-height: 1;
+    font-weight: 500;
+}
+
+/* Klasik UYAP Temasında 1:1 Masaüstü Görünüm */
+[data-ui-theme="uyap-classic"] .uyap-grafik-box {
+    border: 1px solid #94b2d1;
+    border-radius: 4px;
+    background: linear-gradient(to bottom, #ffffff 0%, #edf4fc 60%, #d8e8f7 100%);
+    box-shadow: 0 1px 3px rgba(30, 58, 95, 0.08);
+    padding: 2px 5px 2px 5px;
+}
+
+[data-ui-theme="uyap-classic"] .uyap-grafik-box .tool-divider-v {
+    background: #a4c2e0;
+    box-shadow: 1px 0 0 #ffffff;
+}
+
+[data-ui-theme="uyap-classic"] .uyap-grafik-box .group-label-bottom {
+    color: #29507a;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+[data-ui-theme="uyap-classic"] .tool-btn-large:hover,
+[data-ui-theme="uyap-classic"] .tool-btn-mini:hover {
+    background: linear-gradient(to bottom, #fffde8 0%, #ffeaa8 50%, #ffd66b 100%);
+    border-color: #d19a2e;
+    color: #000000;
+}
+
+/* Karanlık Tema Uyumu */
+[data-theme="dark"] .uyap-grafik-box {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .tool-divider-v {
+    background: #334155;
+}
+
+[data-theme="dark"] .group-label-bottom {
+    color: #94a3b8;
 }
 
 /* Yazdırma (Print) Esnasında Kulp ve Araç Çubuğunu Gizle */

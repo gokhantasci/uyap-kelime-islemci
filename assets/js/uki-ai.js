@@ -307,15 +307,23 @@ TEMEL YARGISAL KURALLAR:
         }
 
         // Kanun Yolu (İstinaf / Temyiz / İtiraz Süresi - CMK / HMK / İYUK Duyarlı)
-        const remedyMatch = text.match(/(?:tebliğ(?:inden)?\s*itibaren|kararın\s*tebliğinden|tefhimden\s*itibaren)[\s\S]{0,350}?(?:istinaf|temyiz|itiraz)[\s\S]{0,180}?(?:mahkemesine|yoluyla|kabul edilmek üzere|süresi içerisinde|açık olmak üzere|\.)/i)
-            || text.match(/(?:CMK|HMK|İYUK)[\s\S]{0,80}?(?:272|273|345|361|45)[\s\S]{0,250}?(?:istinaf|temyiz|itiraz)[\s\S]{0,120}?(?:yolu açık|hafta|gün)/i)
+        const isBasitYargilama = /basit\s*yargılama/i.test(text);
+
+        const remedyMatch = text.match(/(?:Dair[;,]|D\s*A\s*İ\s*R[;,]|Tebliğ(?:inden)?\s*itibaren|kararın\s*tebliğinden|tefhimden\s*itibaren|tefhim\s*veya\s*tebliğden)[\s\S]{0,600}?(?:istinaf|temyiz|itiraz)[\s\S]{0,250}?(?:mahkemesine|yoluyla|kabul edilmek üzere|süresi içerisinde|açık olmak üzere|açık olduğu|karar verildi|\.)/i)
+            || text.match(/(?:CMK|5271)[\s\S]{0,120}?(?:272|273|251|252|267)[\s\S]{0,350}?(?:istinaf|temyiz|itiraz)[\s\S]{0,150}?(?:yolu açık|hafta|gün|karar verildi)/i)
+            || text.match(/(?:HMK|6100)[\s\S]{0,100}?(?:341|345|361)[\s\S]{0,250}?(?:istinaf|temyiz)[\s\S]{0,120}?(?:yolu açık|hafta|gün)/i)
+            || text.match(/(?:İYUK|2577)[\s\S]{0,100}?(?:45|46)[\s\S]{0,250}?(?:istinaf|temyiz)[\s\S]{0,120}?(?:yolu açık|gün)/i)
             || text.match(/([0-9]+\s*(?:gün|hafta)\s*içinde[\s\S]{0,120}?(?:istinaf|temyiz|itiraz))/i);
 
-        if (remedyMatch) {
+        if (remedyMatch && (!isCriminal || !/HMK/i.test(remedyMatch[0]))) {
             facts.legalRemedy = remedyMatch[0].replace(/\s+/g, ' ').trim();
         } else {
             if (isCriminal) {
-                facts.legalRemedy = "Gerekçeli kararın tebliğinden veya tefhiminden itibaren 5271 sayılı CMK m. 272-273 uyarınca 2 hafta içerisinde Bölge Adliye Mahkemesi nezdinde İstinaf kanun yolu açıktır.";
+                if (isBasitYargilama) {
+                    facts.legalRemedy = "Basit Yargılama Usulü (CMK m. 251) uyarınca kararın tebliğinden itibaren 7 gün içinde kararı veren mahkemeye İTİRAZ kanun yolu açıktır (CMK m. 252).";
+                } else {
+                    facts.legalRemedy = "Gerekçeli kararın tebliğinden veya tefhiminden itibaren 5271 sayılı CMK m. 272-273 uyarınca 2 hafta içerisinde Bölge Adliye Mahkemesi nezdinde İstinaf kanun yolu açıktır.";
+                }
             } else if (isAdministrative) {
                 facts.legalRemedy = "Kararın tebliğinden itibaren 2577 sayılı İYUK m. 45 uyarınca 30 gün içerisinde Bölge İdare Mahkemesi nezdinde İstinaf yolu açıktır.";
             } else {
@@ -469,8 +477,15 @@ TEMEL YARGISAL KURALLAR:
 
         // 3. Kanun Yolu / Süreler
         if (/süre|istinaf|temyiz|itiraz|kaç gün|kaç hafta|nereye başvurulur|kanun yolu/i.test(q)) {
-            if (facts.legalRemedy) {
+            if (facts.legalRemedy && facts.legalRemedy !== '-') {
                 return `⏱️ **Kanun Yolu ve Başvuru Süresi:**\n\n${facts.legalRemedy}\n\n💡 *Not: Kanunda öngörülen hak düşürücü süreler kararın usulüne uygun tebliğinden veya tefhiminden itibaren işlemeye başlar.*`;
+            }
+            const isCrim = /(?:CEZA|AĞIR CEZA|ASLİYE CEZA|SULH CEZA|BAŞSAVCILIK|İDDİANAME|SANIK|SUÇ|CMK)/i.test((facts.court || '') + ' ' + docText.slice(0, 3000));
+            const isAdm = /(?:İDARE MAHKEMESİ|VERGİ MAHKEMESİ|DANIŞTAY|BÖLGE İDARE|İYUK)/i.test((facts.court || '') + ' ' + docText.slice(0, 3000));
+            if (isCrim) {
+                return "⏱️ Belgede özel bir kanun yolu ifadesi açıkça ayrıştırılamamış olsa da, Ceza Mahkemelerinde genel kural: Gerekçeli kararın tebliğinden veya tefhiminden itibaren 5271 sayılı CMK m. 272-273 uyarınca 2 HAFTA içerisinde Bölge Adliye Mahkemesi nezdinde İSTİNAF yoludur.";
+            } else if (isAdm) {
+                return "⏱️ Belgede özel bir kanun yolu ifadesi açıkça ayrıştırılamamış olsa da, İdari yargıda genel kural: 2577 sayılı İYUK m. 45 uyarınca kararın tebliğinden itibaren 30 GÜN içerisinde Bölge İdare Mahkemesi nezdinde İSTİNAF yoludur.";
             }
             return "⏱️ Belgede özel bir kanun yolu veya itiraz süresi ifadesi tespit edilemedi. Genel kural: Hukuk mahkemelerinde istinaf süresi gerekçeli kararın tebliğinden itibaren 2 haftadır (HMK m. 345).";
         }
@@ -826,7 +841,7 @@ TEMEL YARGISAL KURALLAR:
         // Kritik yargısal halüsinasyon kontrolü:
         // Eğer mahkeme BERAAT veya CEZA VERİLMESİNE YER OLMADIĞINA karar verdiyse ama model "cezalandırılmasına karar vermiştir" dediyse:
         const isAcquitted = /(?:BERAAT|CEZA VERİLMESİNE YER OLMADIĞI)/i.test(facts.verdictSummary || facts.verdict || '');
-        const claimsPunished = /(?:cezalandırılmasına karar vermiş|mahkumiyetine karar vermiş|hapis cezası ile cezalandırıl)/i.test(narrative);
+        const claimsPunished = /(?:cezalandırılmasına karar vermiş|mahkumiyetine karar vermiş|hapis cezası ile cezalandırıl|sanıkların cezalandırılmasına)/i.test(narrative);
 
         if (isAcquitted && claimsPunished) {
             console.warn('[UkiAI Guardrail] Modelin hüküm fıkrasını yanlış anlama halüsinasyonu engellendi (Beraat kararı cezalandırılma sanıldı). Düzeltilmiş hukuki özet uygulanıyor.');

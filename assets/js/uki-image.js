@@ -31,14 +31,87 @@
         const pw = document.getElementById('page-wrapper');
         if (pw) {
             pw.style.position = 'relative';
-            return pw;
         }
         const ed = getEditor();
-        if (ed && ed.parentElement) {
-            ed.parentElement.style.position = 'relative';
-            return ed.parentElement;
+        if (ed) {
+            ed.style.position = 'relative';
+            return ed;
         }
+        if (pw) return pw;
         return document.body;
+    }
+
+    /**
+     * Resmi HTML5 Canvas üzerinden hedef piksel boyutlarına (en çok 540x750)
+     * ve döndürme/gri tonlama değerine göre fiziksel olarak yeniden rasterize eder.
+     * Bu sayede dışa aktarılan UDF dosyasındaki imageData (Base64), UYAP masaüstü
+     * editöründe tam olarak bu boyutta ve açıda açılır.
+     */
+    function rescaleImageBitmap(img, targetW, targetH, rotationDeg = 0, isGrayscale = false) {
+        return new Promise((resolve) => {
+            if (!img || !img.src) {
+                resolve(null);
+                return;
+            }
+            try {
+                // JSDOM veya canvas desteklenmeyen ortam kontrolü
+                if (typeof window !== 'undefined' && window.navigator && window.navigator.userAgent && window.navigator.userAgent.includes('jsdom')) {
+                    resolve(img.src);
+                    return;
+                }
+                const canvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+                const ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
+                if (!canvas || !ctx) {
+                    resolve(img.src);
+                    return;
+                }
+                const ImageConstructor = (typeof window !== 'undefined' && window.Image) ? window.Image : (typeof Image !== 'undefined' ? Image : null);
+                if (!ImageConstructor) {
+                    resolve(img.src);
+                    return;
+                }
+                const source = new ImageConstructor();
+                source.crossOrigin = 'anonymous';
+                source.onload = () => {
+                    const rot = (rotationDeg % 360 + 360) % 360;
+                    const isRot90 = rot === 90 || rot === 270;
+
+                    const finalW = Math.max(30, Math.min(540, Math.round(targetW || img.offsetWidth || img.naturalWidth || 540)));
+                    const finalH = Math.max(30, Math.min(750, Math.round(targetH || img.offsetHeight || img.naturalHeight || 405)));
+
+                    canvas.width = finalW;
+                    canvas.height = finalH;
+
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+
+                    ctx.save();
+                    ctx.translate(finalW / 2, finalH / 2);
+                    if (rot !== 0) {
+                        ctx.rotate((rot * Math.PI) / 180);
+                    }
+                    const drawW = isRot90 ? finalH : finalW;
+                    const drawH = isRot90 ? finalW : finalH;
+                    if (isGrayscale) {
+                        ctx.filter = 'grayscale(100%)';
+                    }
+                    ctx.drawImage(source, -drawW / 2, -drawH / 2, drawW, drawH);
+                    ctx.restore();
+
+                    try {
+                        const newSrc = canvas.toDataURL('image/png');
+                        img.src = newSrc;
+                        resolve(newSrc);
+                    } catch (e) {
+                        resolve(img.src);
+                    }
+                };
+                source.onerror = () => resolve(img.src);
+                source.src = img.src;
+            } catch (e) {
+                resolve(img.src);
+            }
+        });
     }
 
     function triggerChange() {
@@ -163,16 +236,31 @@
                 tempImg.onload = () => {
                     const nw = tempImg.naturalWidth;
                     const nh = tempImg.naturalHeight;
+                    let curW = nw;
+                    let curH = nh;
                     if (nw > 540) {
                         const ratio = 540 / nw;
-                        img.style.width = '540px';
-                        img.style.height = Math.round(nh * ratio) + 'px';
-                    } else if (nw > 0) {
-                        img.style.width = nw + 'px';
-                        img.style.height = nh + 'px';
+                        curW = 540;
+                        curH = Math.round(nh * ratio);
                     }
-                    updateOverlayPosition();
-                    triggerChange();
+                    if (curH > 750) {
+                        const ratio = 750 / curH;
+                        curH = 750;
+                        curW = Math.round(curW * ratio);
+                    }
+                    if (curW > 0 && curH > 0) {
+                        img.style.width = curW + 'px';
+                        img.style.height = curH + 'px';
+                        img.setAttribute('width', String(curW));
+                        img.setAttribute('height', String(curH));
+                        rescaleImageBitmap(img, curW, curH).then(() => {
+                            updateOverlayPosition();
+                            triggerChange();
+                        });
+                    } else {
+                        updateOverlayPosition();
+                        triggerChange();
+                    }
                 };
                 tempImg.src = dataUrlOrFile;
             }
@@ -262,6 +350,8 @@
 
         overlayEl = document.createElement('div');
         overlayEl.className = 'uki-img-overlay';
+        overlayEl.setAttribute('contenteditable', 'false');
+        overlayEl.setAttribute('aria-hidden', 'true');
 
         // 8 Boyutlandırma Kulpu (Resize Handles)
         const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
@@ -315,10 +405,10 @@
         const width = iRect.width / scale;
         const height = iRect.height / scale;
 
-        overlayEl.style.top = top + 'px';
-        overlayEl.style.left = left + 'px';
-        overlayEl.style.width = width + 'px';
-        overlayEl.style.height = height + 'px';
+        overlayEl.style.top = Math.round(top) + 'px';
+        overlayEl.style.left = Math.round(left) + 'px';
+        overlayEl.style.width = Math.round(width) + 'px';
+        overlayEl.style.height = Math.round(height) + 'px';
     }
 
     function bindOverlayEvents() {
@@ -347,24 +437,38 @@
                     let newH = startH;
 
                     if (dragHandle === 'se' || dragHandle === 'e') {
-                        newW = Math.max(30, startW + dx);
+                        newW = startW + dx;
                         newH = Math.round(newW / aspectRatio);
                     } else if (dragHandle === 's') {
-                        newH = Math.max(30, startH + dy);
+                        newH = startH + dy;
                         newW = Math.round(newH * aspectRatio);
                     } else if (dragHandle === 'sw' || dragHandle === 'w') {
-                        newW = Math.max(30, startW - dx);
+                        newW = startW - dx;
                         newH = Math.round(newW / aspectRatio);
                     } else if (dragHandle === 'ne') {
-                        newW = Math.max(30, startW + dx);
+                        newW = startW + dx;
                         newH = Math.round(newW / aspectRatio);
                     } else if (dragHandle === 'nw' || dragHandle === 'n') {
-                        newW = Math.max(30, startW - dx);
+                        newW = startW - dx;
                         newH = Math.round(newW / aspectRatio);
                     }
 
+                    // A4 Sayfa sınırları koruması (Maksimum 540px genişlik, 750px yükseklik, minimum 30px)
+                    if (newW > 540) {
+                        newW = 540;
+                        newH = Math.round(540 / aspectRatio);
+                    }
+                    if (newH > 750) {
+                        newH = 750;
+                        newW = Math.round(750 * aspectRatio);
+                    }
+                    newW = Math.max(30, Math.min(540, Math.round(newW)));
+                    newH = Math.max(30, Math.min(750, Math.round(newH)));
+
                     selectedImage.style.width = newW + 'px';
                     selectedImage.style.height = newH + 'px';
+                    selectedImage.setAttribute('width', String(newW));
+                    selectedImage.setAttribute('height', String(newH));
                     updateOverlayPosition();
                 };
 
@@ -374,7 +478,14 @@
                         dragHandle = null;
                         document.removeEventListener('mousemove', onMouseMove);
                         document.removeEventListener('mouseup', onMouseUp);
-                        triggerChange();
+
+                        const finalW = parseInt(selectedImage.style.width, 10) || selectedImage.offsetWidth || 540;
+                        const finalH = parseInt(selectedImage.style.height, 10) || selectedImage.offsetHeight || 405;
+
+                        rescaleImageBitmap(selectedImage, finalW, finalH).then(() => {
+                            updateOverlayPosition();
+                            triggerChange();
+                        });
                     }
                 };
 
@@ -567,12 +678,31 @@
         const borderRadius = document.getElementById('img-edit-border-radius');
         const chkGrayscale = document.getElementById('img-edit-grayscale');
 
-        const newW = parseInt(inputW ? inputW.value : 0, 10) || img.offsetWidth || img.naturalWidth || 300;
-        const newH = parseInt(inputH ? inputH.value : 0, 10) || img.offsetHeight || img.naturalHeight || 200;
+        let newW = parseInt(inputW ? inputW.value : 0, 10) || img.offsetWidth || img.naturalWidth || 300;
+        let newH = parseInt(inputH ? inputH.value : 0, 10) || img.offsetHeight || img.naturalHeight || 200;
 
+        // Sayfa sınırları koruması (Max 540px genişlik, 750px yükseklik, min 30px)
+        if (newW > 540) {
+            const ratio = newH / newW;
+            newW = 540;
+            newH = Math.round(540 * ratio);
+        }
+        if (newH > 750) {
+            const ratio = newW / newH;
+            newH = 750;
+            newW = Math.round(750 * ratio);
+        }
+        newW = Math.max(30, newW);
+        newH = Math.max(30, newH);
+
+        const isGray = chkGrayscale ? chkGrayscale.checked : false;
+
+        // Senkron DOM güncellemeleri
         img.style.width = newW + 'px';
         img.style.height = newH + 'px';
         img.style.maxWidth = '100%';
+        img.style.maxHeight = '750px';
+        img.style.objectFit = 'contain';
         img.setAttribute('width', String(newW));
         img.setAttribute('height', String(newH));
 
@@ -637,6 +767,17 @@
         closeEditModal();
         selectImage(img);
         triggerChange();
+
+        // Arka planda canvas piksel rasterizasyonu (UYAP masaüstü dosya uyumu için)
+        rescaleImageBitmap(img, newW, newH, modalRotation, isGray).then(() => {
+            if (modalRotation) {
+                img.style.transform = '';
+                img.dataset.rotation = '0';
+                modalRotation = 0;
+            }
+            updateOverlayPosition();
+            triggerChange();
+        }).catch(() => {});
 
         if (typeof window.showToast === 'function') {
             window.showToast('Resim özellikleri başarıyla güncellendi.', 'success');
