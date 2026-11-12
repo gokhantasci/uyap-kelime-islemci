@@ -750,6 +750,102 @@ test('UYAP Hukuk Asistanı (Yapay Zeka): Karar özeti, Esas No, CMK kanun yolu v
     assert.ok(dom.window.UkiAI.MASTER_LEGAL_SYSTEM_PROMPT.includes('CMK m. 272-273'), 'Sistem promptunda CMK ceza ayrımı bulunmalı');
 });
 
+test('Avukat Antet Temaları & 657.com.tr Kurumsal Antet Paritesi: 8 adet prestijli tema ve Sürüm Yenilikleri entegrasyonu', async () => {
+    const html = fs.readFileSync('index.html', 'utf8');
+    const dom = new JSDOM(html, {
+        url: 'http://localhost:8080',
+        runScripts: 'outside-only',
+        pretendToBeVisual: true
+    });
+    const w = dom.window;
+    w.JSZip = require('../assets/vendor/jszip.min.js');
+    w.TextDecoder = TextDecoder;
+    w.TextEncoder = TextEncoder;
+    w.Blob = Blob;
+    w.document.queryCommandState = () => false;
+    w.document.queryCommandValue = () => '';
+    w.document.execCommand = () => true;
+    w.HTMLElement.prototype.scrollIntoView = () => {};
+    w.Range.prototype.getClientRects = () => [];
+    w.Range.prototype.getBoundingClientRect = () => ({ width: 0, height: 0, left: 0, right: 0, top: 0, bottom: 0 });
+    w.fetch = async (url) => {
+        const name = String(url).replace(/^http:\/\/localhost:8080\//, '');
+        if (fs.existsSync(name)) {
+            const data = fs.readFileSync(name);
+            return {
+                ok: true,
+                text: async () => data.toString(),
+                json: async () => JSON.parse(data),
+                arrayBuffer: async () => data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
+            };
+        }
+        return { ok: false, statusText: 'Not found' };
+    };
+
+    for (const m of html.matchAll(/<script src="(assets\/js\/[^"]+)"/g)) {
+        w.eval(fs.readFileSync(m[1], 'utf8'));
+    }
+    await new Promise(r => setTimeout(r, 120));
+
+    // 1. buildPortal657AntetHtml varlığı ve içeriği
+    assert.ok(typeof w.buildPortal657AntetHtml === 'function', 'buildPortal657AntetHtml fonksiyonu mevcut olmalı');
+    const p657Html = w.buildPortal657AntetHtml(false);
+    assert.ok(p657Html.includes('theme-portal-657'), '657 anteti theme-portal-657 sınıfı içermeli');
+    assert.ok(p657Html.includes('657.COM.TR'), '657 anteti 657.COM.TR başlığı içermeli');
+    assert.ok(p657Html.includes('YARGI VE KAMU HUKUKU BİLGİ BANKASI'), '657 anteti alt başlığı içermeli');
+    assert.ok(p657Html.includes('https://udf.657.com.tr'), '657 anteti web adresini içermeli');
+    assert.ok(p657Html.includes('65700-UYAP-DEV'), '657 anteti UETS kodunu içermeli');
+
+    // 2. buildLawyerAntetHtml 8 Temanın tamamını üretmeli
+    const themeSelect = w.document.getElementById('lawyer-theme-select');
+    assert.ok(themeSelect, 'lawyer-theme-select mevcut olmalı');
+    const availableThemes = Array.from(themeSelect.options).map(o => o.value);
+    const expectedThemes = [
+        'classic_gold',
+        'modern_navy',
+        'prestige_frame',
+        'portal_657',
+        'minimal_crimson',
+        'executive_emerald',
+        'monochrome_bold',
+        'baro_modern'
+    ];
+    for (const exp of expectedThemes) {
+        assert.ok(availableThemes.includes(exp), `Tema listesinde ${exp} seçeneği bulunmalı`);
+        themeSelect.value = exp;
+        const rendered = w.buildLawyerAntetHtml(false);
+        assert.ok(rendered.includes('lawyer-antet-container'), `${exp} teması .lawyer-antet-container içermeli`);
+        assert.ok(rendered.includes(`theme-${exp.replace(/_/g, '-')}`), `${exp} teması tema sınıfını taşımalı`);
+    }
+
+    // 3. Tema portal_657 seçilince girdi alanlarının akıllı doldurulması
+    themeSelect.value = 'portal_657';
+    themeSelect.dispatchEvent(new w.Event('change', { bubbles: true }));
+    const lawyerNameInput = w.document.getElementById('lawyer-name');
+    assert.equal(lawyerNameInput.value, '657.COM.TR', 'portal_657 seçilince kurumsal başlık doldurulmalı');
+
+    // 4. Sürüm Duyurusu şablonu yüklendiğinde 657.com.tr anteti otomatik uygulanmalı
+    const antetLayer = w.document.getElementById('antet-layer');
+    assert.ok(antetLayer, 'antet-layer katmanı mevcut olmalı');
+
+    // Başlangıçta loadWhatsNewDocument çalıştırılmış olmalı veya doğrudan çağrılabilir
+    await w.loadWhatsNewDocument();
+    assert.equal(antetLayer.style.display, 'block', 'Sürüm duyurusu açılınca antet katmanı görünür olmalı');
+    assert.ok(antetLayer.innerHTML.includes('theme-portal-657'), 'Sürüm duyurusu katmanında 657.com.tr anteti yer almalı');
+    assert.ok(antetLayer.innerHTML.includes('657.COM.TR'), 'Sürüm duyurusu katmanında 657.COM.TR yer almalı');
+
+    // 5. Antet Şablonları (ANTET_TEMPLATES) modülü kontrolü
+    const btn657 = w.document.querySelector('.antet-module-btn[data-antet="portal_657"]');
+    assert.ok(btn657, 'Arka Plan Resmi ve Antet Düzenleme modalında 657.com.tr butonu yer almalı');
+    btn657.click();
+    const btnApply = w.document.getElementById('btn-antet-apply');
+    if (btnApply) btnApply.click();
+    assert.ok(antetLayer.innerHTML.includes('theme-portal-657'), 'Modal üzerinden de 657.com.tr anteti uygulanabilmeli');
+
+    dom.window.close();
+});
+
+
 
 
 

@@ -72,3 +72,4 @@ Sana verilen UYAP mahkeme kararlarını, tensip zabıtlarını veya dilekçeleri
 ## 4. JSON Formatında Eğitim Verisi
 
 Projede [assets/data/uyap-ai-training-data.json](file:///d:/UYAP%20Kelime%20İşlemci/assets/data/uyap-ai-training-data.json) dosyasında yerel ve bulut yapay zeka modelleri için yapılandırılmış few-shot eğitim örnekleri ve kural tablosu bulunmaktadır.
+

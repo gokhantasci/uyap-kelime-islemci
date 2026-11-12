@@ -2036,6 +2036,7 @@ DAĞITIM	: Tek sayfalık, sunucusuz web uygulaması (GitHub Pages)
 3. UDF kaydetme düzeltildi: documentproperties.xml artık UYAP’ın kendi Java özellik biçiminde yazılır; paragraflara resolver ve tam nitelik kümesi eklenir; içeriği değiştirilen belgeye eski e-imza dosyası eklenmez.
 4. Bul ve Değiştir: Belgeyi kapatmayan yan panel; Türkçe i/İ–ı/I eşleşmesi ve Türkçe karakter duyarlı “tam sözcük” araması.
 5. Sanal yazıcı: print_to_udf.py her yazdırılabilir dosyayı (PDF, Word, Excel, HTML, metin) UDF’ye çevirir; ofsetler yeniden hesaplanır.
+6. Genişletilmiş Antet Temaları & 657.com.tr Kurumsal Anteti: Avukat Antet Hazırlayıcıya 657.com.tr Yargı Portalı, Bordo Prestij, Zümrüt Yönetici, Monokrom Modernist ve Baro Diplomat tasarım temaları eklendi; sürüm duyurusu belgesi 657.com.tr kurumsal anteti ile zenginleştirildi.
 
 ## ÖNCEKİ ÇALIŞMALAR
 • Karanlık/aydınlık tema, 20’den fazla UYAP yazı tipi, resmî UYAP kısayolları (657.com.tr).
@@ -2059,7 +2060,16 @@ Sakarya Yazı İşleri Müdürü – 139329`;
             if (!text || !text.trim()) text = EMBEDDED_SURUM_DUYURUSU_MD;
             const html = window.UkiMarkdown && window.UkiMarkdown.mdToHtml ? window.UkiMarkdown.mdToHtml(text) : `<p>${escapeHtml(text)}</p>`;
             window.UkiApp.replaceDocument(html, 'Sürüm Duyurusu', {source: 'welcome', clean: true});
-            showToast('Sürüm duyurusu Markdown kaynağından açıldı.', 'success');
+            // 657.com.tr Yargı ve Kamu Hukuku Portalı Kurumsal Anteti Belgeye Otomatik Uygulanır
+            if (typeof applyAntetToEditor === 'function' && typeof buildPortal657AntetHtml === 'function') {
+                applyAntetToEditor({
+                    type: 'lawyer_html',
+                    key: 'portal_657',
+                    html: buildPortal657AntetHtml(false),
+                    name: '657.com.tr Yargı ve Kamu Hukuku Portalı Kurumsal Anteti'
+                });
+            }
+            showToast('Sürüm duyurusu 657.com.tr kurumsal anteti ile açıldı.', 'success');
         } catch (err) {
             console.warn('Duyuru yükleme uyarısı:', err);
         }
@@ -2580,6 +2590,7 @@ Sakarya Yazı İşleri Müdürü – 139329`;
     const btnOpenLawyerBuilderFromAntet = document.getElementById('btn-open-lawyer-builder-from-antet');
     const antetLayer = document.getElementById('antet-layer');
 
+    const antetPreviewCard = document.getElementById('antet-preview-card');
     const antetPreviewImg = document.getElementById('antet-preview-img');
     const antetPreviewCaption = document.getElementById('antet-preview-caption');
     const antetCustomFile = document.getElementById('antet-custom-file');
@@ -2623,6 +2634,12 @@ Sakarya Yazı İşleri Müdürü – 139329`;
             name: 'Cumhuriyetin 100. Yılı Özel Anteti',
             src: 'assets/images/antet/adalet_yuzuncuyil_1.jpg',
             margins: { left: 1.0, right: 1.0, top: 1.0, bottom: 1.0 }
+        },
+        portal_657: {
+            name: '657.com.tr Yargı ve Kamu Hukuku Portalı Kurumsal Anteti',
+            type: 'lawyer_html',
+            getHtml: (isLive) => buildPortal657AntetHtml(isLive),
+            margins: { left: 1.0, right: 1.0, top: 1.0, bottom: 1.0 }
         }
     };
 
@@ -2651,7 +2668,18 @@ Sakarya Yazı İşleri Müdürü – 139329`;
         activeSelectedAntetKey = key;
         const tmpl = ANTET_TEMPLATES[key];
         if (tmpl) {
-            if (antetPreviewImg) antetPreviewImg.src = tmpl.src;
+            if (tmpl.type === 'lawyer_html' && typeof tmpl.getHtml === 'function') {
+                if (antetPreviewCard) {
+                    antetPreviewCard.innerHTML = `<div style="width: 100%; height: 100%; box-sizing: border-box; overflow: hidden;">${tmpl.getHtml(true)}</div>`;
+                }
+            } else {
+                if (antetPreviewCard && !antetPreviewCard.querySelector('#antet-preview-img')) {
+                    antetPreviewCard.innerHTML = `<img id="antet-preview-img" src="${tmpl.src}" alt="Antet Önizleme">`;
+                } else {
+                    const img = document.getElementById('antet-preview-img');
+                    if (img) img.src = tmpl.src;
+                }
+            }
             if (antetPreviewCaption) antetPreviewCaption.textContent = tmpl.name;
         }
     }
@@ -2684,21 +2712,49 @@ Sakarya Yazı İşleri Müdürü – 139329`;
             if (activeSelectedAntetKey === 'custom' && customAntetDataUrl) {
                 antetSrc = customAntetDataUrl;
                 antetName = 'Özel Antet';
+                applyAntetToEditor({
+                    type: 'image',
+                    src: antetSrc,
+                    name: antetName
+                });
             } else if (ANTET_TEMPLATES[activeSelectedAntetKey]) {
-                antetSrc = ANTET_TEMPLATES[activeSelectedAntetKey].src;
-                antetName = ANTET_TEMPLATES[activeSelectedAntetKey].name;
+                const tmpl = ANTET_TEMPLATES[activeSelectedAntetKey];
+                antetName = tmpl.name;
+                if (tmpl.type === 'lawyer_html' && typeof tmpl.getHtml === 'function') {
+                    const html = tmpl.getHtml(false);
+                    applyAntetToEditor({
+                        type: 'lawyer_html',
+                        key: activeSelectedAntetKey,
+                        html: html,
+                        name: antetName
+                    });
+                    if (chkAntetSaveDefault && chkAntetSaveDefault.checked) {
+                        try {
+                            localStorage.setItem('uki-active-antet', JSON.stringify({
+                                type: 'lawyer_html',
+                                key: activeSelectedAntetKey,
+                                html: html,
+                                name: antetName
+                            }));
+                        } catch (e) {}
+                    }
+                    closeModal(modalAntetSetup);
+                    showToast(`"${antetName}" belgeye uygulandı.`, 'success');
+                    return;
+                } else {
+                    antetSrc = tmpl.src;
+                    applyAntetToEditor({
+                        type: 'image',
+                        src: antetSrc,
+                        name: antetName
+                    });
+                }
             }
 
             if (!antetSrc) {
                 showToast('Lütfen bir antet seçin.', 'warning');
                 return;
             }
-
-            applyAntetToEditor({
-                type: 'image',
-                src: antetSrc,
-                name: antetName
-            });
 
             if (chkAntetSaveDefault && chkAntetSaveDefault.checked) {
                 try {
@@ -2813,6 +2869,33 @@ Sakarya Yazı İşleri Müdürü – 139329`;
         }
     });
 
+    if (lawyerThemeSelect) {
+        lawyerThemeSelect.addEventListener('change', () => {
+            if (lawyerThemeSelect.value === 'portal_657') {
+                if (lawyerNameInput && (lawyerNameInput.value === 'DEMİR HUKUK & DANIŞMANLIK BÜROSU' || !lawyerNameInput.value.trim())) {
+                    lawyerNameInput.value = '657.COM.TR';
+                    if (lawyerSubNameInput) lawyerSubNameInput.value = 'YARGI VE KAMU HUKUKU BİLGİ BANKASI';
+                    if (lawyerBaroInput) lawyerBaroInput.value = 'T.C. UYAP & Kamu Mevzuatı Bilgi Sistemleri • Sakarya';
+                    if (lawyerAddressInput) lawyerAddressInput.value = 'Adapazarı / SAKARYA - TÜRKİYE';
+                    if (lawyerPhoneInput) lawyerPhoneInput.value = 'Tel: 0264 000 65 70 - iletisim@657.com.tr';
+                    if (lawyerEmailWebInput) lawyerEmailWebInput.value = 'https://657.com.tr • https://udf.657.com.tr';
+                    if (lawyerUetsInput) lawyerUetsInput.value = 'UETS: 65700-UYAP-DEV';
+                }
+            } else if (['classic_gold', 'modern_navy', 'prestige_frame', 'minimal_crimson', 'executive_emerald', 'monochrome_bold', 'baro_modern'].includes(lawyerThemeSelect.value)) {
+                if (lawyerNameInput && lawyerNameInput.value === '657.COM.TR') {
+                    lawyerNameInput.value = 'DEMİR HUKUK & DANIŞMANLIK BÜROSU';
+                    if (lawyerSubNameInput) lawyerSubNameInput.value = 'Av. Selim DEMİR';
+                    if (lawyerBaroInput) lawyerBaroInput.value = 'Sakarya Barosu - Sicil: 1234';
+                    if (lawyerAddressInput) lawyerAddressInput.value = 'İstiklal Mah. Çark Cad. No: 42 Kat: 3 Adapazarı / SAKARYA';
+                    if (lawyerPhoneInput) lawyerPhoneInput.value = 'Tel: 0264 270 00 00';
+                    if (lawyerEmailWebInput) lawyerEmailWebInput.value = 'av.selim@demirhukuk.av.tr';
+                    if (lawyerUetsInput) lawyerUetsInput.value = 'UETS: 15849-29104-58291';
+                }
+            }
+            updateLawyerLivePreview();
+        });
+    }
+
     if (lawyerLogoSelect && lawyerCustomLogoFile) {
         lawyerLogoSelect.addEventListener('change', () => {
             if (lawyerLogoSelect.value === 'custom') {
@@ -2853,6 +2936,73 @@ Sakarya Yazı İşleri Müdürü – 139329`;
         `;
     }
 
+    function buildPortal657AntetHtml(isLivePreview = false, customFields = {}) {
+        const name = customFields.name || (lawyerNameInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerNameInput.value) || '657.COM.TR';
+        const subName = customFields.subName || (lawyerSubNameInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerSubNameInput.value) || 'YARGI VE KAMU HUKUKU BİLGİ BANKASI';
+        const baro = customFields.baro || (lawyerBaroInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerBaroInput.value) || 'T.C. UYAP & Kamu Mevzuatı Bilgi Sistemleri • Sakarya';
+        const address = customFields.address || (lawyerAddressInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerAddressInput.value) || 'Adapazarı / SAKARYA - TÜRKİYE';
+        const phone = customFields.phone || (lawyerPhoneInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerPhoneInput.value) || 'Tel: 0264 000 65 70 - iletisim@657.com.tr';
+        const emailWeb = customFields.emailWeb || (lawyerEmailWebInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerEmailWebInput.value) || 'https://657.com.tr • https://udf.657.com.tr';
+        const uets = customFields.uets || (lawyerUetsInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerUetsInput.value) || 'UETS: 65700-UYAP-DEV';
+
+        const emblemSvg = `
+            <svg width="${isLivePreview ? '30' : '44'}" height="${isLivePreview ? '30' : '44'}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="24" cy="24" r="22" fill="#eff6ff" stroke="#1e40af" stroke-width="2"/>
+                <line x1="24" y1="8" x2="24" y2="40" stroke="#1e40af" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M14 40H34" stroke="#1e40af" stroke-width="2.5" stroke-linecap="round"/>
+                <circle cx="24" cy="8" r="3" fill="#d97706"/>
+                <line x1="8" y1="15" x2="40" y2="15" stroke="#d97706" stroke-width="2.2" stroke-linecap="round"/>
+                <line x1="12" y1="15" x2="8" y2="27" stroke="#1e40af" stroke-width="1.2"/>
+                <line x1="12" y1="15" x2="16" y2="27" stroke="#1e40af" stroke-width="1.2"/>
+                <path d="M6 27C6 30 18 30 18 27H6Z" fill="#1e40af" opacity="0.9"/>
+                <line x1="36" y1="15" x2="32" y2="27" stroke="#1e40af" stroke-width="1.2"/>
+                <line x1="36" y1="15" x2="40" y2="27" stroke="#1e40af" stroke-width="1.2"/>
+                <path d="M30 27C30 30 42 30 42 27H30Z" fill="#1e40af" opacity="0.9"/>
+                <polygon points="24,20 25.5,23.5 29,24 26.5,26.5 27,30 24,28 21,30 21.5,26.5 19,24 22.5,23.5" fill="#d97706"/>
+            </svg>
+        `;
+
+        return `
+            <div class="lawyer-antet-container theme-portal-657" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: ${isLivePreview ? '8px 10px' : '22pt 26pt'}; box-sizing: border-box;">
+                <!-- Üst Başlık (Header) -->
+                <div>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: ${isLivePreview ? '8px' : '12px'};">
+                            <div style="flex-shrink: 0;">${emblemSvg}</div>
+                            <div>
+                                <div style="font-size: ${isLivePreview ? '12px' : '16pt'}; font-weight: 900; color: #1e3a8a; font-family: 'Times New Roman', Georgia, serif; letter-spacing: 1.5px; line-height: 1.1;">${escapeHtml(name)}</div>
+                                <div style="font-size: ${isLivePreview ? '7.5px' : '9.5pt'}; font-weight: 700; color: #b45309; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; letter-spacing: 0.8px; margin-top: 2px;">${escapeHtml(subName)}</div>
+                                <div style="font-size: ${isLivePreview ? '6.5px' : '8pt'}; font-weight: 500; color: #64748b; font-family: sans-serif; margin-top: 1px;">${escapeHtml(baro)}</div>
+                            </div>
+                        </div>
+                        <div style="text-align: right; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: ${isLivePreview ? '6.5px' : '8pt'}; line-height: 1.35;">
+                            <div style="font-weight: 800; color: #1e40af; letter-spacing: 0.5px;">T.C. YARGI DİJİTAL SİSTEMLERİ</div>
+                            <div style="font-weight: 600; color: #0284c7;">https://udf.657.com.tr</div>
+                            <div style="color: #94a3b8; font-size: ${isLivePreview ? '5.5px' : '7pt'};">Sakarya Yazı İşleri Müdürlüğü AR-GE</div>
+                        </div>
+                    </div>
+                    <!-- Çift Renk Prestij Şerit -->
+                    <div style="margin-top: ${isLivePreview ? '4px' : '7pt'}; border-bottom: 2.5px solid #1e40af; height: 2px;"></div>
+                    <div style="margin-top: 1.5px; border-bottom: 1px solid #d97706; height: 1px; display: flex; justify-content: center; align-items: center;">
+                        <span style="background: #ffffff; padding: 0 8px; font-size: ${isLivePreview ? '6px' : '8pt'}; color: #d97706; transform: translateY(-50%); font-weight: bold;">⚖️ 657.COM.TR</span>
+                    </div>
+                </div>
+
+                <!-- Alt Bilgi (Footer) -->
+                <div style="border-top: 1.5px solid #1e40af; padding-top: ${isLivePreview ? '4px' : '6pt'}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: ${isLivePreview ? '6.5px' : '8pt'}; color: #334155; line-height: 1.45;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid #e2e8f0; padding-bottom: 2px; margin-bottom: 2px;">
+                        <span><b>🌐 Portal:</b> ${escapeHtml(emailWeb)}</span>
+                        <span><b>📍 Merkez:</b> ${escapeHtml(address)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; color: #475569;">
+                        <span><b>⚖️ İletişim:</b> ${escapeHtml(phone)}</span>
+                        <span><b>🏛️ Elektronik Tebligat:</b> ${escapeHtml(uets)} • <b>Geliştirici:</b> Gökhan TAŞÇI (139329)</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     function buildLawyerAntetHtml(isLivePreview = false) {
         const name = (lawyerNameInput && lawyerNameInput.value) || 'DEMİR HUKUK & DANIŞMANLIK BÜROSU';
         const subName = (lawyerSubNameInput && lawyerSubNameInput.value) || 'Av. Selim DEMİR';
@@ -2864,7 +3014,14 @@ Sakarya Yazı İşleri Müdürü – 139329`;
         const emailWeb = (lawyerEmailWebInput && lawyerEmailWebInput.value) || 'av.selim@demirhukuk.av.tr';
         const uets = (lawyerUetsInput && lawyerUetsInput.value) || 'UETS: 15849-29104-58291';
 
-        const logoColor = (theme === 'modern_navy') ? '#1e3a8a' : '#b45309';
+        let logoColor = '#b45309';
+        if (theme === 'modern_navy') logoColor = '#1e3a8a';
+        else if (theme === 'portal_657') logoColor = '#1e40af';
+        else if (theme === 'minimal_crimson') logoColor = '#881337';
+        else if (theme === 'executive_emerald') logoColor = '#047857';
+        else if (theme === 'monochrome_bold') logoColor = '#09090b';
+        else if (theme === 'baro_modern') logoColor = '#0369a1';
+
         let logoHtml = '';
 
         if (logoChoice === 'custom' && customLawyerLogoDataUrl) {
@@ -2879,7 +3036,132 @@ Sakarya Yazı İşleri Müdürü – 139329`;
             logoHtml = getScalesSvg(logoColor);
         }
 
-        if (theme === 'modern_navy') {
+        if (theme === 'portal_657') {
+            return buildPortal657AntetHtml(isLivePreview, {
+                name, subName, baro, address, phone, emailWeb, uets
+            });
+        } else if (theme === 'minimal_crimson') {
+            return `
+                <div class="lawyer-antet-container theme-minimal-crimson" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: ${isLivePreview ? '8px 10px' : '22pt 26pt'}; box-sizing: border-box;">
+                    <!-- Üst Başlık (Minimalist Bordo) -->
+                    <div style="border-bottom: 1.5px solid #881337; padding-bottom: ${isLivePreview ? '4px' : '7pt'};">
+                        <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: ${isLivePreview ? '6px' : '10px'};">
+                                ${logoHtml}
+                                <div>
+                                    <div style="font-size: ${isLivePreview ? '11px' : '15pt'}; font-weight: 800; color: #881337; font-family: 'Times New Roman', Georgia, serif; letter-spacing: 0.8px;">${escapeHtml(name)}</div>
+                                    <div style="font-size: ${isLivePreview ? '7.5px' : '9.5pt'}; font-weight: 600; color: #9f1239; font-family: 'Times New Roman', serif; margin-top: 2px;">${escapeHtml(subName)} • ${escapeHtml(baro)}</div>
+                                </div>
+                            </div>
+                            <div style="text-align: right; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: ${isLivePreview ? '6.5px' : '8pt'}; color: #9f1239;">
+                                <div><b>AVUKATLIK &amp; HUKUKİ DANIŞMANLIK</b></div>
+                                <div style="color: #64748b; font-size: ${isLivePreview ? '5.5px' : '7pt'};">TÜRKİYE BAROLAR BİRLİĞİ</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alt Bilgi (Bordo) -->
+                    <div style="border-top: 1px solid #881337; padding-top: ${isLivePreview ? '4px' : '6pt'}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: ${isLivePreview ? '6.5px' : '8pt'}; color: #4c0519; line-height: 1.4;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span><b>Adres:</b> ${escapeHtml(address)}</span>
+                            <span><b>Tel:</b> ${escapeHtml(phone)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 2px; color: #881337;">
+                            <span><b>E-Posta &amp; Web:</b> ${escapeHtml(emailWeb)}</span>
+                            <span><b>UETS / KEP:</b> ${escapeHtml(uets)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (theme === 'executive_emerald') {
+            return `
+                <div class="lawyer-antet-container theme-executive-emerald" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: ${isLivePreview ? '8px 10px' : '22pt 26pt'}; box-sizing: border-box;">
+                    <!-- Üst Başlık (Zümrüt Yönetici) -->
+                    <div style="text-align: center;">
+                        <div style="display: inline-block;">${logoHtml}</div>
+                        <div style="font-size: ${isLivePreview ? '11px' : '15pt'}; font-weight: 800; color: #064e3b; font-family: 'Times New Roman', serif; letter-spacing: 0.8px; margin-top: 2px;">${escapeHtml(name)}</div>
+                        <div style="font-size: ${isLivePreview ? '8px' : '10pt'}; font-weight: 600; color: #047857; font-family: 'Times New Roman', serif;">${escapeHtml(subName)} • ${escapeHtml(baro)}</div>
+                        <div style="margin-top: ${isLivePreview ? '4px' : '6pt'}; border-bottom: 2px solid #064e3b; height: 2px;"></div>
+                        <div style="margin-top: 1.5px; border-bottom: 1px solid #d97706; height: 1px;"></div>
+                    </div>
+
+                    <!-- Alt Bilgi (Zümrüt) -->
+                    <div style="border-top: 1.5px solid #064e3b; padding-top: ${isLivePreview ? '4px' : '6pt'}; font-family: 'Times New Roman', serif; font-size: ${isLivePreview ? '6.8px' : '8.2pt'}; color: #064e3b; line-height: 1.35;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <div><b>Adres:</b> ${escapeHtml(address)}</div>
+                            <div><b>İletişim:</b> ${escapeHtml(phone)}</div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 2px; color: #047857;">
+                            <div><b>E-Posta:</b> ${escapeHtml(emailWeb)}</div>
+                            <div><b>UETS:</b> ${escapeHtml(uets)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (theme === 'monochrome_bold') {
+            return `
+                <div class="lawyer-antet-container theme-monochrome-bold" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: ${isLivePreview ? '8px 10px' : '22pt 26pt'}; box-sizing: border-box;">
+                    <!-- Üst Başlık (Monokrom Modernist) -->
+                    <div style="border-bottom: 2.5px solid #09090b; padding-bottom: ${isLivePreview ? '4px' : '8pt'};">
+                        <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+                            <div>
+                                <div style="font-size: ${isLivePreview ? '11px' : '15pt'}; font-weight: 900; color: #09090b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; letter-spacing: 1.5px; text-transform: uppercase;">${escapeHtml(name)}</div>
+                                <div style="font-size: ${isLivePreview ? '7.5px' : '9.5pt'}; font-weight: 600; color: #52525b; font-family: sans-serif; letter-spacing: 0.5px; margin-top: 2px;">${escapeHtml(subName)} | ${escapeHtml(baro)}</div>
+                            </div>
+                            <div style="text-align: right; font-family: monospace; font-size: ${isLivePreview ? '6.5px' : '8pt'}; color: #71717a;">
+                                <div>[HUKUK &amp; DANIŞMANLIK]</div>
+                                <div>BARO LEVHASINA KAYITLI</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alt Bilgi (Monokrom) -->
+                    <div style="border-top: 1.5px solid #09090b; padding-top: ${isLivePreview ? '4px' : '6pt'}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: ${isLivePreview ? '6.5px' : '8pt'}; color: #27272a; line-height: 1.4;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span><b>ADRES:</b> ${escapeHtml(address)}</span>
+                            <span><b>TEL:</b> ${escapeHtml(phone)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 2px; color: #52525b;">
+                            <span><b>WEB:</b> ${escapeHtml(emailWeb)}</span>
+                            <span><b>UETS:</b> ${escapeHtml(uets)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (theme === 'baro_modern') {
+            return `
+                <div class="lawyer-antet-container theme-baro-modern" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: ${isLivePreview ? '8px 10px' : '22pt 26pt'}; box-sizing: border-box;">
+                    <!-- Üst Başlık (Baro Diplomat) -->
+                    <div style="border: 1px solid #0284c7; padding: ${isLivePreview ? '4px 6px' : '8pt 12pt'}; border-radius: 2px; background: rgba(2, 132, 199, 0.02);">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                ${logoHtml}
+                                <div>
+                                    <div style="font-size: ${isLivePreview ? '11px' : '15pt'}; font-weight: 800; color: #0369a1; font-family: 'Times New Roman', serif;">${escapeHtml(name)}</div>
+                                    <div style="font-size: ${isLivePreview ? '7.5px' : '9.5pt'}; font-weight: 600; color: #334155; font-family: sans-serif;">${escapeHtml(subName)} • ${escapeHtml(baro)}</div>
+                                </div>
+                            </div>
+                            <div style="text-align: right; font-family: sans-serif; font-size: ${isLivePreview ? '6.5px' : '8pt'}; color: #0284c7; border-left: 1px solid #cbd5e1; padding-left: 8px;">
+                                <div style="font-weight: 700;">TÜRKİYE BAROLAR BİRLİĞİ</div>
+                                <div style="color: #64748b;">Resmî Avukatlık Anteti</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alt Bilgi (Baro) -->
+                    <div style="border-top: 1.5px solid #0284c7; padding-top: ${isLivePreview ? '4px' : '6pt'}; font-family: sans-serif; font-size: ${isLivePreview ? '6.5px' : '8pt'}; color: #334155; line-height: 1.4;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>📍 <b>Adres:</b> ${escapeHtml(address)}</span>
+                            <span>📞 <b>İletişim:</b> ${escapeHtml(phone)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 2px; color: #64748b;">
+                            <span>✉️ <b>E-Posta:</b> ${escapeHtml(emailWeb)}</span>
+                            <span>⚖️ <b>Elektronik Tebligat:</b> ${escapeHtml(uets)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (theme === 'modern_navy') {
             return `
                 <div class="lawyer-antet-container theme-modern-navy" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: ${isLivePreview ? '8px 10px' : '24pt 28pt'}; box-sizing: border-box;">
                     <!-- Üst Başlık -->
@@ -4116,8 +4398,16 @@ function openColorPicker(pickerId, ev) {
             editorEl.dispatchEvent(new Event('input', {bubbles:true}));
             if (options.clean) this.markSaved(); else markChanged();
             if (window.UkiStats && options.source !== 'welcome') window.UkiStats.recordDocumentOpened({text:this.text(), source:options.source});
-        }
+        },
+        applyAntetToEditor,
+        removeAntetFromEditor,
+        buildPortal657AntetHtml,
+        buildLawyerAntetHtml,
+        loadWhatsNewDocument
     };
+    window.buildPortal657AntetHtml = buildPortal657AntetHtml;
+    window.buildLawyerAntetHtml = buildLawyerAntetHtml;
+    window.loadWhatsNewDocument = loadWhatsNewDocument;
     editorEl.addEventListener('input', markChanged);
     docTitleInput.addEventListener('input', markChanged);
     document.addEventListener('uki-document-change', markChanged);

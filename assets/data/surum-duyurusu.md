@@ -10,6 +10,7 @@ DAĞITIM	: Tek sayfalık, sunucusuz web uygulaması (GitHub Pages)
 3. UDF kaydetme düzeltildi: documentproperties.xml artık UYAP’ın kendi Java özellik biçiminde yazılır; paragraflara resolver ve tam nitelik kümesi eklenir; içeriği değiştirilen belgeye eski e-imza dosyası eklenmez.
 4. Bul ve Değiştir: Belgeyi kapatmayan yan panel; Türkçe i/İ–ı/I eşleşmesi ve Türkçe karakter duyarlı “tam sözcük” araması.
 5. Sanal yazıcı: print_to_udf.py her yazdırılabilir dosyayı (PDF, Word, Excel, HTML, metin) UDF’ye çevirir; ofsetler yeniden hesaplanır.
+6. Genişletilmiş Antet Temaları & 657.com.tr Kurumsal Anteti: Avukat Antet Hazırlayıcıya 657.com.tr Yargı Portalı, Bordo Prestij, Zümrüt Yönetici, Monokrom Modernist ve Baro Diplomat tasarım temaları eklendi.
 ## ÖNCEKİ ÇALIŞMALAR
 • Karanlık/aydınlık tema, 20’den fazla UYAP yazı tipi, resmî UYAP kısayolları (657.com.tr).
 • Word (.docx) olarak indirme, şablon sihirbazı (her zaman atlanabilir), kurum ve avukat anteti (tarayıcıda saklanır).
