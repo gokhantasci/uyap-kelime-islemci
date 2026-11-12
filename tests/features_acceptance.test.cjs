@@ -13,6 +13,7 @@ function initDom() {
     global.document = dom.window.document;
     global.Event = dom.window.Event;
     global.Node = dom.window.Node;
+    global.NodeFilter = dom.window.NodeFilter;
     global.DOMParser = dom.window.DOMParser;
     global.XMLSerializer = dom.window.XMLSerializer;
     global.Image = dom.window.Image;
@@ -635,6 +636,70 @@ test('Dil & Ses Araçları (UKİ): Astryx başlığı temizlenmiştir, Piper TTS
     const statusEl = dom.window.document.getElementById('speech-status');
     assert.equal(statusEl.textContent, 'Okuma durduruldu.');
 });
+
+test('Yazım Hataları & TDK Kuralları: Bulunan uyarılara tıklandığında belgede ilgili kelimeye odaklanır ve düzeltme yapılabilir', async () => {
+    const dom = initDom();
+
+    let currentRange = null;
+    dom.window.getSelection = () => ({
+        rangeCount: currentRange ? 1 : 0,
+        getRangeAt: (i) => currentRange,
+        removeAllRanges: () => { currentRange = null; },
+        addRange: (r) => { currentRange = r; },
+        toString: () => currentRange ? currentRange.toString() : ''
+    });
+
+    const editorEl = dom.window.document.getElementById('editor');
+    editorEl.innerHTML = '<p>Mahkeme yanlız sanık için karar verdi. Herkez hazır bulundu.</p>';
+
+    dom.window.UkiApp = {
+        text: () => editorEl.textContent
+    };
+
+    // Yükleme
+    const rulesCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-writing-rules.js'), 'utf8');
+    dom.window.eval(rulesCode);
+
+    const langToolsCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-language-tools.js'), 'utf8');
+    dom.window.eval(langToolsCode);
+
+    // Paneli aç ve taramayı başlat
+    dom.window.UkiLanguageTools.open();
+    const btnInspect = dom.window.document.getElementById('writing-inspect');
+    assert.ok(btnInspect, 'Yazım kurallarını tara butonu bulunmalı');
+    btnInspect.click();
+
+    const resultsEl = dom.window.document.getElementById('writing-results');
+    const cards = resultsEl.querySelectorAll('.writing-finding-card');
+    assert.ok(cards.length >= 2, 'En az 2 yazım hatası kartı oluşturulmalı');
+
+    // 1. İlk kart (yanlız -> yalnız) tıklama testi: Belgede odaklanmalı
+    const firstCard = cards[0];
+    assert.ok(firstCard.textContent.includes('yanlız'), 'İlk kart "yanlız" kelimesini içermeli');
+    firstCard.click();
+
+    assert.equal(firstCard.dataset.active, 'true', 'Tıklanan kart aktif olarak işaretlenmeli');
+    assert.ok(currentRange, 'Belgede Range seçimi oluşturulmalı');
+    assert.equal(currentRange.toString(), 'yanlız', 'Belgedeki "yanlız" kelimesi seçilmeli');
+
+    // 2. Düzeltme butonu testi: "yanlız" kelimesini "yalnız" yapmalı
+    const btnFix = firstCard.querySelector('button');
+    assert.ok(btnFix, 'Kart içinde düzelt butonu olmalı');
+    btnFix.click();
+
+    assert.ok(editorEl.textContent.includes('yalnız'), 'Belgedeki "yanlız" kelimesi "yalnız" olarak düzeltilmeli');
+    assert.ok(!editorEl.textContent.includes('yanlız'), 'Belgede eski "yanlız" kalmamalı');
+    assert.equal(btnFix.textContent, '✅ Düzeltildi', 'Buton durumu güncellenmeli');
+
+    // 3. İkinci kart (Herkez -> herkes) tıklama testi
+    const secondCard = cards[1];
+    assert.ok(secondCard.textContent.includes('Herkez'), 'İkinci kart "Herkez" kelimesini içermeli');
+    secondCard.click();
+
+    assert.equal(secondCard.dataset.active, 'true', 'İkinci kart aktif olmalı');
+    assert.equal(currentRange.toString().toLocaleLowerCase('tr-TR'), 'herkez', 'Belgedeki "herkez" kelimesi seçilmeli');
+});
+
 
 
 

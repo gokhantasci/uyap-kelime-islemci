@@ -418,7 +418,7 @@
 
                     <div style="margin-top:6px;">
                         <button type="button" class="tool-btn-secondary" id="writing-inspect" style="width:100%; font-size:11.5px; padding:6px;">✍️ Yazım Hatalarını ve TDK Kurallarını Tara</button>
-                        <div id="writing-results" style="font-size:11px; max-height:100px; overflow-y:auto; margin-top:6px;"></div>
+                        <div id="writing-results" style="font-size:11px; max-height:180px; overflow-y:auto; margin-top:8px;"></div>
                     </div>
                 </div>
             `;
@@ -506,20 +506,112 @@
                 const out = $('writing-results');
                 out.replaceChildren();
                 const text = window.UkiApp && window.UkiApp.text ? window.UkiApp.text() : '';
+                if (!text.trim()) {
+                    out.innerHTML = '<div style="color:#64748b; font-size:11px; padding:4px 0;">İncelenecek metin bulunamadı.</div>';
+                    return;
+                }
                 if (window.UkiWritingRules && window.UkiWritingRules.inspect) {
                     const findings = window.UkiWritingRules.inspect(text);
-                    const list = document.createElement('ol');
-                    list.style.margin = '4px 0 8px 16px';
-                    list.style.padding = '0';
-                    findings.slice(0, 50).forEach(f => {
-                        const li = document.createElement('li');
-                        li.innerHTML = `<b>${f.text}</b> → ${f.replacement || 'kontrol edin'}: <span style="color:#64748b;">${f.message}</span>`;
-                        list.append(li);
+                    if (!findings.length) {
+                        out.innerHTML = '<div style="color:#16a34a; font-weight:500; font-size:11px; padding:6px 0;">✅ Belgede yazım kuralı veya TDK hatası bulunamadı.</div>';
+                        return;
+                    }
+
+                    const countHeader = document.createElement('div');
+                    countHeader.style.cssText = 'font-size:11px; font-weight:600; color:#475569; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;';
+                    countHeader.innerHTML = `<span>🔍 Bulunan Uyarılar (${findings.length})</span><span style="font-size:10px; color:#2563eb;">📍 Belgede görmek için tıklayın</span>`;
+                    out.append(countHeader);
+
+                    const list = document.createElement('div');
+                    list.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
+
+                    const wordOccurrenceMap = {};
+                    findings.slice(0, 50).forEach((f) => {
+                        const key = f.text.toLocaleLowerCase('tr-TR');
+                        f.occurrenceIndex = wordOccurrenceMap[key] || 0;
+                        wordOccurrenceMap[key] = f.occurrenceIndex + 1;
+
+                        const card = document.createElement('div');
+                        card.className = 'writing-finding-card';
+                        card.style.cssText = 'padding:6px 8px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; cursor:pointer; transition:all 0.15s ease; box-shadow:0 1px 2px rgba(0,0,0,0.03); user-select:none;';
+
+                        card.onmouseenter = () => {
+                            if (!card.dataset.active) card.style.background = '#f8fafc';
+                        };
+                        card.onmouseleave = () => {
+                            if (!card.dataset.active) card.style.background = '#ffffff';
+                        };
+
+                        const headerRow = document.createElement('div');
+                        headerRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:4px;';
+
+                        const wordsCol = document.createElement('div');
+                        wordsCol.style.cssText = 'display:flex; align-items:center; gap:4px; flex-wrap:wrap;';
+                        wordsCol.innerHTML = `
+                            <span class="finding-orig" style="color:#b91c1c; font-weight:700; background:#fee2e2; padding:1px 5px; border-radius:4px; font-size:11px;">${f.text}</span>
+                            <span style="color:#16a34a; font-weight:600; font-size:11px;">→ ${f.replacement || 'kontrol edin'}</span>
+                        `;
+
+                        const jumpBadge = document.createElement('span');
+                        jumpBadge.style.cssText = 'font-size:10px; color:#2563eb; font-weight:500; display:flex; align-items:center; gap:2px;';
+                        jumpBadge.innerHTML = '📍 Göster';
+                        headerRow.append(wordsCol, jumpBadge);
+
+                        const msgRow = document.createElement('div');
+                        msgRow.style.cssText = 'font-size:10.5px; color:#64748b; margin-top:3px; line-height:1.3;';
+                        msgRow.textContent = f.message;
+
+                        card.append(headerRow, msgRow);
+
+                        if (f.replacement && f.replacement !== f.text) {
+                            const actionsRow = document.createElement('div');
+                            actionsRow.style.cssText = 'margin-top:5px; display:flex; justify-content:flex-end; gap:6px;';
+
+                            const btnFix = document.createElement('button');
+                            btnFix.type = 'button';
+                            btnFix.className = 'tool-btn-primary';
+                            btnFix.style.cssText = 'padding:2px 8px; font-size:10px; border-radius:4px; background:#16a34a; border-color:#16a34a; color:#fff; cursor:pointer;';
+                            btnFix.textContent = '✍️ Düzelt';
+
+                            btnFix.onclick = (e) => {
+                                e.stopPropagation();
+                                replaceFindingInEditor(f, () => {
+                                    const origSpan = card.querySelector('.finding-orig');
+                                    if (origSpan) {
+                                        origSpan.style.textDecoration = 'line-through';
+                                        origSpan.style.opacity = '0.6';
+                                    }
+                                    btnFix.disabled = true;
+                                    btnFix.style.background = '#94a3b8';
+                                    btnFix.style.borderColor = '#94a3b8';
+                                    btnFix.textContent = '✅ Düzeltildi';
+                                });
+                            };
+
+                            actionsRow.append(btnFix);
+                            card.append(actionsRow);
+                        }
+
+                        // Kart tıklandığında belgede ilgili kelimeyi göster ve odaklan
+                        card.onclick = () => {
+                            list.querySelectorAll('.writing-finding-card').forEach(c => {
+                                delete c.dataset.active;
+                                c.style.background = '#ffffff';
+                                c.style.borderColor = '#e2e8f0';
+                            });
+                            card.dataset.active = 'true';
+                            card.style.background = '#eff6ff';
+                            card.style.borderColor = '#3b82f6';
+
+                            const found = highlightFindingInEditor(f.text, f.occurrenceIndex);
+                            if (found && window.showToast) {
+                                window.showToast(`Belgede "${f.text}" kelimesine odaklanıldı.`, 'info');
+                            }
+                        };
+
+                        list.append(card);
                     });
                     out.append(list);
-                    if (!findings.length) {
-                        out.textContent = '✅ Belgede yazım kuralı hatası bulunamadı.';
-                    }
                 }
             };
         }
@@ -531,6 +623,151 @@
             $('tdk-word').value = /^[\p{L}’'-]{1,64}$/u.test(selection.trim()) ? selection.trim() : '';
         }
         updateVoiceDropdown();
+    }
+
+    function highlightFindingInEditor(targetText, occurrenceIndex = 0) {
+        const editor = $('editor');
+        if (!editor || !targetText) return false;
+
+        const NF = window.NodeFilter || (typeof NodeFilter !== 'undefined' ? NodeFilter : { SHOW_TEXT: 4, FILTER_ACCEPT: 1, FILTER_REJECT: 2 });
+        const textNodes = [];
+        const walker = document.createTreeWalker(editor, NF.SHOW_TEXT, {
+            acceptNode: (n) => {
+                if (!n || !n.nodeValue) return NF.FILTER_REJECT;
+                if (n.parentElement && n.parentElement.closest('[contenteditable="false"], .pb-header, .pb-footer, .pb-spacer')) {
+                    return NF.FILTER_REJECT;
+                }
+                return NF.FILTER_ACCEPT;
+            }
+        });
+
+        let node;
+        while ((node = walker.nextNode())) {
+            textNodes.push(node);
+        }
+        if (!textNodes.length) return false;
+
+        let fullText = '';
+        const nodeRanges = [];
+        for (const tn of textNodes) {
+            const val = tn.nodeValue || '';
+            const start = fullText.length;
+            const end = start + val.length;
+            nodeRanges.push({ node: tn, start, end });
+            fullText += val;
+        }
+
+        const lowerFull = fullText.toLocaleLowerCase('tr-TR');
+        const lowerTarget = targetText.toLocaleLowerCase('tr-TR');
+        const occurrences = [];
+        let pos = 0;
+        while (pos < lowerFull.length) {
+            const idx = lowerFull.indexOf(lowerTarget, pos);
+            if (idx === -1) break;
+            occurrences.push({ start: idx, end: idx + targetText.length });
+            pos = idx + Math.max(1, targetText.length);
+        }
+
+        if (!occurrences.length) return false;
+
+        const chosenIdx = Math.min(Math.max(0, occurrenceIndex || 0), occurrences.length - 1);
+        const chosen = occurrences[chosenIdx];
+        const matchStart = chosen.start;
+        const matchEnd = chosen.end;
+
+        let startNode = null, startOffset = 0;
+        let endNode = null, endOffset = 0;
+
+        for (const nr of nodeRanges) {
+            if (!startNode && nr.end > matchStart && nr.start <= matchStart) {
+                startNode = nr.node;
+                startOffset = matchStart - nr.start;
+            }
+            if (nr.end >= matchEnd && nr.start < matchEnd) {
+                endNode = nr.node;
+                endOffset = matchEnd - nr.start;
+                break;
+            }
+        }
+
+        if (!startNode || !endNode) {
+            const overlapping = nodeRanges.filter(nr => nr.end > matchStart && nr.start < matchEnd);
+            if (overlapping.length > 0) {
+                startNode = overlapping[0].node;
+                startOffset = Math.max(0, matchStart - overlapping[0].start);
+                endNode = overlapping[overlapping.length - 1].node;
+                endOffset = Math.min(overlapping[overlapping.length - 1].node.nodeValue.length, matchEnd - overlapping[overlapping.length - 1].start);
+            }
+        }
+
+        if (!startNode || !endNode) return false;
+
+        try {
+            const range = document.createRange();
+            range.setStart(startNode, startOffset);
+            range.setEnd(endNode, endOffset);
+
+            const sel = window.getSelection();
+            if (sel) {
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+
+            const parentEl = startNode.parentElement || editor;
+            if (parentEl && parentEl.scrollIntoView) {
+                parentEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            // Gözle takibi kolaylaştıran sarı odak animasyonu
+            const prevBg = parentEl.style.backgroundColor;
+            const prevTransition = parentEl.style.transition;
+            parentEl.style.transition = 'background-color 0.25s ease';
+            parentEl.style.backgroundColor = '#fef08a';
+            setTimeout(() => {
+                parentEl.style.backgroundColor = prevBg;
+                setTimeout(() => { parentEl.style.transition = prevTransition; }, 300);
+            }, 1400);
+
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function replaceFindingInEditor(finding, onDone) {
+        if (!finding || !finding.text || !finding.replacement) return false;
+        const success = highlightFindingInEditor(finding.text, finding.occurrenceIndex || 0);
+        if (!success) {
+            if (window.showToast) window.showToast('Kelime belgede bulunamadı.', 'warning');
+            return false;
+        }
+
+        try {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                range.deleteContents();
+                const replacementNode = document.createTextNode(finding.replacement);
+                range.insertNode(replacementNode);
+
+                range.setStartAfter(replacementNode);
+                range.setEndAfter(replacementNode);
+                sel.removeAllRanges();
+                sel.addRange(range);
+
+                const editor = $('editor');
+                if (editor) {
+                    editor.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+
+                if (window.showToast) {
+                    window.showToast(`"${finding.text}" → "${finding.replacement}" olarak düzeltildi.`, 'success');
+                }
+                if (typeof onDone === 'function') onDone();
+                return true;
+            }
+        } catch (_) {}
+        return false;
     }
 
     function init() {
@@ -555,7 +792,9 @@
         read,
         resolveEngineVoice,
         updateVoiceDropdown,
-        splitTextIntoChunks
+        splitTextIntoChunks,
+        highlightFindingInEditor,
+        replaceFindingInEditor
     };
 
     if (document.readyState === 'loading') {
