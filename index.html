@@ -310,6 +310,18 @@
             </div>
 
             <div class="ude-toolbar-actions-right">
+                <button type="button" class="ude-pill-feature" id="ude-pill-zen" title="Zen / Odaklanma Modu (F11)">
+                    <span>🧘</span>
+                    <span>Zen Modu</span>
+                </button>
+                <button type="button" class="ude-pill-feature" id="ude-pill-diff" title="Belge Karşılaştır & Fark İncele (Google Docs & Word Paritesi)">
+                    <span>⚖️</span>
+                    <span>Karşılaştır</span>
+                </button>
+                <button type="button" class="ude-pill-feature" id="ude-pill-versions" title="Sürüm Geçmişi & Zaman Makinesi">
+                    <span>🕒</span>
+                    <span>Sürüm Geçmişi</span>
+                </button>
                 <button type="button" class="ude-pill-feature ude-pill-share" id="ude-pill-share" title="UDF Yükle ve 30 Dakikalık Geçici Kod ile Paylaş (Hetzner Sunucusuna Yüklenmez)">
                     <span>📤</span>
                     <span>UDF Paylaş</span>
@@ -340,6 +352,8 @@
                 <div class="uyap-dropdown-menu">
                     <div class="uyap-dropdown-item" onclick="document.getElementById('btn-new').click()"><span>Yeni</span><kbd>Ctrl+N</kbd></div>
                     <div class="uyap-dropdown-item" onclick="document.getElementById('btn-open').click()"><span>Aç (UDF / Word / MD)...</span><kbd>Ctrl+O</kbd></div>
+                    <div class="uyap-dropdown-item" onclick="window.UkiDiff && window.UkiDiff.openDiffModal()"><span>⚖️ Belge Karşılaştır (Diff)...</span></div>
+                    <div class="uyap-dropdown-item" onclick="window.UkiVersions && window.UkiVersions.openModal()"><span>🕒 Sürüm Geçmişi (Zaman Makinesi)...</span></div>
                     <div class="uyap-dropdown-item" onclick="window.UkiShare && window.UkiShare.openShareModal()"><span>📤 UDF Yükle ve Paylaş (30 Dk)...</span></div>
                     <div class="uyap-dropdown-item" onclick="window.UkiShare && window.UkiShare.openAccessCodeModal()"><span>🔑 Erişim Kodu ile Belge Aç...</span></div>
                     <div class="uyap-dropdown-item" onclick="window.UkiOCR && window.UkiOCR.openModal()"><span>Taranmış Belge / Görsel Aç (OCR)...</span></div>
@@ -367,6 +381,7 @@
                     <div class="uyap-dropdown-item" onclick="document.getElementById('btn-find-replace').click()"><span>Bul ve Değiştir...</span><kbd>Ctrl+F</kbd></div>
                     <div class="uyap-dropdown-item" onclick="window.dispatchEvent(new KeyboardEvent('keydown',{key:'g',ctrlKey:true,bubbles:true,cancelable:true}))"><span>Sayfaya Git...</span><kbd>Ctrl+G</kbd></div>
                     <div class="uyap-dropdown-divider"></div>
+                    <div class="uyap-dropdown-item" onclick="window.UkiLinter && window.UkiLinter.cleanTypography()"><span>🧹 Tipografi ve Boşluk Temizle (Linter)</span></div>
                     <div class="uyap-dropdown-item" onclick="window.openKvkkModal && window.openKvkkModal()"><span>🔒 Kişisel Verileri Arındır (KVKK)...</span></div>
                 </div>
             </div>
@@ -397,6 +412,7 @@
                 <span><u>G</u>örünüm</span>
                 <div class="uyap-dropdown-menu">
                     <div class="uyap-dropdown-item" onclick="document.getElementById('btn-toggle-thumbnails').click()"><span>Sayfa Önizlemeleri Bölmesi</span></div>
+                    <div class="uyap-dropdown-item" onclick="window.UkiZen && window.UkiZen.toggle()"><span>🧘 Zen / Odaklanma Modu</span><kbd>F11</kbd></div>
                     <div class="uyap-dropdown-item" onclick="document.getElementById('btn-toggle-ruler').click()"><span>Yatay Cetvel</span></div>
                     <div class="uyap-dropdown-item" onclick="window.dispatchEvent(new KeyboardEvent('keydown',{key:'w',ctrlKey:true,bubbles:true,cancelable:true}))"><span>Gizli Karakterler</span><kbd>Ctrl+W</kbd></div>
                     <div class="uyap-dropdown-divider"></div>
@@ -435,6 +451,8 @@
                     <div class="uyap-dropdown-divider"></div>
                     <div class="uyap-dropdown-item" onclick="window.UkiAI && window.UkiAI.openModal()"><span>🤖 Yapay Zeka Hukuk Asistanı (Belge İncele &amp; Sor)...</span><kbd>Alt+A</kbd></div>
                     <div class="uyap-dropdown-item" onclick="window.UkiDictionary && window.UkiDictionary.openModal()"><span>📖 Hukuki Terimler Sözlüğü (657.com.tr)...</span><kbd>Alt+S</kbd></div>
+                    <div class="uyap-dropdown-item" onclick="window.UkiLegalGlossary && window.UkiLegalGlossary.openModal()"><span>⚖️ Hukuki Kısaltmalar Kılavuzu...</span></div>
+                    <div class="uyap-dropdown-item" onclick="window.openSnippetsModal && window.openSnippetsModal()"><span>⚡ Akıllı Hukuki Metin Kalıpları...</span></div>
                     <div class="uyap-dropdown-item" onclick="window.UkiOCR && window.UkiOCR.openModal()"><span>🔍 Belge Tara &amp; OCR (Görselden UDF'e)...</span></div>
                     <div class="uyap-dropdown-item" onclick="document.getElementById('btn-view-signatures').click()"><span>Elektronik İmzaları İncele...</span><kbd>Shift+Ctrl+G</kbd></div>
                     <div class="uyap-dropdown-item" onclick="document.getElementById('btn-header-stats').click()"><span>Kullanım İstatistikleri &amp; Sayaç</span></div>
@@ -763,17 +781,24 @@
 
         <!-- ASTRYX WORKSPACE CANVAS -->
         <main class="workspace-container" id="workspace-container" role="main">
-            <!-- SAYFA GEZİNTİ VE KÜÇÜK ÖNİZLEME BÖLMESİ (PAGE THUMBNAILS SIDEBAR) -->
-            <aside id="thumbnails-sidebar" class="thumbnails-sidebar" aria-label="Sayfa Önizlemeleri">
+            <!-- SAYFA GEZİNTİ VE KÜÇÜK ÖNİZLEME BÖLMESİ (PAGE THUMBNAILS & OUTLINE SIDEBAR) -->
+            <aside id="thumbnails-sidebar" class="thumbnails-sidebar" aria-label="Sayfa Önizlemeleri ve Belge Taslağı">
                 <div class="thumbnails-header">
-                    <div class="thumbnails-title">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-                        <span>Sayfalar (<span id="thumb-count-badge">1</span>)</span>
+                    <div class="sidebar-tab-buttons" style="display: flex; gap: 4px;">
+                        <button type="button" id="tab-btn-pages" class="sidebar-tab-btn active" style="padding: 4px 8px; font-size: 11px; font-weight: 600; border-radius: 4px; border: 1px solid #cbd5e1; background: #ffffff; cursor: pointer;">
+                            📄 Sayfalar (<span id="thumb-count-badge">1</span>)
+                        </button>
+                        <button type="button" id="tab-btn-outline" class="sidebar-tab-btn" style="padding: 4px 8px; font-size: 11px; font-weight: 600; border-radius: 4px; border: 1px solid transparent; background: transparent; cursor: pointer;">
+                            📑 Belge Taslağı
+                        </button>
                     </div>
                     <button type="button" id="btn-close-thumbnails" class="thumbnails-close-btn" title="Gezinti Bölmesini Kapat">&times;</button>
                 </div>
                 <div id="thumbnails-list" class="thumbnails-list">
                     <!-- Dinamik küçük sayfa önizleme kartları buraya yüklenir -->
+                </div>
+                <div id="sidebar-outline-content" class="sidebar-outline-content" style="display: none; padding: 6px; overflow-y: auto;">
+                    <!-- Belge taslağı başlıkları buraya yüklenir -->
                 </div>
             </aside>
 
@@ -2943,6 +2968,138 @@
             </div>
         </div>
     </div>
+
+    <!-- ==========================================================================
+         MODAL: BELGE KARŞILAŞTIRMA & FARK İNCELEME (UKİ DIFF)
+         ========================================================================== -->
+    <div id="modal-doc-diff" class="ax-modal-backdrop" style="display: none;">
+        <div class="ax-modal-dialog" style="max-width: 900px; width: 95vw;">
+            <div class="ax-modal-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 20px;">⚖️</span>
+                    <h3 style="margin: 0;">Belge Karşılaştırma &amp; Fark İnceleme</h3>
+                </div>
+                <button type="button" class="ax-modal-close" data-close-modal>&times;</button>
+            </div>
+            <div class="ax-modal-body" style="padding: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <label style="font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                            <input type="radio" name="diff-view-mode" id="diff-view-inline" checked onchange="window.UkiDiff && window.UkiDiff.runActiveCompare()">
+                            <span>Satır İçi Birleşik Görünüm</span>
+                        </label>
+                        <label style="font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                            <input type="radio" name="diff-view-mode" id="diff-view-split" onchange="window.UkiDiff && window.UkiDiff.runActiveCompare()">
+                            <span>Yan Yana (Split View)</span>
+                        </label>
+                    </div>
+                    <div id="diff-stats-badge"></div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                    <div>
+                        <label style="font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">Eski / Orijinal Metin:</label>
+                        <textarea id="diff-old-text" class="ax-input" rows="4" style="width: 100%; box-sizing: border-box; font-size: 12px; resize: vertical;" placeholder="Karşılaştırmak istediğiniz eski metni buraya yapıştırın..." oninput="window.UkiDiff && window.UkiDiff.runActiveCompare()"></textarea>
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">Yeni / Düzenlenen Metin (Mevcut Belge):</label>
+                        <textarea id="diff-new-text" class="ax-input" rows="4" style="width: 100%; box-sizing: border-box; font-size: 12px; resize: vertical;" placeholder="Mevcut düzenleme metni..." oninput="window.UkiDiff && window.UkiDiff.runActiveCompare()"></textarea>
+                    </div>
+                </div>
+
+                <div style="font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px;">FARK ANALİZ ÇIKTISI:</div>
+                <div id="diff-result-view" style="min-height: 220px; max-height: 50vh; overflow-y: auto;"></div>
+            </div>
+            <div class="ax-modal-footer" style="display: flex; justify-content: space-between;">
+                <button type="button" class="tool-btn-secondary" onclick="navigator.clipboard.writeText(document.getElementById('diff-result-view').innerText).then(() => window.showToast && window.showToast('Fark metni panoya kopyalandı.', 'success'))">📋 Metni Kopyala</button>
+                <button type="button" class="tool-btn-primary" data-close-modal>Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         MODAL: SÜRÜM GEÇMİŞİ & ZAMAN MAKİNESİ (UKİ VERSIONS)
+         ========================================================================== -->
+    <div id="modal-version-history" class="ax-modal-backdrop" style="display: none;">
+        <div class="ax-modal-dialog" style="max-width: 650px; width: 95vw;">
+            <div class="ax-modal-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 20px;">🕒</span>
+                    <h3 style="margin: 0;">Sürüm Geçmişi &amp; Zaman Makinesi</h3>
+                </div>
+                <button type="button" class="ax-modal-close" data-close-modal>&times;</button>
+            </div>
+            <div class="ax-modal-body" style="padding: 16px;">
+                <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+                    <input type="text" id="version-manual-name-input" class="ax-input" placeholder="Örn: Duruşma Öncesi Son Taslak..." style="flex: 1; font-size: 13px;">
+                    <button type="button" class="tool-btn-primary" onclick="const input = document.getElementById('version-manual-name-input'); window.UkiVersions && window.UkiVersions.createSnapshot(input.value || 'Özel Sürüm', false); input.value = ''; window.UkiVersions.renderSnapshotList();" style="white-space: nowrap; font-size: 12px;">
+                        💾 Anlık Görüntü Al
+                    </button>
+                </div>
+                <div id="version-history-list" style="max-height: 60vh; overflow-y: auto; padding-right: 4px;"></div>
+            </div>
+            <div class="ax-modal-footer" style="display: flex; justify-content: space-between;">
+                <button type="button" class="tool-btn-danger" onclick="window.UkiVersions && window.UkiVersions.clearAllSnapshots()" style="font-size: 11px;">🗑️ Tüm Geçmişi Sil</button>
+                <button type="button" class="tool-btn-secondary" data-close-modal>Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         MODAL: HUKUKİ KISALTMALAR KILAVUZU (UKİ GLOSSARY)
+         ========================================================================== -->
+    <div id="modal-legal-glossary" class="ax-modal-backdrop" style="display: none;">
+        <div class="ax-modal-dialog" style="max-width: 580px; width: 95vw;">
+            <div class="ax-modal-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 20px;">⚖️</span>
+                    <h3 style="margin: 0;">Hukuki Terimler &amp; Kısaltmalar Kılavuzu</h3>
+                </div>
+                <button type="button" class="ax-modal-close" data-close-modal>&times;</button>
+            </div>
+            <div class="ax-modal-body" style="padding: 16px;">
+                <div style="margin-bottom: 12px;">
+                    <input type="text" id="glossary-search-input" class="ax-input" placeholder="Kısaltma veya kanun ara (örn: HMK, CMK, BAM, İİK, AİHM)..." style="width: 100%; box-sizing: border-box; font-size: 13.5px; padding: 8px 12px;" oninput="window.UkiLegalGlossary && window.UkiLegalGlossary.renderList(this.value)">
+                </div>
+                <div id="legal-glossary-list" style="max-height: 55vh; overflow-y: auto;"></div>
+            </div>
+            <div class="ax-modal-footer">
+                <button type="button" class="tool-btn-secondary" data-close-modal>Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         MODAL: AKILLI HUKUKİ METİN KALIPLARI (UKİ EXPANDER)
+         ========================================================================== -->
+    <div id="modal-snippets-settings" class="ax-modal-backdrop" style="display: none;">
+        <div class="ax-modal-dialog" style="max-width: 620px; width: 95vw;">
+            <div class="ax-modal-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 20px;">⚡</span>
+                    <h3 style="margin: 0;">Akıllı Hukuki Metin Genişletici Kalıpları</h3>
+                </div>
+                <button type="button" class="ax-modal-close" data-close-modal>&times;</button>
+            </div>
+            <div class="ax-modal-body" style="padding: 16px;">
+                <p style="font-size: 12.5px; color: #475569; margin-top: 0;">
+                    Yazarken kısayolu yazıp <b>Boşluk</b> veya <b>;</b> tuşuna bastığınızda uzun metne otomatik genişletilir.
+                </p>
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+                    <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px; color: #0f172a;">Yeni Kalıp Ekle</div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <input type="text" id="snippet-new-key" class="ax-input" placeholder="Kısayol (örn: \itiraz veya itiraz;)" style="width: 180px; font-size: 12px;">
+                        <input type="text" id="snippet-new-val" class="ax-input" placeholder="Genişletilecek uzun metin..." style="flex: 1; font-size: 12px;">
+                        <button type="button" class="tool-btn-primary" onclick="window.addSnippetFromModal && window.addSnippetFromModal()" style="font-size: 12px; white-space: nowrap;">+ Ekle</button>
+                    </div>
+                </div>
+                <div id="snippets-table-container" style="max-height: 45vh; overflow-y: auto;"></div>
+            </div>
+            <div class="ax-modal-footer">
+                <button type="button" class="tool-btn-secondary" data-close-modal>Kapat</button>
+            </div>
+        </div>
+    </div>
 <!-- Gizli Dosya Seçici (UDF, DOCX, Markdown, Görseller ve Taranmış Belgeler) -->
     <input type="file" id="file-input" accept=".udf,.docx,.md,.markdown,.txt,image/*,.png,.jpg,.jpeg,.bmp,.tiff,.webp" style="display: none;">
 
@@ -2981,6 +3138,14 @@
     <script src="assets/js/uki-layout-debugger.js"></script>
     <script src="assets/js/uki-image.js"></script>
     <script src="assets/js/uki-share.js"></script>
+    <script src="assets/js/uki-diff.js"></script>
+    <script src="assets/js/uki-versions.js"></script>
+    <script src="assets/js/uki-slash-menu.js"></script>
+    <script src="assets/js/uki-zen.js"></script>
+    <script src="assets/js/uki-outline.js"></script>
+    <script src="assets/js/uki-expander.js"></script>
+    <script src="assets/js/uki-linter.js"></script>
+    <script src="assets/js/uki-legal-glossary.js"></script>
     <script src="assets/js/app.js"></script>
 </body>
 </html>

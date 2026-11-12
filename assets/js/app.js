@@ -5694,6 +5694,48 @@ function openColorPicker(pickerId, ev) {
             path: 'Dosya >',
             icon: '🔑',
             action: () => window.UkiShare && window.UkiShare.openAccessCodeModal()
+        },
+        {
+            id: 'zen-mode',
+            title: 'Zen / Odaklanma Modu (F11)',
+            path: 'Görünüm >',
+            icon: '🧘',
+            action: () => window.UkiZen && window.UkiZen.toggle()
+        },
+        {
+            id: 'doc-diff',
+            title: 'Belge Karşılaştır & Fark İncele (Diff)',
+            path: 'Dosya >',
+            icon: '⚖️',
+            action: () => window.UkiDiff && window.UkiDiff.openDiffModal()
+        },
+        {
+            id: 'doc-versions',
+            title: 'Sürüm Geçmişi & Zaman Makinesi',
+            path: 'Dosya >',
+            icon: '🕒',
+            action: () => window.UkiVersions && window.UkiVersions.openModal()
+        },
+        {
+            id: 'doc-linter',
+            title: 'Tipografi ve Çift Boşluk Temizle (Linter)',
+            path: 'Düzen >',
+            icon: '🧹',
+            action: () => window.UkiLinter && window.UkiLinter.cleanTypography()
+        },
+        {
+            id: 'legal-glossary',
+            title: 'Hukuki Kısaltmalar Kılavuzu',
+            path: 'Araçlar >',
+            icon: '📖',
+            action: () => window.UkiLegalGlossary && window.UkiLegalGlossary.openModal()
+        },
+        {
+            id: 'legal-snippets',
+            title: 'Akıllı Hukuki Metin Kalıpları (Expander)',
+            path: 'Araçlar >',
+            icon: '⚡',
+            action: () => window.openSnippetsModal && window.openSnippetsModal()
         }
     ];
 
@@ -5949,6 +5991,9 @@ function openColorPicker(pickerId, ev) {
 
         const udePillShare = document.getElementById('ude-pill-share');
         const udePillAccessCode = document.getElementById('ude-pill-access-code');
+        const udePillZen = document.getElementById('ude-pill-zen');
+        const udePillDiff = document.getElementById('ude-pill-diff');
+        const udePillVersions = document.getElementById('ude-pill-versions');
 
         if (udePillShare) {
             udePillShare.addEventListener('click', () => {
@@ -5961,7 +6006,109 @@ function openColorPicker(pickerId, ev) {
                 if (window.UkiShare && window.UkiShare.openAccessCodeModal) window.UkiShare.openAccessCodeModal();
             });
         }
+
+        if (udePillZen) {
+            udePillZen.addEventListener('click', () => {
+                if (window.UkiZen && window.UkiZen.toggle) window.UkiZen.toggle();
+            });
+        }
+
+        if (udePillDiff) {
+            udePillDiff.addEventListener('click', () => {
+                if (window.UkiDiff && window.UkiDiff.openDiffModal) window.UkiDiff.openDiffModal();
+            });
+        }
+
+        if (udePillVersions) {
+            udePillVersions.addEventListener('click', () => {
+                if (window.UkiVersions && window.UkiVersions.openModal) window.UkiVersions.openModal();
+            });
+        }
     }
+
+    // Sidebar Tabs (Sayfalar & Belge Taslağı)
+    const tabBtnPages = document.getElementById('tab-btn-pages');
+    const tabBtnOutline = document.getElementById('tab-btn-outline');
+    const sidebarOutlineContent = document.getElementById('sidebar-outline-content');
+
+    if (tabBtnPages && tabBtnOutline) {
+        tabBtnPages.addEventListener('click', () => {
+            tabBtnPages.classList.add('active');
+            tabBtnOutline.classList.remove('active');
+            tabBtnPages.style.background = '#ffffff';
+            tabBtnPages.style.borderColor = '#cbd5e1';
+            tabBtnOutline.style.background = 'transparent';
+            tabBtnOutline.style.borderColor = 'transparent';
+            if (thumbnailsList) thumbnailsList.style.display = 'block';
+            if (sidebarOutlineContent) sidebarOutlineContent.style.display = 'none';
+        });
+
+        tabBtnOutline.addEventListener('click', () => {
+            tabBtnOutline.classList.add('active');
+            tabBtnPages.classList.remove('active');
+            tabBtnOutline.style.background = '#ffffff';
+            tabBtnOutline.style.borderColor = '#cbd5e1';
+            tabBtnPages.style.background = 'transparent';
+            tabBtnPages.style.borderColor = 'transparent';
+            if (thumbnailsList) thumbnailsList.style.display = 'none';
+            if (sidebarOutlineContent) {
+                sidebarOutlineContent.style.display = 'block';
+                if (window.UkiOutline && window.UkiOutline.refresh) window.UkiOutline.refresh();
+            }
+        });
+    }
+
+    // Snippets Modal Yönetimi
+    window.openSnippetsModal = function () {
+        const modal = document.getElementById('modal-snippets-settings');
+        if (!modal) return;
+        renderSnippetsTable();
+        openModal(modal);
+    };
+
+    function renderSnippetsTable() {
+        const container = document.getElementById('snippets-table-container');
+        if (!container || !window.UkiExpander) return;
+
+        const all = window.UkiExpander.getAllSnippets();
+        const rows = Object.entries(all).map(([key, val]) => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #f1f5f9; font-size: 12px;">
+                <div style="flex: 1; min-width: 0;">
+                    <code style="background: #eff6ff; color: #1e40af; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${key}</code>
+                    <span style="color: #475569; margin-left: 10px;">${String(val).substring(0, 70)}...</span>
+                </div>
+                <button type="button" class="tool-btn-secondary" style="font-size: 11px; padding: 2px 6px; color: #dc2626;" onclick="window.removeSnippetFromModal('${key}')">Sil</button>
+            </div>
+        `).join('');
+
+        container.innerHTML = rows || '<div style="color: #64748b; padding: 12px; text-align: center;">Kayıtlı kalıp yok.</div>';
+    }
+
+    window.addSnippetFromModal = function () {
+        const keyInput = document.getElementById('snippet-new-key');
+        const valInput = document.getElementById('snippet-new-val');
+        if (!keyInput || !valInput || !window.UkiExpander) return;
+
+        const key = keyInput.value.trim();
+        const val = valInput.value.trim();
+        if (!key || !val) {
+            showToast('Lütfen hem kısayolu hem de uzun kalıbı giriniz.', 'error');
+            return;
+        }
+
+        window.UkiExpander.addSnippet(key, val);
+        keyInput.value = '';
+        valInput.value = '';
+        renderSnippetsTable();
+        showToast(`"${key}" kalıbı başarıyla eklendi!`, 'success');
+    };
+
+    window.removeSnippetFromModal = function (key) {
+        if (!window.UkiExpander) return;
+        window.UkiExpander.removeSnippet(key);
+        renderSnippetsTable();
+        showToast(`"${key}" kalıbı silindi.`, 'info');
+    };
 
     initUdeTopToolbar();
     initCommandPalette();

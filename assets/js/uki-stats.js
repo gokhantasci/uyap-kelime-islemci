@@ -207,6 +207,53 @@
         }
 
         /**
+         * Aktif belgenin ayrıntılı adli metriklerini hesaplar (MS Word & Google Docs paritesi)
+         */
+        getCurrentDocMetrics() {
+            const editor = document.getElementById('editor');
+            const text = editor ? (editor.innerText || editor.textContent || '').trim() : '';
+            if (!text) {
+                return {
+                    words: 0,
+                    charsWithSpaces: 0,
+                    charsNoSpaces: 0,
+                    paragraphs: 0,
+                    sentences: 0,
+                    hearingReadingTimeStr: '0 dk',
+                    silentReadingTimeStr: '0 dk'
+                };
+            }
+
+            const words = text.split(/\s+/).filter(Boolean).length;
+            const charsWithSpaces = text.length;
+            const charsNoSpaces = text.replace(/\s+/g, '').length;
+            const paragraphs = text.split(/\r\n|\r|\n+/).filter(p => p.trim().length > 0).length;
+            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
+
+            // Duruşmada sesli okuma hızı (Katipler/Hakimler için ortalama 130 kelime/dakika)
+            const hearingMinutes = words / 130;
+            const hMin = Math.floor(hearingMinutes);
+            const hSec = Math.round((hearingMinutes - hMin) * 60);
+            const hearingReadingTimeStr = hMin > 0 ? `${hMin} dk ${hSec} sn` : `${hSec} sn`;
+
+            // Sessiz okuma hızı (~220 kelime/dakika)
+            const silentMinutes = words / 220;
+            const sMin = Math.floor(silentMinutes);
+            const sSec = Math.round((silentMinutes - sMin) * 60);
+            const silentReadingTimeStr = sMin > 0 ? `${sMin} dk ${sSec} sn` : `${sSec} sn`;
+
+            return {
+                words,
+                charsWithSpaces,
+                charsNoSpaces,
+                paragraphs,
+                sentences,
+                hearingReadingTimeStr,
+                silentReadingTimeStr
+            };
+        }
+
+        /**
          * İstatistikler modalını doldurur
          */
         populateModal() {

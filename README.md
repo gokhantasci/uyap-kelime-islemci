@@ -205,6 +205,26 @@ python print_to_udf.py --daemon
 
 ---
 
+## 🚀 Popüler Metin Editörleri & Rakip Paritesi (Google Docs, Word, Notion & iA Writer İnovasyonları)
+
+UYAP Web Editörü, yalnızca masaüstü UYAP Kelime İşlemci ve resmi UDE (`udf.adalet.gov.tr`) özelliklerini sunmakla kalmaz; modern web ve masaüstü döküman editörlerinin amiral gemisi yeteneklerini yerel ve gizlilik odaklı mimariyle bünyesinde birleştirir:
+
+| Modül & Özellik | İlham Kaynağı / Parite | İşlev ve Hukuki Katkı |
+| :--- | :--- | :--- |
+| **⚖️ Belge Karşılaştırma & Fark İnceleme (`UkiDiff`)** | *Google Docs & MS Word Karşılaştır* | İki UDF veya metin taslağını Myers Diff algoritmasıyla inceler; eklenenleri yeşil (`+`), çıkarılanları kırmızı (`-`) olarak satır içi veya yan yana (split view) gösterir. |
+| **🕒 Sürüm Geçmişi & Zaman Makinesi (`UkiVersions`)** | *Google Docs Version History* | Her 2 dakikada bir yerel anlık görüntü (snapshot) alır. İsimlendirilmiş sürümler, eski sürüme tek tıkla geri dönme ve mevcut belgeyle farkı görme yeteneği (%100 Zero-Server yerel depolama). |
+| **✨ Notion Tarzı Slash Menüsü (`/`) (`UkiSlashMenu`)** | *Notion, TipTap & Coda* | Klavyede `/` tuşuna basıldığında açılan klavye navigasyonlu komut menüsü. `/tablo`, `/imza`, `/antet`, `/hüküm`, `/tarih`, `/kvkk`, `/ai` kısayollarıyla fareye dokunmadan hızlı yazım. |
+| **🧘 Zen / Odaklanma Modu & Daktilo Deneyimi (`UkiZen`)** | *iA Writer & Ulysses* | `F11` veya araç çubuğundan tek tıkla tüm menüleri gizler, daktilo kaydırma (imleci dikey merkezde tutma) ve mekanik daktilo tuş sesi / satır sonu zili (ding) sunar. |
+| **📑 Belge Taslağı / Başlık Gezgini (`UkiOutline`)** | *Google Docs Outline & Word Gezinti* | Sol panelde H1, H2, H3 ve adli karar başlıklarını (İddia, Savunma, Deliller, Gerekçe, Hüküm) hiyerarşik listeler; tıklandığında yumuşak kaydırma ve parlak mavi vurgu efekti uygular. |
+| **⚡ Akıllı Hukuki Metin Genişletici (`UkiExpander`)** | *TextExpander, Raycast & Word AutoCorrect* | `\vekalet`, `\sure`, `\arz`, `\tebligat`, `\karar`, `\tarih` gibi kısayolları Boşluk veya Tab tuşlandığında uzun resmi adli kalıplara dönüştürür. Özel kalıp eklenebilir. |
+| **🧹 Adli Tipografi & Boşluk Temizleyici (`UkiLinter`)** | *Grammarly & MS Word Belge Denetçisi* | Adliye evraklarında kopyala-yapıştır sonucu oluşan çift/çoklu boşlukları, noktalama işaretleri öncesindeki hatalı boşlukları ve gereksiz boş paragrafları tek tıkla temizler. |
+| **📖 Hukuki Kısaltmalar Kılavuzu (`UkiLegalGlossary`)** | *Lexpera / Kazancı Adli Kılavuz* | HMK, CMK, TCK, İİK, AİHM, BAM, YHGK, AYM, KHK, CBS vb. 60+ adli kısaltmanın açılımını ve mevzuat tanımını anında arama ve belgeye tek tıkla ekleme. |
+| **⏱️ Duruşma & Sessiz Okuma Süresi Metrikleri (`UkiStats`)** | *Word Sözcük Sayımı & Medium Read Time* | Toplam kelime ve karakterin yanı sıra, duruşmada sesli okuma süresi (~130 kelime/dk) ve sessiz okuma süresi (~220 kelime/dk) analizleri sunar. |
+| **📤 30 Dakikalık Geçici Kod ile UDF Paylaşım (`UkiShare`)** | *WeTransfer / Bitwarden Send (Zero-Server)* | Hetzner sunucusuna belge yüklemeden, 6 haneli erişim kodu ve URL hash simetrik şifrelemesiyle 30 dakika sonra otomatik imha olan güvenli UDF paylaşımı. |
+
+
+---
+
 ## 🔌 WordPress Eklentisi: UYAP Kelime İşlemci (Web UDF)
 
 WordPress tabanlı hukuk siteleri, barolar, mevzuat portalları veya bloglar için hazır resmi eklenti paketi:

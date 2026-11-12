@@ -1220,5 +1220,161 @@ test('UkiShare: UDF Yükle ve 30 Dakikalık Geçici Kod ile Paylaş (Zero Hetzne
     dom.window.close();
 });
 
+test('Gelişmiş Editör & Rakip Analizi Parite Paketi: Diff, Sürüm Geçmişi, Slash Menü, Zen Modu, Başlık Gezgini, Kalıp Genişletici, Linter ve Hukuk Kılavuzu', async () => {
+    const html = fs.readFileSync('index.html', 'utf8');
+    const dom = new JSDOM(html, {
+        url: 'http://localhost:8080',
+        runScripts: 'outside-only',
+        pretendToBeVisual: true
+    });
+    const w = dom.window;
+    w.JSZip = require('../assets/vendor/jszip.min.js');
+    w.TextDecoder = TextDecoder;
+    w.TextEncoder = TextEncoder;
+    w.Blob = Blob;
+    w.document.queryCommandState = () => false;
+    w.document.queryCommandValue = () => '';
+    w.document.execCommand = () => true;
+    w.HTMLElement.prototype.scrollIntoView = () => {};
+    w.Range.prototype.getClientRects = () => [];
+    w.Range.prototype.getBoundingClientRect = () => ({ width: 0, height: 0, left: 0, right: 0, top: 0, bottom: 0 });
+
+    const scripts = [
+        'assets/js/uki-diff.js',
+        'assets/js/uki-versions.js',
+        'assets/js/uki-slash-menu.js',
+        'assets/js/uki-zen.js',
+        'assets/js/uki-outline.js',
+        'assets/js/uki-expander.js',
+        'assets/js/uki-linter.js',
+        'assets/js/uki-legal-glossary.js',
+        'assets/js/uki-stats.js'
+    ];
+
+    for (const s of scripts) {
+        if (fs.existsSync(s)) {
+            w.eval(fs.readFileSync(s, 'utf8'));
+        }
+    }
+
+    // 1. UkiDiff (Google Docs & MS Word Karşılaştırma Paritesi)
+    const UkiDiff = w.UkiDiff;
+    assert.ok(UkiDiff, 'UkiDiff modülü yüklenmiş olmalı');
+    const diffSame = UkiDiff.diffWords('Sakarya 1. Asliye Ceza', 'Sakarya 1. Asliye Ceza');
+    assert.equal(diffSame.isIdentical, true, 'Aynı metinler için isIdentical true dönmeli');
+
+    const diffDiff = UkiDiff.diffWords('Sanığın beraatine karar verildi', 'Sanığın mahkumiyetine karar verildi ve hapis cezası uygulandı');
+    assert.ok(diffDiff.addedCount > 0, 'Eklenen kelime sayısı pozitif olmalı');
+    assert.ok(diffDiff.removedCount > 0, 'Silinen kelime sayısı pozitif olmalı');
+    const inlineHtml = UkiDiff.renderInlineHtml(diffDiff.diff);
+    assert.ok(inlineHtml.includes('diff-ins'), 'Eklenen kelimeler ins sınıfı taşımalı');
+    assert.ok(inlineHtml.includes('diff-del'), 'Silinen kelimeler del sınıfı taşımalı');
+
+    // 2. UkiVersions (Sürüm Geçmişi & Yerel Zaman Makinesi)
+    const UkiVersions = w.UkiVersions;
+    assert.ok(UkiVersions, 'UkiVersions modülü yüklenmiş olmalı');
+    const editor = w.document.getElementById('editor');
+    if (editor) {
+        editor.innerHTML = '<p>Duruşma öncesi ilk taslak metni</p>';
+    }
+    UkiVersions.createSnapshot('İlk Duruşma Taslağı', false);
+    const snapshots = JSON.parse(w.localStorage.getItem('uki_doc_version_snapshots_v1') || '[]');
+    assert.ok(snapshots.length >= 1, 'En az 1 sürüm anlık görüntüsü kaydedilmiş olmalı');
+    assert.equal(snapshots[0].name, 'İlk Duruşma Taslağı', 'Kayıt adı doğrulanmalı');
+
+    // 3. UkiSlashMenu (Notion & TipTap Slash Menü Paritesi)
+    const UkiSlashMenu = w.UkiSlashMenu;
+    assert.ok(UkiSlashMenu, 'UkiSlashMenu modülü yüklenmiş olmalı');
+    assert.ok(typeof UkiSlashMenu.open === 'function', 'open fonksiyonu olmalı');
+
+    // 4. UkiZen (Odaklanma Modu & Daktilo)
+    const UkiZen = w.UkiZen;
+    assert.ok(UkiZen, 'UkiZen modülü yüklenmiş olmalı');
+    assert.equal(UkiZen.isActive(), false, 'Başlangıçta Zen modu pasif olmalı');
+    UkiZen.enter();
+    assert.equal(UkiZen.isActive(), true, 'Zen modu aktifleşmeli');
+    assert.ok(w.document.body.classList.contains('zen-mode-active'), 'body öğesine zen-mode-active sınıfı eklenmeli');
+    UkiZen.exit();
+    assert.equal(UkiZen.isActive(), false, 'Zen modundan çıkılabilmeli');
+    assert.ok(!w.document.body.classList.contains('zen-mode-active'));
+
+    // 5. UkiOutline (Belge Taslağı & Hukuki Başlık Gezgini)
+    const UkiOutline = w.UkiOutline;
+    assert.ok(UkiOutline, 'UkiOutline modülü yüklenmiş olmalı');
+    if (editor) {
+        editor.innerHTML = `
+            <h1>T.C. SAKARYA 1. ASLİYE CEZA MAHKEMESİ</h1>
+            <h2>İDDİA VE SAVUNMA</h2>
+            <p><strong>GEREKÇE:</strong> Tüm dosya incelendiğinde...</p>
+            <p><strong>HÜKÜM:</strong> Beraatine...</p>
+        `;
+    }
+    UkiOutline.refresh();
+    const outlineContainer = w.document.getElementById('sidebar-outline-content');
+    assert.ok(outlineContainer, 'sidebar-outline-content alanı mevcut olmalı');
+    assert.ok(outlineContainer.innerHTML.includes('outline-tree-item'), 'Başlıklar taslak ağacına eklenmeli');
+
+    // 6. UkiExpander (Akıllı Metin Genişletici Kalıpları)
+    const UkiExpander = w.UkiExpander;
+    assert.ok(UkiExpander, 'UkiExpander modülü yüklenmiş olmalı');
+    const allSnippets = UkiExpander.getAllSnippets();
+    assert.ok(allSnippets['\\vekalet'] || allSnippets['vekalet;'], 'Vekalet kalıbı mevcut olmalı');
+    assert.ok(allSnippets['\\sure'] || allSnippets['sure;'], 'Süre kalıbı mevcut olmalı');
+    assert.ok(allSnippets['\\arz'] || allSnippets['arz;'], 'Arz kalıbı mevcut olmalı');
+
+    UkiExpander.addSnippet('\\itiraz', 'Karara süresi içerisinde itiraz ediyoruz.');
+    const updatedSnippets = UkiExpander.getAllSnippets();
+    assert.equal(updatedSnippets['\\itiraz'], 'Karara süresi içerisinde itiraz ediyoruz.', 'Özel kalıp eklenebilmeli');
+    UkiExpander.removeSnippet('\\itiraz');
+
+    // 7. UkiLinter (Tipografi & Boşluk Temizleyici)
+    const UkiLinter = w.UkiLinter;
+    assert.ok(UkiLinter, 'UkiLinter modülü yüklenmiş olmalı');
+    if (editor) {
+        editor.innerHTML = '<p>Bu   metinde   birden  fazla    boşluk , ve noktalama öncesi boşluk . bulunmaktadır.</p>';
+        const cleanRes = UkiLinter.cleanTypography();
+        assert.ok(cleanRes.doubleSpacesFixed > 0, 'Çift boşluklar tespit edilip düzeltilmeli');
+        assert.ok(cleanRes.punctuationFixed > 0, 'Hatalı noktalamalar tespit edilip düzeltilmeli');
+        assert.ok(!editor.innerHTML.includes('   '), '3 ve daha fazla boşluk kalmamalı');
+        assert.ok(editor.innerHTML.includes('boşluk, ve'), 'Virgül öncesi boşluk silinmeli');
+        assert.ok(editor.innerHTML.includes('boşluk. bulunmaktadır'), 'Nokta öncesi boşluk silinmeli');
+    }
+
+    // 8. UkiLegalGlossary (Hukuki Kısaltmalar Kılavuzu)
+    const UkiLegalGlossary = w.UkiLegalGlossary;
+    assert.ok(UkiLegalGlossary, 'UkiLegalGlossary modülü yüklenmiş olmalı');
+    const items = UkiLegalGlossary.getItems();
+    assert.ok(items.length >= 20, 'En az 20 hukuki kısaltma tanımlı olmalı');
+    const hmk = items.find(i => i.abbr === 'HMK');
+    assert.ok(hmk && hmk.full.includes('Hukuk Muhakemeleri'), 'HMK tanımı eksiksiz olmalı');
+
+    const filtered = UkiLegalGlossary.filterItems('Ceza');
+    assert.ok(filtered.some(i => i.abbr === 'CMK' || i.abbr === 'TCK'), 'Ceza araması CMK veya TCK getirmeli');
+
+    // 9. UkiStats Ayrıntılı Belge Metrikleri (Duruşma Okuma Süresi)
+    const UkiStats = w.UkiStats;
+    assert.ok(UkiStats, 'UkiStats mevcut olmalı');
+    if (editor) {
+        editor.innerHTML = '<p>' + 'Mahkeme gerekçeli karar metni kelimeleri test ediliyor. '.repeat(50) + '</p>';
+        const metrics = UkiStats.getCurrentDocMetrics();
+        assert.ok(metrics.words > 0, 'Kelime sayısı hesaplanmalı');
+        assert.ok(metrics.charsWithSpaces > metrics.charsNoSpaces, 'Boşluklu karakter boşluksuzdan büyük olmalı');
+        assert.ok(metrics.hearingReadingTimeStr, 'Duruşma sesli okuma süresi üretilmeli');
+        assert.ok(metrics.silentReadingTimeStr, 'Sessiz okuma süresi üretilmeli');
+    }
+
+    // 10. DOM Arayüz Öğelerinin Varlığı
+    assert.ok(w.document.getElementById('modal-doc-diff'), 'modal-doc-diff DOM içinde bulunmalı');
+    assert.ok(w.document.getElementById('modal-version-history'), 'modal-version-history DOM içinde bulunmalı');
+    assert.ok(w.document.getElementById('modal-legal-glossary'), 'modal-legal-glossary DOM içinde bulunmalı');
+    assert.ok(w.document.getElementById('modal-snippets-settings'), 'modal-snippets-settings DOM içinde bulunmalı');
+    assert.ok(w.document.getElementById('tab-btn-outline'), 'tab-btn-outline butonu DOM içinde bulunmalı');
+    assert.ok(w.document.getElementById('ude-pill-zen'), 'ude-pill-zen butonu DOM içinde bulunmalı');
+    assert.ok(w.document.getElementById('ude-pill-diff'), 'ude-pill-diff butonu DOM içinde bulunmalı');
+    assert.ok(w.document.getElementById('ude-pill-versions'), 'ude-pill-versions butonu DOM içinde bulunmalı');
+
+    dom.window.close();
+});
+
 
 
