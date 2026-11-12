@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     UYAP Kelime İşlemci & Print to UDF - Tek Komutla Otomatik Kurulum Betiği
 .DESCRIPTION
@@ -69,6 +69,8 @@ if ($Uninstall) {
     }
     $udfReg = "HKCU:\Software\Classes\.udf\OpenWithList"
     if (Test-Path $udfReg) { Remove-Item -Path $udfReg -Recurse -Force -ErrorAction SilentlyContinue }
+    $udfMenuReg = "HKCU:\Software\Classes\SystemFileAssociations\.udf\shell\OpenInUyapEditor"
+    if (Test-Path $udfMenuReg) { Remove-Item -Path $udfMenuReg -Recurse -Force -ErrorAction SilentlyContinue }
 
     # 5. Sanal Yazıcı (Eğer Yöneticiyse)
     $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -208,12 +210,17 @@ Write-Host "  [+] Desteklenen formatlara (PDF, Word, Markdown, Metin, Resim) sa�
 # .udf dosyaları için doğrudan Editörde Aç menüsü
 $udfMenuKey = "HKCU:\Software\Classes\SystemFileAssociations\.udf\shell\OpenInUyapEditor"
 New-Item -Path $udfMenuKey -Force | Out-Null
-Set-ItemProperty -Path $udfMenuKey -Name "(Default)" -Value "Web Editörde Aç"
+Set-ItemProperty -Path $udfMenuKey -Name "(Default)" -Value "UYAP Editöründe Aç"
 Set-ItemProperty -Path $udfMenuKey -Name "Icon" -Value "imageres.dll,2"
 
 $udfCmdKey = "$udfMenuKey\command"
 New-Item -Path $udfCmdKey -Force | Out-Null
-$pythonwPath = (Get-Command pythonw.exe -ErrorAction Stop).Source
+$pyExeObj = Get-Command pythonw.exe -ErrorAction SilentlyContinue
+if (-not $pyExeObj) { $pyExeObj = Get-Command python.exe -ErrorAction SilentlyContinue }
+if (-not $pyExeObj -and $pythonCmd) { $pyExeObj = Get-Command $pythonCmd -ErrorAction SilentlyContinue }
+if (-not $pyExeObj) { throw "Python çalıştırıcısı (pythonw.exe veya python.exe) bulunamadı." }
+$pythonwPath = $pyExeObj.Source
+
 $localOpener = Join-Path $targetDir "open_in_editor.py"
 $browserCmd = '"' + $pythonwPath + '" "' + $localOpener + '" "%1"'
 Set-ItemProperty -Path $udfCmdKey -Name "(Default)" -Value $browserCmd
