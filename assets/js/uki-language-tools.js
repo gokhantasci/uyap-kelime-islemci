@@ -115,7 +115,50 @@
 
     let localServerStatus = { piper: null, ema: null };
 
-    async function tryLocalNeuralTts(engine, textChunk) {
+    // Gerçek Piper TTS: model 657.com.tr/modeller/piper/ altından indirilip tarayıcıda (Web Worker + WASM) çalışır.
+    let piperWorker = null;
+    let piperJobSeq = 0;
+    let piperFailedAt = 0;
+    let lastNeuralSource = '';
+
+    function browserPiper(text, onProgress) {
+        if (typeof Worker === 'undefined' || Date.now() - piperFailedAt < 60000) return Promise.resolve(null);
+        return new Promise((resolve) => {
+            let w = piperWorker;
+            try {
+                if (!w) {
+                    w = piperWorker = new Worker(new URL('assets/js/piper-worker.js', document.baseURI).href);
+                }
+            } catch (_) { piperFailedAt = Date.now(); resolve(null); return; }
+            const id = ++piperJobSeq;
+            const cleanup = () => { w.removeEventListener('message', onMsg); w.removeEventListener('error', onErr); };
+            const fail = () => { cleanup(); piperFailedAt = Date.now(); try { w.terminate(); } catch (_) {} if (piperWorker === w) piperWorker = null; resolve(null); };
+            const onMsg = (ev) => {
+                const d = ev.data || {};
+                if (d.type === 'progress') { if (onProgress) onProgress(d.value); return; }
+                if (d.id !== id) return;
+                if (d.type === 'audio') {
+                    cleanup();
+                    const blob = d.wav instanceof Blob ? d.wav : new Blob([d.wav], { type: 'audio/wav' });
+                    resolve(blob.size > 200 ? URL.createObjectURL(blob) : null);
+                } else if (d.type === 'error') {
+                    console.warn('Piper (tarayıcı) hatası:', d.message);
+                    fail();
+                }
+            };
+            const onErr = (e) => { console.warn('Piper çalışanı hata verdi:', e && e.message); fail(); };
+            w.addEventListener('message', onMsg);
+            w.addEventListener('error', onErr);
+            w.postMessage({ id, text });
+        });
+    }
+
+    async function tryLocalNeuralTts(engine, textChunk, onProgress) {
+        lastNeuralSource = '';
+        if (engine === 'piper') {
+            const url = await browserPiper(textChunk, onProgress);
+            if (url) { lastNeuralSource = 'browser'; return url; }
+        }
         const fetchFn = (window && window.fetch) || (typeof fetch !== 'undefined' ? fetch : null);
         if (!fetchFn || localServerStatus[engine] === false) return null;
 
@@ -248,9 +291,10 @@
             // 1. Yerel Piper veya Ema sunucusu varsa oradan çalmayı dene
             if (engine === 'piper' || engine === 'ema') {
                 try {
-                    const audioUrl = await tryLocalNeuralTts(engine, chunkText);
+                    if (engine === 'piper' && status && !piperWorker) status.textContent = '⬇ Piper sesi hazırlanıyor…';
+                    const audioUrl = await tryLocalNeuralTts(engine, chunkText, (pct) => { if (status && reading) status.textContent = `⬇ Piper sesi indiriliyor (ilk kullanımda ~60 MB, sonra önbellekten): %${pct}`; });
                     if (audioUrl && reading && sessionId === currentSessionId) {
-                        if (status) status.textContent = `🎙️ ${engine === 'piper' ? 'Piper TTS (Yerel Nöral)' : 'Ema Lightning (Yerel Nöral)'}: ${progressLabel}`;
+                        if (status) status.textContent = `🎙️ ${engine === 'piper' ? (lastNeuralSource === 'browser' ? 'Piper TTS (Fahrettin, tarayıcıda)' : 'Piper TTS (Yerel sunucu)') : 'Ema Lightning (Yerel sunucu)'}: ${progressLabel}`;
                         piperAudio = new Audio(audioUrl);
                         piperAudio.playbackRate = userRate;
                         piperAudio.onended = () => {
@@ -307,7 +351,7 @@
             const autoOpt = document.createElement('option');
             autoOpt.value = 'auto';
             autoOpt.selected = true;
-            autoOpt.textContent = '🎯 Otomatik En İyi Doğal Türkçe (Bariton)';
+            autoOpt.textContent = '🎯 Fahrettin (Piper, tarayıcıda çalışır)';
             field.append(autoOpt);
 
             trVoices.forEach(v => {
@@ -322,7 +366,7 @@
             const autoOpt = document.createElement('option');
             autoOpt.value = 'auto';
             autoOpt.selected = true;
-            autoOpt.textContent = '⚡ Otomatik Ema Lightning Hızlı & Net';
+            autoOpt.textContent = '⚡ Ema Lightning (yerel sunucu gerekir; yoksa sistem sesi)';
             field.append(autoOpt);
 
             trVoices.forEach(v => {
@@ -377,8 +421,8 @@
                     <div class="lang-dock-row">
                         <label for="speech-engine">Ses Motoru:</label>
                         <select id="speech-engine" class="ax-select" style="flex:1; font-size:11.5px;">
-                            <option value="piper" selected>Piper TTS (Doğal Türkçe Nöral)</option>
-                            <option value="ema">Ema Lightning (Hafif ve Hızlı Nöral)</option>
+                            <option value="piper" selected>Piper TTS (Doğal Türkçe Nöral, tarayıcıda)</option>
+                            <option value="ema">Ema Lightning (yerel sunucu gerekir)</option>
                             <option value="webspeech">Tarayıcı Yerel Sesi (Web Speech)</option>
                         </select>
                     </div>

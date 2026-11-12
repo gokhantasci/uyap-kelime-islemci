@@ -95,6 +95,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modal) return;
         modal.style.display = 'none';
     }
+    // Diğer modüller (Karşılaştır, Sürüm Geçmişi vb.) pencereleri bu iki işlev üzerinden açar
+    window.openModal = openModal;
+    window.closeModal = closeModal;
 
     document.querySelectorAll('[data-close-modal]').forEach(btn => {
         btn.addEventListener('click', () => {

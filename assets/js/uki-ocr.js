@@ -50,6 +50,32 @@
     /**
      * Taranmış belgenin kontrastını artırıp siyah-beyaz optimizasyonu yapar (Canvas)
      */
+    // Tesseract hataları çoğu zaman Error değil düz metin/olay nesnesidir; "undefined" yerine gerçek nedeni göster
+    function describeError(e) {
+        if (e == null) return 'Bilinmeyen hata';
+        if (typeof e === 'string') return e;
+        if (e.message) return e.message;
+        if (typeof Event !== 'undefined' && e instanceof Event) {
+            return 'Dosya yüklenemedi (' + e.type + (e.target && (e.target.src || e.target.href) ? ': ' + (e.target.src || e.target.href) : '') + ')';
+        }
+        try { return JSON.stringify(e).slice(0, 200); } catch (_) { return String(e); }
+    }
+
+    // Bellek yetmediğinde yeniden denemek için görseli küçült
+    function downscaleToDataUrl(imageElement, maxSide) {
+        const w = imageElement.naturalWidth || imageElement.width;
+        const h = imageElement.naturalHeight || imageElement.height;
+        const scale = Math.min(1, maxSide / Math.max(w, h));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(w * scale));
+        canvas.height = Math.max(1, Math.round(h * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/png');
+    }
+
     function preprocessImage(imageElement, enhanceContrast = true) {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -488,7 +514,7 @@
 
             // Resim decode edilmeden naturalWidth sıfır olabilir.
             try { await previewImg.decode(); await triggerOcrProcess(); }
-            catch (err) { if (window.showToast) window.showToast('Görsel okunamadı: ' + err.message, 'error'); }
+            catch (err) { if (window.showToast) window.showToast('Görsel okunamadı: ' + describeError(err), 'error'); }
         };
         reader.readAsDataURL(file);
     }
@@ -523,11 +549,19 @@
         const previewImg = document.getElementById('ocr-preview-img');
         try {
             const processedImageSrc = preprocessImage(previewImg, enhance);
-            const res = await runOcr(processedImageSrc, { lang: lang, alternateSource: enhance ? activeImageDataUrl : null }, (pct, label) => {
+            const onProgress = (pct, label) => {
                 progressBar.style.width = `${pct}%`;
                 progressPct.textContent = `${pct}%`;
                 progressLabel.textContent = label;
-            });
+            };
+            let res;
+            try {
+                res = await runOcr(processedImageSrc, { lang: lang, alternateSource: enhance ? activeImageDataUrl : null }, onProgress);
+            } catch (firstErr) {
+                console.warn('OCR ilk deneme başarısız (' + describeError(firstErr) + '); küçültülmüş görselle yeniden deneniyor.');
+                progressLabel.textContent = 'İlk deneme başarısız oldu, daha küçük görselle yeniden deneniyor…';
+                res = await runOcr(downscaleToDataUrl(previewImg, 1800), { lang: lang, alternateSource: null }, onProgress);
+            }
 
             lastOcrResult = res;
             if (window.UkiStats) window.UkiStats.recordFeature('ocr');
@@ -547,10 +581,10 @@
         } catch (err) {
             isProcessing = false;
             console.error('OCR Hatası:', err);
-            resultTextarea.value = `Tarama sırasında bir hata oluştu:\n${err.message}`;
+            resultTextarea.value = `Tarama sırasında bir hata oluştu:\n${describeError(err)}`;
             btnStart.style.display = 'inline-flex';
             if (window.showToast) {
-                window.showToast('OCR işlemi sırasında hata oluştu: ' + err.message, 'error');
+                window.showToast('OCR işlemi sırasında hata oluştu: ' + describeError(err), 'error');
             }
         }
     }

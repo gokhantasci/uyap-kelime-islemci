@@ -4,13 +4,16 @@
   "private": true,
   "scripts": {
     "test": "node --test tests/*.test.cjs",
-    "check": "node --test tests/syntax.test.cjs"
+    "check": "node --test tests/syntax.test.cjs",
+    "build:piper": "esbuild tools/piper-worker.src.js --bundle --platform=browser --external:fs --external:path --format=iife --minify --target=es2020 --outfile=assets/js/piper-worker.js"
   },
   "devDependencies": {
+    "@mintplex-labs/piper-tts-web": "^1.0.5",
     "dictionary-tr": "^2.0.0",
     "esbuild": "^0.28.2",
     "jsdom": "^26.1.0",
     "nspell": "^2.1.5",
+    "onnxruntime-web": "^1.18.0",
     "tesseract.js": "^6.0.1"
   }
 }

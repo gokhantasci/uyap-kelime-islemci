@@ -119,9 +119,35 @@
         });
     }
 
+    var DOWNLOAD_URL = 'https://eimza.adalet.gov.tr/';
+
     function notFound(body, foot) {
         fail(body, foot, 'Adalet E-İmza Uygulaması Bulunamadı',
-            'İmzalama yapabilmek için Adalet E-İmza client uygulamasının bilgisayarınızda kurulu ve çalışıyor olması gerekir. Uygulamayı kurup çalıştırdıktan sonra tekrar deneyin.');
+            'İmzalama yapabilmek için Adalet E-İmza client uygulamasının bilgisayarınızda kurulu ve çalışıyor olması gerekir.');
+        var guide = el('div');
+        guide.style.cssText = 'margin-top:12px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:12.5px;line-height:1.55;color:#334155;text-align:left;';
+        var h = el('div', null, 'Nasıl kurulur?');
+        h.style.cssText = 'font-weight:700;margin-bottom:4px;';
+        guide.appendChild(h);
+        var ol = el('ol');
+        ol.style.cssText = 'margin:0;padding-left:18px;';
+        [
+            'Aşağıdaki bağlantıdan Adalet E-İmza uygulamasını indirip kurun.',
+            'E-imza kartınızı/token\u2019ınızı bilgisayara takın ve kart okuyucu sürücüsünün kurulu olduğundan emin olun.',
+            'Uygulamayı başlatın ve çalışır durumda bırakın (arka planda açık olmalı).',
+            'Bu pencerede \u201cTekrar Dene\u201d düğmesine basın.'
+        ].forEach(function (t) { ol.appendChild(el('li', null, t)); });
+        guide.appendChild(ol);
+        var a = el('a', null, '\u2B07 Adalet E-İmza Uygulamasını İndir');
+        a.href = DOWNLOAD_URL;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.style.cssText = 'display:inline-block;margin-top:8px;font-weight:600;color:#2563eb;text-decoration:none;';
+        guide.appendChild(a);
+        var note = el('div', null, 'Uygulama kurulu ama bağlantı kurulamıyorsa tarayıcının \u201cyerel ağa erişim\u201d iznini isteyip istemediğine bakın ve izin verin.');
+        note.style.cssText = 'margin-top:6px;font-size:11.5px;color:#64748b;';
+        guide.appendChild(note);
+        body.appendChild(guide);
     }
 
     function fail(body, foot, title, text) {
