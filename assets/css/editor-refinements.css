@@ -1603,3 +1603,39 @@ body:not([data-ui-theme="uyap-classic"]) .toolbar .quick-styles-group { height: 
     z-index: 40 !important;
     box-shadow: 0 1px 0 #e2e8f0, 0 6px 8px -6px rgba(15, 23, 42, 0.18);
 }
+
+/* Ekleme araçları zaten "Ekle" menüsünde; şeritteki yinelenen grup gizlenir (DOM'da kalır, .click() çalışır) */
+body:not([data-ui-theme="uyap-classic"]) #group-grafik { display: none !important; }
+
+/* "Daha Fazla" menüsü */
+.ude-more-wrap { position: relative; display: inline-flex; }
+.ude-more-menu {
+    position: fixed; z-index: 3000;
+    min-width: 220px; padding: 6px; display: none; flex-direction: column; gap: 2px;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+    box-shadow: 0 12px 32px -8px rgba(15, 23, 42, .25);
+}
+.ude-more-menu.open { display: flex; }
+.ude-more-menu .ude-pill-feature {
+    width: 100%; justify-content: flex-start; border: 0; background: transparent;
+    height: 34px; padding: 0 10px; border-radius: 6px; font-size: 13px;
+}
+.ude-more-menu .ude-pill-feature:hover { background: #f1f5f9; }
+[data-theme="dark"] .ude-more-menu { background: #111827; border-color: #1f2937; }
+[data-theme="dark"] .ude-more-menu .ude-pill-feature:hover { background: #1f2937; }
+
+/* E-imzalı belge: salt okunur mod (udf.adalet.gov.tr paritesi) */
+.ude-signed-banner[hidden] { display: none !important; }
+.ude-signed-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 8px 16px; background: #fffbeb; border-bottom: 1px solid #fde68a;
+    color: #92400e; font-size: 12.5px;
+}
+.ude-signed-enable {
+    flex: 0 0 auto; height: 28px; padding: 0 14px; border-radius: 6px; cursor: pointer;
+    background: #fff; color: #111827; border: 1px solid #b45309; font-weight: 600; font-size: 12px;
+}
+.ude-signed-enable:hover { background: #fef3c7; }
+body.ude-signed-readonly .toolbar,
+body.ude-signed-readonly .ude-toolbar-actions-right { display: none !important; }
+body.ude-signed-readonly #editor { cursor: default; }

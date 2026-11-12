@@ -907,7 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Sol marjin 2cm (56.69pt) olduğunda metin fiziksel olarak 67.92pt (2.4cm)'den başlar.
         // Sağ marjin 2.5cm (70.87pt) olduğunda UYAP PDF metin sınırı 522.50pt (marjin 72.82pt)'dedir.
         const leftEffPt = Math.abs(props.leftMargin - 56.69) < 2.0 ? 67.92 : props.leftMargin;
-        const rightEffPt = Math.abs(props.rightMargin - 70.87) < 2.0 ? 72.82 : props.rightMargin;
+        const rightEffPt = Math.abs(props.rightMargin - 70.87) < 2.0 ? 70.87 : props.rightMargin;
         editorEl.style.padding = `${props.topMargin}pt ${rightEffPt}pt ${props.bottomMargin}pt ${leftEffPt}pt`;
 
         // Yatay Cetvel Marjin İşaretçilerini Güncelle
@@ -1894,6 +1894,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // E-imzalı belge: resmî UDE gibi salt okunur açılır; düzenleme imzaları siler
+    function setSignedReadOnly(on) {
+        const banner = document.getElementById('ude-signed-banner');
+        document.body.classList.toggle('ude-signed-readonly', !!on);
+        const ed = document.getElementById('editor');
+        if (ed) ed.setAttribute('contenteditable', on ? 'false' : 'true');
+        if (banner) banner.hidden = !on;
+    }
+
+    function enableEditingFromSigned() {
+        if (currentDocModel) { currentDocModel.isSigned = false; currentDocModel.signatures = []; }
+        renderElectronicSeal([]);
+        if (signatureBadge) signatureBadge.style.display = 'none';
+        setSignedReadOnly(false);
+        showToast('Düzenleme etkinleştirildi; mevcut e-imzalar kaldırıldı.', 'info');
+    }
+    window.addEventListener('DOMContentLoaded', () => {
+        const b = document.getElementById('ude-signed-enable');
+        if (b) b.addEventListener('click', enableEditingFromSigned);
+    });
+
     async function loadUdfFile(file) {
         try {
             setStatus('Dosya açılıyor...');
@@ -1931,9 +1952,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     signatureBadge.style.display = 'inline-flex';
                     if (signatureBadgeText) signatureBadgeText.textContent = `E-İmzalı (${sigList.length})`;
                 }
+                setSignedReadOnly(true);
             } else {
                 renderElectronicSeal([]);
                 if (signatureBadge) signatureBadge.style.display = 'none';
+                setSignedReadOnly(false);
             }
 
             // Çok sayfalı döküman sayfa ve önizleme hesaplaması
