@@ -334,13 +334,14 @@ html, body { overflow-x: clip; }
 /* Modern Biçimlendirme Şeridi (Tek Sıra, Derli Toplu & Gizlenebilir) */
 body:not([data-ui-theme="uyap-classic"]) .toolbar {
     min-height: 38px !important;
-    height: 38px !important;
-    padding: 3px 16px !important;
+    height: auto !important;
+    padding: 4px 16px !important;
     background: #f8fafc !important;
     border-bottom: 1px solid #e2e8f0 !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    gap: 4px !important;
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+    row-gap: 4px !important;
+    column-gap: 4px !important;
     align-items: center !important;
     box-sizing: border-box !important;
     transition: all 0.2s ease !important;
@@ -1581,3 +1582,24 @@ body.zen-mode-active:hover .zen-mode-top-bar,
 
 
 
+
+
+/* Araç çubuğu taşma düzeltmeleri: çok satırlı etiketler tek satır, gruplar kırpılmaz */
+body:not([data-ui-theme="uyap-classic"]) .toolbar > * { flex: 0 0 auto; }
+body:not([data-ui-theme="uyap-classic"]) .toolbar .btn-text-multiline br { display: none !important; }
+body:not([data-ui-theme="uyap-classic"]) .toolbar .tool-btn-large,
+body:not([data-ui-theme="uyap-classic"]) .toolbar .tool-btn-mini { white-space: nowrap !important; overflow: visible !important; }
+body:not([data-ui-theme="uyap-classic"]) #group-grafik { height: auto !important; min-height: 28px; overflow: visible !important; }
+body:not([data-ui-theme="uyap-classic"]) .grafik-tools-body { height: auto !important; min-height: 24px; flex-wrap: nowrap !important; }
+body:not([data-ui-theme="uyap-classic"]) .grafik-sub-grid { height: auto !important; }
+body:not([data-ui-theme="uyap-classic"]) #group-harf-denetimi { height: 28px !important; min-height: 0 !important; flex-direction: row !important; align-items: center !important; gap: 2px !important; }
+body:not([data-ui-theme="uyap-classic"]) #group-harf-denetimi .group-label-bottom { display: none !important; }
+body:not([data-ui-theme="uyap-classic"]) .toolbar .quick-styles-group { height: 28px !important; }
+
+/* Cetvel: kaydırmada belge metninin üstünde asılı kalmasın; çalışma alanı kenarına yapışsın */
+.workspace-container .horizontal-ruler {
+    top: -36px !important;
+    margin-top: 0 !important;
+    z-index: 40 !important;
+    box-shadow: 0 1px 0 #e2e8f0, 0 6px 8px -6px rgba(15, 23, 42, 0.18);
+}
