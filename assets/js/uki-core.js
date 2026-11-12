@@ -35,6 +35,11 @@
         return parseFloat(String(cm).replace(',', '.')) * UDF_CONSTANTS.CM_TO_PT;
     }
 
+    // Belge verisi (UDF/DOM) güvensizdir: XML özniteliğine ve HTML'e yazılmadan önce kaçışlanır
+    function escAttr(v) {
+        return String(v == null ? '' : v).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
+    }
+
     function argbToHex(val) {
         if (val === undefined || val === null || val === '') return null;
         const n = parseInt(val, 10);
@@ -631,7 +636,7 @@
         }
         return `<svg class="udf-barcode-svg" width="${totalW}pt" height="${heightPt}pt" viewBox="0 0 ${totalW} ${heightPt}" xmlns="http://www.w3.org/2000/svg" style="display:block;">` +
             rects +
-            `<text x="${(totalW / 2).toFixed(1)}" y="${heightPt - 2}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="9pt" textLength="${Math.round(totalW * 0.5)}" lengthAdjust="spacingAndGlyphs" fill="#000">${data}</text>` +
+            `<text x="${(totalW / 2).toFixed(1)}" y="${heightPt - 2}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="9pt" textLength="${Math.round(totalW * 0.5)}" lengthAdjust="spacingAndGlyphs" fill="#000">${escAttr(data)}</text>` +
             `</svg>`;
     }
 
@@ -1198,6 +1203,7 @@
             const contentsXml = [];
             let lastTextRunIdx = -1;
             let lastTextRunLen = 0;
+            let lastTextRunAttrs = null;
             const textNodes = getTextLeaves(pEl);
 
             if (textNodes.length === 0) {
@@ -1225,7 +1231,7 @@
                     currentOffset += len;
 
                     if (item.tag === 'barcode' || item.barcodeData) {
-                        contentsXml.push(`<barcode barcodeData="${item.barcodeData}" startOffset="${start}" length="1" />`);
+                        contentsXml.push(`<barcode barcodeData="${escAttr(item.barcodeData)}" startOffset="${start}" length="1" />`);
                         continue;
                     }
 
@@ -1243,7 +1249,7 @@
                         const hPt = toPtAttr(item.imgHeight);
                         const wAttr = wPt ? ` width="${wPt}"` : '';
                         const hAttr = hPt ? ` height="${hPt}"` : '';
-                        contentsXml.push(`<image resolver="${imgResolver}" imageData="${item.image}"${wAttr}${hAttr} startOffset="${start}" length="${len}" />`);
+                        contentsXml.push(`<image resolver="${escAttr(imgResolver)}" imageData="${escAttr(item.image)}"${wAttr}${hAttr} startOffset="${start}" length="${len}" />`);
                         continue;
                     }
 
@@ -1258,25 +1264,27 @@
                     if (item.subscript) attrs.push('subscript="true"');
                     if (item.superscript) attrs.push('superscript="true"');
                     attrs.push(`size="${item.size || 12}"`);
-                    attrs.push(`family="${item.family || 'Times New Roman'}"`);
+                    attrs.push(`family="${escAttr(item.family || 'Times New Roman')}"`);
                     attrs.push(`foreground="${item.foreground || -16777216}"`);
                     if (item.background) attrs.push(`background="${hexToArgb(item.background)}"`);
 
-                    const nodeTag = item.tag || 'content';
-                    const nodeResolver = item.resolver ? ` resolver="${item.resolver}"` : ' resolver="hvl-default"';
+                    const nodeTag = /^[a-zA-Z]+$/.test(item.tag || '') ? item.tag : 'content';
+                    const nodeResolver = item.resolver ? ` resolver="${escAttr(item.resolver)}"` : ' resolver="hvl-default"';
                     let extraFieldAttrs = '';
-                    if (item.fieldName) extraFieldAttrs += ` fieldName="${item.fieldName}"`;
-                    if (item.fieldType) extraFieldAttrs += ` fieldType="${item.fieldType}"`;
-                    if (item.isList) extraFieldAttrs += ` isList="${item.isList}"`;
+                    if (item.fieldName) extraFieldAttrs += ` fieldName="${escAttr(item.fieldName)}"`;
+                    if (item.fieldType) extraFieldAttrs += ` fieldType="${escAttr(item.fieldType)}"`;
+                    if (item.isList) extraFieldAttrs += ` isList="${escAttr(item.isList)}"`;
 
-                    contentsXml.push(`<${nodeTag}${nodeResolver}${extraFieldAttrs} ${attrs.join(' ')} />`);
+                    // Eleman birleştirme anında üretilir (paragraf sonu "\n" son metin parçasına eklenebilsin diye)
+                    contentsXml.push(() => `<${nodeTag}${nodeResolver}${extraFieldAttrs} ${attrs.join(' ')} />`);
                     lastTextRunIdx = nodeTag === 'content' ? contentsXml.length - 1 : -1;
+                    lastTextRunAttrs = nodeTag === 'content' ? attrs : null;
                     lastTextRunLen = len;
                 }
                 fullText += '\n';
-                if (lastTextRunIdx >= 0 && lastTextRunIdx === contentsXml.length - 1) {
-                    // son metin parçasının uzunluğunu 1 artır: "\n" aynı biçimi alır
-                    contentsXml[lastTextRunIdx] = contentsXml[lastTextRunIdx].replace(/length="\d+"/, `length="${lastTextRunLen + 1}"`);
+                if (lastTextRunIdx >= 0 && lastTextRunIdx === contentsXml.length - 1 && lastTextRunAttrs) {
+                    // son metin parçasının uzunluğunu 1 artır: "\n" aynı biçimi alır (öznitelik dizisi güncellenir, metin yamanmaz)
+                    lastTextRunAttrs[1] = `length="${lastTextRunLen + 1}"`;
                 } else {
                     contentsXml.push(`<content resolver="hvl-default" startOffset="${currentOffset}" length="1" />`);
                 }
@@ -1284,7 +1292,7 @@
             }
 
             return {
-                xml: `<paragraph LineSpacing="${lineSpacingAttr}" LeftIndent="${leftIndentAttr}" SpaceAbove="${spaceAboveAttr}"${tabSetXml} RightIndent="${rightIndentAttr}" Alignment="${alignCode}" resolver="hvl-default" Hanging="${hangAttr}" SpaceBelow="${spaceBelowAttr}"${fliAttr}${extraParaAttrs}>${contentsXml.join('')}</paragraph>`
+                xml: `<paragraph LineSpacing="${lineSpacingAttr}" LeftIndent="${leftIndentAttr}" SpaceAbove="${spaceAboveAttr}"${tabSetXml} RightIndent="${rightIndentAttr}" Alignment="${alignCode}" resolver="hvl-default" Hanging="${hangAttr}" SpaceBelow="${spaceBelowAttr}"${fliAttr}${extraParaAttrs}>${contentsXml.map(e => (typeof e === 'function' ? e() : e)).join('')}</paragraph>`
             };
         }
 
