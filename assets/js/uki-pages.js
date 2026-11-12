@@ -193,7 +193,7 @@
     }
     function saveSel() {
         const sel = window.getSelection();
-        if (!sel || sel.rangeCount === 0 || !ed.contains(sel.anchorNode) || document.activeElement !== ed) return null;
+        if (!sel || sel.rangeCount === 0 || !sel.anchorNode || !ed.contains(sel.anchorNode)) return null;
         const pos = (node, off) => {
             let total = 0;
             for (const t of textNodes(ed)) {
@@ -204,10 +204,46 @@
         };
         const a = pos(sel.anchorNode, sel.anchorOffset);
         const f = pos(sel.focusNode, sel.focusOffset);
-        return (a < 0 || f < 0) ? null : { a, f };
+        if (a >= 0 && f >= 0) {
+            return { type: 'text', a, f };
+        }
+        // Boş paragraf (<p><br></p>), tablo hücresi veya metin içermeyen eleman seçimi
+        let aNode = sel.anchorNode;
+        let aOff = sel.anchorOffset;
+        let fNode = sel.focusNode || aNode;
+        let fOff = sel.focusOffset || aOff;
+        if (aNode && aNode.nodeType === 1 && aNode.classList && aNode.classList.contains('pb-spacer')) {
+            aNode = aNode.nextSibling || aNode.parentNode;
+            aOff = 0;
+        }
+        if (fNode && fNode.nodeType === 1 && fNode.classList && fNode.classList.contains('pb-spacer')) {
+            fNode = fNode.nextSibling || fNode.parentNode;
+            fOff = 0;
+        }
+        return { type: 'node', anchorNode: aNode, anchorOffset: aOff, focusNode: fNode, focusOffset: fOff };
     }
     function restoreSel(s) {
         if (!s) return;
+        const sel = window.getSelection();
+        if (!sel) return;
+
+        if (s.type === 'node') {
+            if (s.anchorNode && s.anchorNode.isConnected && ed.contains(s.anchorNode)) {
+                try {
+                    const fNode = (s.focusNode && s.focusNode.isConnected && ed.contains(s.focusNode)) ? s.focusNode : s.anchorNode;
+                    const fOff = (s.focusNode && s.focusNode.isConnected) ? s.focusOffset : s.anchorOffset;
+                    const maxA = s.anchorNode.nodeType === 1 ? s.anchorNode.childNodes.length : (s.anchorNode.nodeValue ? s.anchorNode.nodeValue.length : 0);
+                    const maxF = fNode.nodeType === 1 ? fNode.childNodes.length : (fNode.nodeValue ? fNode.nodeValue.length : 0);
+                    sel.setBaseAndExtent(
+                        s.anchorNode, Math.min(s.anchorOffset, maxA),
+                        fNode, Math.min(fOff, maxF)
+                    );
+                    return;
+                } catch (e) {}
+            }
+            return;
+        }
+
         const find = (idx) => {
             let total = 0;
             for (const t of textNodes(ed)) {
@@ -219,8 +255,9 @@
         };
         const a = find(s.a), f = find(s.f);
         if (!a || !f) return;
-        const sel = window.getSelection();
-        sel.setBaseAndExtent(a[0], a[1], f[0], f[1]);
+        try {
+            sel.setBaseAndExtent(a[0], a[1], f[0], f[1]);
+        } catch (e) {}
     }
 
     // ---- Karakter geometrisi ----
@@ -228,7 +265,7 @@
         const r = document.createRange();
         r.setStart(node, off);
         r.setEnd(node, Math.min(off + 1, node.nodeValue.length));
-        const rects = r.getClientRects();
+        const rects = (r.getClientRects && r.getClientRects()) || [];
         return rects.length ? rects[0] : null;
     }
 
@@ -296,6 +333,18 @@
             while (loops++ < 60 && guard++ < 3000) {
                 const r = block.getBoundingClientRect();
                 const top = relTop(r.top);
+                k = Math.max(0, Math.floor((top + 0.5) / g.S));
+                const pageContentTop = k * g.S + g.Mt;
+
+                // 2. ve sonraki sayfalarda (k >= 1), blok sayfa üst kenar boşluğunun (g.Mt) üstünde başlayamaz!
+                if (k >= 1 && top < pageContentTop - 1.5) {
+                    const needed = Math.max(1, Math.round(pageContentTop - top));
+                    const spTop = makeSpacer('div');
+                    spTop.style.height = needed + 'px';
+                    block.parentNode.insertBefore(spTop, block);
+                    continue;
+                }
+
                 // Alt dolgu (paragraf sonrası boşluk) sığmasa da son satır sığıyorsa bölme
                 const padB = block.tagName.toLowerCase() === 'table' ? 0 : (parseFloat(getComputedStyle(block).paddingBottom) || 0);
                 const bottom = relTop(r.bottom) - padB;
@@ -336,8 +385,9 @@
                 }
 
                 // Metin bloğu: satır düzeyinde böl
+                const hasText = textNodes(block).some(n => n.nodeValue.length > 0);
                 const sp = findSplitPoint(block, limit);
-                if (!sp) break; // hiçbir karakter sınırı aşmıyor: sığıyor
+                if (hasText && !sp) break; // metin karakterlerinin tümü sınıra sığıyor
                 if (sp && sp.idx > 0) {
                     const pos = sp.flat[sp.idx];
                     const cr0 = charRect(pos[0], pos[1]);

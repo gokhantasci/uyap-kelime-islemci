@@ -987,6 +987,78 @@ test('Mobil Uyumluluk & Duyarlı Arayüz (Mobile Suite): Akıcı okuma modu, A4 
     dom.window.close();
 });
 
+test('Enter ile yeni sayfaya geçişte dikey üst kenar boşluğu (top margin) ve boş paragraf paritesi', () => {
+    const dom = initDom();
+    dom.window.Range.prototype.getClientRects = () => [];
+    dom.window.Range.prototype.getBoundingClientRect = () => ({ width: 0, height: 0, left: 0, right: 0, top: 0, bottom: 0 });
+    const pagesCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-pages.js'), 'utf8');
+    const editfixCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-editfix.js'), 'utf8');
+    eval(pagesCode);
+    eval(editfixCode);
+
+    const editorEl = dom.window.document.getElementById('editor');
+    editorEl.style.paddingTop = '94.5px';
+    editorEl.style.paddingBottom = '94.5px';
+    editorEl.style.paddingLeft = '56.7px';
+    editorEl.style.paddingRight = '56.7px';
+    Object.defineProperty(editorEl, 'offsetWidth', { value: 794, configurable: true });
+
+    // W = 794 => H = 1123, GAP = 15, S = 1138, Mt = 94.5, Mb = 94.5.
+    // Sayfa 1 limit: 1123 - 94.5 = 1028.5px. Sayfa 2 metin başı (nextTop): 1138 + 94.5 = 1232.5px
+    editorEl.innerHTML = '<p id="p1">Sayfa 1 Metni</p><p id="p2"><br></p>';
+    const p1 = editorEl.querySelector('#p1');
+    const p2 = editorEl.querySelector('#p2');
+
+    // p1: 94.5px .. 1020px (Sayfa 1'e sığıyor)
+    // p2: 1020px .. 1040px (Sayfa 1 limitini 1028.5 aşıyor)
+    editorEl.getBoundingClientRect = () => ({ top: 0, bottom: 2276, left: 0, right: 794, width: 794, height: 2276 });
+    p1.getBoundingClientRect = () => ({ top: 94.5, bottom: 1020, left: 56.7, right: 737.3, width: 680, height: 925.5 });
+    p2.getBoundingClientRect = () => {
+        const prev = p2.previousElementSibling;
+        const offset = (prev && prev.classList.contains('pb-spacer')) ? parseFloat(prev.style.height || 0) : 0;
+        const top = 1020 + offset;
+        return { top, bottom: top + 20, left: 56.7, right: 737.3, width: 680, height: 20 };
+    };
+
+    dom.window.UkiPages.init(editorEl);
+    const pageCount = dom.window.UkiPages.repaginate();
+
+    // Sayfa sayısı 2 olmalı
+    assert.equal(pageCount, 2, 'Boş paragraf Sayfa 2\'ye taştığında sayfa sayısı 2 olmalı');
+
+    // p2'nin hemen önünde pb-spacer bulunmalı
+    const spacer = p2.previousElementSibling;
+    assert.ok(spacer, 'Sayfa 2\'ye geçen p2\'nin önünde spacer olmalı');
+    assert.ok(spacer.classList.contains('pb-spacer'), 'Eklenen eleman pb-spacer olmalı');
+
+    // Spacer yüksekliği p2'yi Sayfa 2'nin üst kenar boşluğuna (nextTop >= 1232px) taşımalı:
+    const spacerH = parseFloat(spacer.style.height);
+    assert.ok(spacerH > 200, `Spacer yüksekliği p2'yi Sayfa 2'ye öteleyecek boyutta olmalı: ${spacerH}px`);
+
+    // p2'nin yeni hesaplanan konumu Sayfa 2'nin üst kenar boşluğuna eşit olmalı (>= 1232px)
+    const newP2Top = p2.getBoundingClientRect().top;
+    assert.ok(newP2Top >= 1232, `p2 Sayfa 2 üst kenar boşluğunda başlamalı: ${newP2Top}px >= 1232px`);
+
+    // 2. Sayfa 2'nin üstünde (1138..1232.5px aralığında, bölme çizgisine yapışık) başlayan blok kontrolü
+    editorEl.innerHTML = '<p id="p_top"><br></p>';
+    const pTop = editorEl.querySelector('#p_top');
+    // pTop Sayfa 2'nin en üstüne yapışık (1145px, yani Sayfa 2'nin 7px altında, 94.5px'lik Mt'nin çok üstünde)
+    pTop.getBoundingClientRect = () => {
+        const prev = pTop.previousElementSibling;
+        const offset = (prev && prev.classList.contains('pb-spacer')) ? parseFloat(prev.style.height || 0) : 0;
+        const top = 1145 + offset;
+        return { top, bottom: top + 20, left: 56.7, right: 737.3, width: 680, height: 20 };
+    };
+
+    dom.window.UkiPages.repaginate();
+    const topSpacer = pTop.previousElementSibling;
+    assert.ok(topSpacer && topSpacer.classList.contains('pb-spacer'), 'Sayfa 2 üst kenar boşluğunun üstünde kalan blok için spacer eklenmeli');
+    assert.ok(pTop.getBoundingClientRect().top >= 1232, 'Blok Sayfa 2 dikey üst kenar boşluğuna (1232.5px) itilmeli');
+
+    dom.window.close();
+});
+
+
 
 
 

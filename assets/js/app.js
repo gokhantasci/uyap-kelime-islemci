@@ -3673,48 +3673,50 @@ Sakarya Yazı İşleri Müdürü – 139329`;
 
     // Tab ve Enter tuşları yönetimi: sekme durağına gitme ve yeni paragrafta özellikleri devralma
     editorEl.addEventListener('keydown', (e) => {
-        // Enter tuşu: Paragraf özelliklerini (girinti, satır aralığı, boşluklar, hizalama ve TabSet) sonraki paragrafa aktar
+        // Enter tuşu: Paragraf özelliklerini sonraki paragrafa aktar ve sayfa düzenini dikey üst kenar boşluğuyla anında yenile
         if (e.key === 'Enter' && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
             const sel = window.getSelection();
-            if (sel && sel.rangeCount > 0) {
-                const node = sel.anchorNode;
-                const currentP = node ? (node.nodeType === Node.ELEMENT_NODE ? node.closest('p') : (node.parentElement ? node.parentElement.closest('p') : null)) : null;
-                if (currentP && editorEl.contains(currentP)) {
-                    const attrs = ['data-fli', 'data-hanging', 'data-li', 'data-ri', 'data-spaceabove', 'data-spacebelow', 'data-linespacing', 'data-tabset'];
-                    const savedAttrs = {};
-                    attrs.forEach(a => {
-                        if (currentP.hasAttribute(a)) savedAttrs[a] = currentP.getAttribute(a);
-                    });
-                    const savedStyles = {
-                        textAlign: currentP.style.textAlign,
-                        textIndent: currentP.style.textIndent,
-                        paddingLeft: currentP.style.paddingLeft,
-                        paddingRight: currentP.style.paddingRight,
-                        lineHeight: currentP.style.lineHeight,
-                        margin: currentP.style.margin,
-                        padding: currentP.style.padding
-                    };
-
-                    setTimeout(() => {
-                        const s = window.getSelection();
-                        if (!s || !s.rangeCount) return;
-                        const nextNode = s.anchorNode;
-                        const newP = nextNode ? (nextNode.nodeType === Node.ELEMENT_NODE ? nextNode.closest('p') : (nextNode.parentElement ? nextNode.parentElement.closest('p') : null)) : null;
-                        if (newP && newP !== currentP && editorEl.contains(newP)) {
-                            Object.entries(savedAttrs).forEach(([k, v]) => newP.setAttribute(k, v));
-                            Object.entries(savedStyles).forEach(([k, v]) => {
-                                if (v) newP.style[k] = v;
-                            });
-                            if (typeof UkiCore !== 'undefined' && UkiCore.layoutTabs) {
-                                UkiCore.layoutTabs(editorEl);
-                            }
-                            if (typeof recalculatePagesAndThumbnails === 'function') {
-                                recalculatePagesAndThumbnails();
-                            }
-                        }
-                    }, 0);
-                }
+            const node = (sel && sel.rangeCount > 0) ? sel.anchorNode : null;
+            const currentP = node ? (node.nodeType === Node.ELEMENT_NODE ? node.closest('p') : (node.parentElement ? node.parentElement.closest('p') : null)) : null;
+            const attrs = ['data-fli', 'data-hanging', 'data-li', 'data-ri', 'data-spaceabove', 'data-spacebelow', 'data-linespacing', 'data-tabset'];
+            const savedAttrs = {};
+            const savedStyles = {};
+            if (currentP && editorEl.contains(currentP)) {
+                attrs.forEach(a => {
+                    if (currentP.hasAttribute(a)) savedAttrs[a] = currentP.getAttribute(a);
+                });
+                Object.assign(savedStyles, {
+                    textAlign: currentP.style.textAlign,
+                    textIndent: currentP.style.textIndent,
+                    paddingLeft: currentP.style.paddingLeft,
+                    paddingRight: currentP.style.paddingRight,
+                    lineHeight: currentP.style.lineHeight,
+                    margin: currentP.style.margin,
+                    padding: currentP.style.padding
+                });
             }
+
+            setTimeout(() => {
+                const s = window.getSelection();
+                if (s && s.rangeCount > 0) {
+                    const nextNode = s.anchorNode;
+                    const newP = nextNode ? (nextNode.nodeType === Node.ELEMENT_NODE ? nextNode.closest('p') : (nextNode.parentElement ? nextNode.parentElement.closest('p') : null)) : null;
+                    if (newP && newP !== currentP && editorEl.contains(newP)) {
+                        Object.entries(savedAttrs).forEach(([k, v]) => newP.setAttribute(k, v));
+                        Object.entries(savedStyles).forEach(([k, v]) => {
+                            if (v) newP.style[k] = v;
+                        });
+                    }
+                }
+                if (typeof UkiCore !== 'undefined' && UkiCore.layoutTabs) {
+                    UkiCore.layoutTabs(editorEl);
+                }
+                if (typeof recalculatePagesAndThumbnails === 'function') {
+                    recalculatePagesAndThumbnails();
+                } else if (window.UkiPages && typeof window.UkiPages.repaginate === 'function') {
+                    window.UkiPages.repaginate();
+                }
+            }, 0);
             return;
         }
 

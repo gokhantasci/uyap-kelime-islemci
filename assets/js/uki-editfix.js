@@ -255,6 +255,20 @@
         return null;
     }
 
+    function firstTargetAfter(node) {
+        const t = firstTextAfter(node);
+        if (t) return { node: t, offset: 0 };
+        // Metin düğümü yoksa (örn: boş <p><br></p>), spacer'dan sonraki ilk düzenlenebilir bloğu bul
+        let curr = node.nextSibling;
+        while (curr) {
+            if (curr.nodeType === 1 && (!curr.matches || !curr.matches(SKIP))) {
+                return { node: curr, offset: 0 };
+            }
+            curr = curr.nextSibling;
+        }
+        return null;
+    }
+
     function keepCaretOutOfSpacers() {
         if (fixingCaret) return;
         const sel = window.getSelection();
@@ -270,10 +284,10 @@
             spacer = node.parentElement.closest('.pb-spacer');
         }
         if (!spacer) return;
-        const target = firstTextAfter(spacer);
+        const target = firstTargetAfter(spacer);
         if (!target) return;
         fixingCaret = true;
-        try { sel.collapse(target, 0); } finally { fixingCaret = false; }
+        try { sel.collapse(target.node, target.offset); } finally { fixingCaret = false; }
     }
 
     // ---- Sekme boşluğuna (udf-tab) tıklanıldığında imleci doğru konuma yerleştirme ----
