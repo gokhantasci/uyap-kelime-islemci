@@ -530,7 +530,15 @@
         const tabParts = tabSet ? tabSet.split(',')[0].split(':') : [];
         const tabPosPt = tabParts[0] ? parseFloat(tabParts[0]) : (right ? 255 : 0);
         const startPg = (he.startPage !== undefined && he.startPage !== null) ? he.startPage : (he.attrs && he.attrs.startPage ? parseInt(he.attrs.startPage, 10) : 1);
-        return { left, right, startPage: startPg, tabSet, tabPosPt, attrs: he.attrs || {}, paragraphs: he.paragraphs };
+        // Başlık yazı stili: dosyadaki ilk metin parçasından (masaüstü UYAP bunu aynen çizer)
+        const firstTextRun = ((he.paragraphs.map(p => (p.runs || []).find(r => r.text && String(r.text).trim())).find(Boolean)) || {});
+        const hAttrFg = he.attrs && he.attrs.foreground !== undefined ? argbToHex(he.attrs.foreground) : null;
+        const style = {
+            size: parseFloat(firstTextRun.size) || 12,
+            bold: !!firstTextRun.bold,
+            color: firstTextRun.foreground || hAttrFg || '#000000'
+        };
+        return { left, right, startPage: startPg, tabSet, tabPosPt, attrs: he.attrs || {}, paragraphs: he.paragraphs, style };
     }
 
     /**
@@ -601,7 +609,7 @@
                 modules += (j % 2 === 0 ? '1' : '0').repeat(parseInt(pat[j], 10));
             }
         }
-        const modW = 1.0;
+        const modW = 0.84; // masaüstü UYAP: 11 haneli Code128 ~131pt genişlik (ölçüldü)
         const totalW = Math.round(modules.length * modW);
         const barH = heightPt - 13;
         let rects = '';
@@ -623,7 +631,7 @@
         }
         return `<svg class="udf-barcode-svg" width="${totalW}pt" height="${heightPt}pt" viewBox="0 0 ${totalW} ${heightPt}" xmlns="http://www.w3.org/2000/svg" style="display:block;">` +
             rects +
-            `<text x="${(totalW / 2).toFixed(1)}" y="${heightPt - 2}" text-anchor="middle" font-family="monospace, Courier, sans-serif" font-size="9pt" fill="#000">${data}</text>` +
+            `<text x="${(totalW / 2).toFixed(1)}" y="${heightPt - 2}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="9pt" textLength="${Math.round(totalW * 0.5)}" lengthAdjust="spacingAndGlyphs" fill="#000">${data}</text>` +
             `</svg>`;
     }
 
@@ -686,6 +694,8 @@
             pEl.style.textIndent = effFli + 'pt';
         }
 
+        // Masaüstü UYAP: madde işareti/numara, ilk metin parçasının kalınlığını taşır (düz metinde normal)
+        const markerBold = !!((runs.find(r => r.text && String(r.text).trim()) || {}).bold);
         // Madde işareti veya numaralandırma ön eki
         if (p.bulleted) {
             let bulletChar = '●';
@@ -694,7 +704,7 @@
             const marker = document.createElement('span');
             marker.className = 'udf-list-marker';
             marker.setAttribute('contenteditable', 'false');
-            marker.style.cssText = 'user-select:none;display:inline-block;width:18pt;font-weight:bold;';
+            marker.style.cssText = 'user-select:none;display:inline-block;width:18pt;font-weight:' + (markerBold ? 'bold' : 'normal') + ';';
             marker.textContent = bulletChar + ' ';
             pEl.appendChild(marker);
         } else if (p.numbered) {
@@ -709,17 +719,14 @@
             const marker = document.createElement('span');
             marker.className = 'udf-list-marker';
             marker.setAttribute('contenteditable', 'false');
-            marker.style.cssText = 'user-select:none;display:inline-block;width:18pt;font-weight:bold;';
+            marker.style.cssText = 'user-select:none;display:inline-block;width:18pt;font-weight:' + (markerBold ? 'bold' : 'normal') + ';';
             marker.textContent = numText + ' ';
             pEl.appendChild(marker);
         }
 
         if (fullText.replace(/[\r\n]+/g, '') === '' && !runs.some(r => r.imageData || r.barcodeData || r.type === 'barcode')) {
             const bgRun = runs.find(r => r.background);
-            if (bgRun && bgRun.background) {
-                pEl.style.backgroundColor = bgRun.background;
-                pEl.setAttribute('data-bg', bgRun.background);
-            }
+            if (bgRun && bgRun.background) pEl.setAttribute('data-bg', bgRun.background);
             const fgRun = runs.find(r => r.foreground);
             if (fgRun && fgRun.foreground) {
                 pEl.setAttribute('data-fg', fgRun.foreground);
@@ -740,6 +747,15 @@
                 } else if (!p.bulleted && !p.numbered) {
                     pEl.innerHTML = '<br>';
                 }
+            }
+            // Masaüstü UYAP boş satır sonunun arka planını tüm satıra değil, satır boyunca ince dikey bir çizgi olarak çizer;
+            // ardışık boş paragraflarda çizgiler birleşip aşağı doğru uzar
+            if (bgRun && bgRun.background) {
+                const bgMark = document.createElement('span');
+                bgMark.className = 'udf-empty-mark';
+                bgMark.setAttribute('contenteditable', 'false');
+                bgMark.style.cssText = 'display:inline-block;width:2px;height:1.1633em;vertical-align:top;background-color:' + bgRun.background + ';';
+                pEl.insertBefore(bgMark, pEl.firstChild);
             }
             pEl.style.fontSize = effFirstSize + 'pt';
             pEl.style.lineHeight = '1.1633';
@@ -1017,11 +1033,15 @@
 
             const hRunsXml = [];
             let hFullText = '';
+            const hs = hi.style || null;
+            const hsSize = hs ? Math.round(hs.size) : 10;
+            const hsBold = hs ? (hs.bold ? 'true' : 'false') : 'true';
+            const hsFg = hs ? hexToArgb(hs.color || '#000000') : '-8355712';
 
             if (leftText) {
                 const lStart = currentOffset + hFullText.length;
                 hFullText += leftText;
-                hRunsXml.push(`<content resolver="hvl-default" size="10" bold="true" foreground="-8355712" family="Times New Roman" startOffset="${lStart}" length="${leftText.length}" />`);
+                hRunsXml.push(`<content resolver="hvl-default" size="${hsSize}" bold="${hsBold}" foreground="${hsFg}" family="Times New Roman" startOffset="${lStart}" length="${leftText.length}" />`);
             }
 
             if (rightText) {
@@ -1031,16 +1051,16 @@
                 if (labelMatch) {
                     const label = '\t' + labelMatch[1];
                     const val = labelMatch[2];
-                    hRunsXml.push(`<content resolver="hvl-default" size="10" bold="true" foreground="-8355712" family="Times New Roman" startOffset="${tabStart}" length="${label.length}" />`);
+                    hRunsXml.push(`<content resolver="hvl-default" size="${hsSize}" bold="${hsBold}" foreground="${hsFg}" family="Times New Roman" startOffset="${tabStart}" length="${label.length}" />`);
                     hFullText += labelMatch[1];
                     if (val) {
                         const valStart = currentOffset + hFullText.length;
                         hFullText += val;
-                        hRunsXml.push(`<content resolver="hvl-default" size="10" bold="false" foreground="-8355712" family="Times New Roman" startOffset="${valStart}" length="${val.length}" />`);
+                        hRunsXml.push(`<content resolver="hvl-default" size="${hsSize}" bold="false" foreground="${hsFg}" family="Times New Roman" startOffset="${valStart}" length="${val.length}" />`);
                     }
                 } else {
                     const rTextWithTab = '\t' + rightText;
-                    hRunsXml.push(`<content resolver="hvl-default" size="10" bold="true" foreground="-8355712" family="Times New Roman" startOffset="${tabStart}" length="${rTextWithTab.length}" />`);
+                    hRunsXml.push(`<content resolver="hvl-default" size="${hsSize}" bold="${hsBold}" foreground="${hsFg}" family="Times New Roman" startOffset="${tabStart}" length="${rTextWithTab.length}" />`);
                     hFullText += rightText;
                 }
             }
@@ -1176,6 +1196,8 @@
             }
 
             const contentsXml = [];
+            let lastTextRunIdx = -1;
+            let lastTextRunLen = 0;
             const textNodes = getTextLeaves(pEl);
 
             if (textNodes.length === 0) {
@@ -1248,9 +1270,16 @@
                     if (item.isList) extraFieldAttrs += ` isList="${item.isList}"`;
 
                     contentsXml.push(`<${nodeTag}${nodeResolver}${extraFieldAttrs} ${attrs.join(' ')} />`);
+                    lastTextRunIdx = nodeTag === 'content' ? contentsXml.length - 1 : -1;
+                    lastTextRunLen = len;
                 }
                 fullText += '\n';
-                contentsXml.push(`<content resolver="hvl-default" startOffset="${currentOffset}" length="1" />`);
+                if (lastTextRunIdx >= 0 && lastTextRunIdx === contentsXml.length - 1) {
+                    // son metin parçasının uzunluğunu 1 artır: "\n" aynı biçimi alır
+                    contentsXml[lastTextRunIdx] = contentsXml[lastTextRunIdx].replace(/length="\d+"/, `length="${lastTextRunLen + 1}"`);
+                } else {
+                    contentsXml.push(`<content resolver="hvl-default" startOffset="${currentOffset}" length="1" />`);
+                }
                 currentOffset += 1;
             }
 

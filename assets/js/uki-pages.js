@@ -717,6 +717,13 @@
                     }
                 }
 
+                const hStyle = cfg.header && cfg.header.style;
+                if (hStyle) {
+                    h.style.setProperty('font-size', (hStyle.size * 0.98).toFixed(2) + 'pt', 'important');
+                    h.style.setProperty('color', hStyle.color || '#000', 'important');
+                    h.style.setProperty('font-weight', hStyle.bold ? '700' : '400', 'important');
+                    leftEl.style.setProperty('font-weight', hStyle.bold ? '700' : '400', 'important');
+                }
                 h.appendChild(leftEl);
                 h.appendChild(rightEl);
                 layer.appendChild(h);
@@ -1017,7 +1024,7 @@
             cfg.pageNumberAlign = saved.pageNumberAlign || 'right';
             cfg.showPageNumberOnFirstPage = saved.showPageNumberOnFirstPage !== false;
         },
-        getHeader() { return cfg.header ? { left: cfg.header.left, right: cfg.header.right, startPage: cfg.startPage } : null; },
+        getHeader() { return cfg.header ? { left: cfg.header.left, right: cfg.header.right, startPage: cfg.startPage, style: cfg.header.style || null } : null; },
         setHeader(hData) {
             if (!hData || (!hData.left && !hData.right)) {
                 cfg.header = null;
@@ -1032,7 +1039,7 @@
                         { text: right ? String.fromCharCode(9) + right : '', bold: true }
                     ]
                 }];
-                cfg.header = { left, right, startPage, paras };
+                cfg.header = { left, right, startPage, paras, style: (hData.style || (cfg.header && cfg.header.style) || null) };
                 cfg.startPage = startPage;
             }
             try { document.dispatchEvent(new (window.Event || Event)('uki-document-change')); } catch(e) {}

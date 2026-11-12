@@ -82,8 +82,11 @@ test('test metni.udf: Liste işaretleri (●, 1., 1), 2)), barkod ve girintiler 
     assert.ok(bcode.textContent.includes('12345678911'), 'Barkod verisi metin olarak yazılmalı');
 
     // 6. Arka plan rengi (P#9 ve P#10)
-    const coloredP = ps.find(p => p.style.backgroundColor && p.style.backgroundColor.includes('255, 160'));
-    assert.ok(coloredP, 'Turuncu arka planlı boş paragraf bulunmalı');
+    // Masaüstü UYAP boş satır sonu arka planını tüm satıra değil, yalnızca ince bir işarete boyar
+    const coloredP = ps.find(p => p.getAttribute('data-bg') && !p.style.backgroundColor && [...p.querySelectorAll('.udf-empty-mark')].some(m => m.style.backgroundColor.includes('255, 160')));
+    assert.ok(coloredP, 'Turuncu arka planlı boş paragraf bulunmalı (data-bg korunur)');
+    const mark = coloredP.querySelector('.udf-empty-mark');
+    assert.ok(mark && mark.style.backgroundColor.includes('255, 160'), 'Turuncu arka plan yalnızca ince işaretçide görünmeli');
 
     env.close();
 });
