@@ -568,22 +568,50 @@ TEMEL YARGISAL KURALLAR:
         return await chromeSession.prompt(userPrompt);
     }
 
+    // WebGPU asistan modeli 657.com.tr/modeller/ altında yayınlanır (CORS açık); Hugging Face'e bağımlı değiliz.
+    const GPU_MODEL_ID = 'Qwen3-0.6B-q4f16_1-MLC';
+    const GPU_MODEL_BASE = 'https://657.com.tr/modeller/resolve/' + GPU_MODEL_ID + '/';
+    const WEBLLM_URL = 'https://esm.run/@mlc-ai/web-llm@0.2.86';
+
     async function loadGpuModel() {
         const button = document.getElementById('btn-load-gpu-model');
         const status = document.getElementById('gpu-model-progress');
         button.disabled = true;
         try {
             if (!navigator.gpu) throw new Error('Bu tarayıcıda WebGPU yok.');
-            const webllm = await import('https://esm.run/@mlc-ai/web-llm@0.2.88');
-            const record = webllm.prebuiltAppConfig.model_list.find(m => /Qwen3-0.6B.*q4f16/.test(m.model_id))
-                || webllm.prebuiltAppConfig.model_list.find(m => /Llama-3.2-1B-Instruct.*q4f16/.test(m.model_id));
-            if (!record) throw new Error('Uygun küçük model yapılandırması bulunamadı.');
-            gpuEngine = await webllm.CreateMLCEngine(record.model_id, {initProgressCallback:p => { status.textContent = p.text; }});
+            const adapter = await navigator.gpu.requestAdapter();
+            if (!adapter) throw new Error('Kullanılabilir WebGPU aygıtı bulunamadı.');
+            if (!adapter.features.has('shader-f16')) throw new Error('GPU bu modelin gerektirdiği shader-f16 özelliğini desteklemiyor.');
+            status.textContent = 'WebGPU kütüphanesi yükleniyor…';
+            const webllm = await import(WEBLLM_URL);
+            const onProgress = (p) => { status.textContent = p.text; };
+            const hostedConfig = {
+                model_list: [{
+                    model_id: GPU_MODEL_ID,
+                    model: GPU_MODEL_BASE,
+                    model_lib: GPU_MODEL_BASE + 'model.wasm',
+                    overrides: { context_window_size: 4096 },
+                    required_features: ['shader-f16']
+                }]
+            };
+            let usedId = GPU_MODEL_ID;
+            try {
+                // Önce 657.com.tr'de yayınlanan model (~360 MB, ilk indirmeden sonra tarayıcı önbelleğinden)
+                status.textContent = 'Model 657.com.tr üzerinden indiriliyor (~360 MB, bir kez)…';
+                gpuEngine = await webllm.CreateMLCEngine(GPU_MODEL_ID, { appConfig: hostedConfig, initProgressCallback: onProgress });
+            } catch (hostedErr) {
+                console.warn('657.com.tr modeli yüklenemedi, yerleşik kayda dönülüyor:', hostedErr);
+                const record = webllm.prebuiltAppConfig.model_list.find(m => /Qwen3-0.6B.*q4f16/.test(m.model_id))
+                    || webllm.prebuiltAppConfig.model_list.find(m => /Llama-3.2-1B-Instruct.*q4f16/.test(m.model_id));
+                if (!record) throw hostedErr;
+                usedId = record.model_id;
+                gpuEngine = await webllm.CreateMLCEngine(record.model_id, { initProgressCallback: onProgress });
+            }
             aiStatus.activeBackend = 'webgpu';
-            status.textContent = record.model_id+' hazır. Belge cihazınızda işlenir.';
+            status.textContent = usedId + ' hazır. Belge cihazınızda işlenir.';
             button.textContent = 'WebGPU modeli hazır';
             updateTopbarBadge();
-        } catch (err) { status.textContent = err.message; button.disabled = false; }
+        } catch (err) { status.textContent = (err && err.message) || String(err); button.disabled = false; }
     }
     async function promptGpu(system, text) {
         const result = await gpuEngine.chat.completions.create({messages:[{role:'system',content:system},{role:'user',content:text}],max_tokens:512});
