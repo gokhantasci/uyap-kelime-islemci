@@ -275,8 +275,12 @@
 
             if (!signatures || signatures.length === 0) {
                 this.hide();
+                this.removePageMedal();
                 return;
             }
+
+            // Sayfa 1 sol üst köşesine otantik UYAP Kırmızı Mühür Madalyasını iliştir (udf.adalet.gov.tr Screenshot 2)
+            this.renderPageMedal(signatures);
 
             let namesHtml = '';
             signatures.forEach(s => {
@@ -318,6 +322,69 @@
             if (sealContainer) {
                 sealContainer.style.display = 'none';
             }
+            this.removePageMedal();
+        },
+
+        renderPageMedal: function(signatures) {
+            this.removePageMedal();
+            if (!signatures || signatures.length === 0) return;
+
+            const pageWrapper = document.getElementById('page-wrapper');
+            if (!pageWrapper) return;
+
+            const medalEl = document.createElement('div');
+            medalEl.id = 'ude-page-seal-ribbon';
+            medalEl.className = 'ude-page-seal-ribbon';
+            medalEl.setAttribute('role', 'button');
+            medalEl.setAttribute('tabindex', '0');
+            medalEl.title = `Elektronik İmzalı Belge (${signatures.length} İmza - İncelemek için tıklayın)`;
+
+            medalEl.innerHTML = `
+                <div class="ude-medal-container">
+                    <svg width="40" height="52" viewBox="0 0 44 58" fill="none">
+                        <!-- Çift Kırmızı Kurdele (Notched Ribbon Tails) -->
+                        <path d="M14 26L7 55L19 49L23 55L20 28" fill="#c5221f" stroke="#7f1d1d" stroke-width="0.8"/>
+                        <path d="M30 26L37 55L25 49L21 55L24 28" fill="#dc2626" stroke="#991b1b" stroke-width="0.8"/>
+                        <!-- Altın Madalya ve Çift Çerçeve -->
+                        <circle cx="22" cy="20" r="17" fill="url(#udeMedalGoldGrad)" stroke="#b45309" stroke-width="1.8"/>
+                        <circle cx="22" cy="20" r="14" fill="none" stroke="#fde047" stroke-width="0.9" stroke-dasharray="2 1.5"/>
+                        <!-- Adalet Terazisi / Mühür Rozeti -->
+                        <path d="M22 10V26M15 15L29 15M15 15L12 21H18L15 15ZM29 15L26 21H32L29 15Z" stroke="#78350f" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="22" cy="20" r="2" fill="#78350f"/>
+                        <defs>
+                            <linearGradient id="udeMedalGoldGrad" x1="8" y1="6" x2="36" y2="34" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#fef08a"/>
+                                <stop offset="0.5" stop-color="#f59e0b"/>
+                                <stop offset="1" stop-color="#b45309"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="ude-medal-counter">${signatures.length}</div>
+                </div>
+            `;
+
+            medalEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (typeof onClickCallback === 'function') {
+                    onClickCallback(currentSignatures);
+                }
+            });
+
+            medalEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (typeof onClickCallback === 'function') {
+                        onClickCallback(currentSignatures);
+                    }
+                }
+            });
+
+            pageWrapper.appendChild(medalEl);
+        },
+
+        removePageMedal: function() {
+            const existing = document.getElementById('ude-page-seal-ribbon');
+            if (existing) existing.remove();
         },
 
         resetPosition: function() {

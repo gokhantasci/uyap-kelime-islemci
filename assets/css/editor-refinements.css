@@ -1,42 +1,612 @@
 /* Hallmark · pre-emit critique: P4 H4 E4 S5 R5 V3
- * Mevcut Astryx tokenları, kompakt belge araçları; marka renkleri korunur. */
+ * UDE (udf.adalet.gov.tr) Resmi Tasarım Dili ve Astryx İyileştirmeleri
+ */
 html, body { overflow-x: clip; }
-#group-harf-denetimi { position: relative; display: flex; flex-flow: row nowrap; align-items: center; gap: 2px; padding: 0 5px; background: transparent; border: 0; box-shadow: none; height: auto; }
-#group-harf-denetimi button { white-space: nowrap; font-family: var(--ax-font-sans); }
-.language-settings { position: relative; }
-.language-settings summary { list-style: none; cursor: pointer; padding: 5px; color: var(--ax-color-neutral-700); border-radius: var(--ax-radius-xs); }
-.language-settings summary::-webkit-details-marker { display: none; }
-.language-settings summary:hover { background: var(--ax-surface-hover); }
-.language-settings-panel { position: absolute; top: 100%; right: 0; z-index: 150; min-width: 255px; padding: 10px; background: var(--ax-surface-default); border: 1px solid var(--ax-border-default); border-radius: var(--ax-radius-md); box-shadow: var(--ax-shadow-lg); }
-.language-settings-panel label { display: flex; align-items: center; gap: 7px; padding: 7px; color: var(--ax-color-neutral-800); font: 12px var(--ax-font-sans); }
-.language-dialog { max-width: 620px; max-height: 90vh; background: var(--ax-surface-default); color: var(--ax-color-neutral-800); }
-.language-body { overflow-y: auto; padding: 20px; font: 13px/1.6 var(--ax-font-sans); }
-.language-body h4 { margin: 16px 0 6px; font-style: normal; font-size: 14px; color: var(--ax-color-neutral-900); }
-.language-body h4:first-child { margin-top: 0; }
-.language-body p { margin: 6px 0 12px; color: var(--ax-color-neutral-600); }
-.language-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
-.language-actions input { min-width: 0; flex: 1; padding: 8px; }
-.language-actions button { white-space: nowrap; }
-#writing-sources { display: flex; flex-wrap: wrap; gap: 6px 16px; }
-.language-body a { color: var(--ax-color-primary); text-decoration: underline; }
-#writing-results { max-height: 220px; overflow: auto; }
-#tdk-result { overflow-wrap: anywhere; }
-[data-unsaved="true"] { border-bottom: 2px solid var(--ax-color-primary) !important; }
-.pb-header { border-bottom: 0; padding-bottom: 0; font: 700 9.8pt 'Times New Roman', serif; color: #808080; white-space: nowrap; }
-.pb-header-left { white-space: nowrap; font-weight: 700; }
-.pb-header-right { white-space: nowrap; }
-.a4-watermark-layer, .floating-seal-widget { user-select: none; }
-input, select, textarea { accent-color: var(--ax-color-primary); }
-:is(button, summary, a, input, select, textarea):focus-visible { outline: 2px solid var(--ax-border-focus); outline-offset: 2px; }
-button:disabled { opacity: .55; cursor: wait; }
-@media (max-width: 768px) {
-    .language-dialog { max-width: calc(100vw - 24px); }
-    .language-body { padding: 14px; }
-    .language-settings-panel { position: fixed; top: 110px; right: 12px; min-width: 0; width: min(280px, calc(100vw - 24px)); }
-    .toolbar { justify-content: flex-start !important; padding-left: 8px !important; padding-right: 8px !important; overflow-x: auto; }
+
+/* ==========================================================================
+   1. UDE (udf.adalet.gov.tr) Tuval ve Sayfa Zemin Standartları
+   ========================================================================== */
+:root {
+    --ude-primary: #1e40af;
+    --ude-primary-hover: #1d4ed8;
+    --ude-primary-bg: #eff6ff;
+    --ude-canvas-bg: #eaedf1;           /* udf.adalet.gov.tr resmi sayfa tuvali */
+    --ude-toolbar-bg: #ffffff;
+    --ude-border: #e2e8f0;
+    --ude-border-strong: #cbd5e1;
+    --ude-text: #1f2937;
+    --ude-text-secondary: #4b5563;
+    --ude-text-muted: #6b7280;
+    --ude-success: #16a34a;
+    --ude-success-bg: #f6ffed;
+    --ude-success-border: #b7eb8f;
 }
-@media print {
-    .a4-watermark-layer, .udf-watermark, .watermark-text,
-    .e-sign-seal-badge, .udf-seal-stamp, .floating-seal-widget,
-    #uki-language-dialog { display: none !important; }
+
+[data-theme="dark"] {
+    --ude-canvas-bg: #090d16;
+    --ude-toolbar-bg: #111827;
+    --ude-border: #1e293b;
+    --ude-border-strong: #334155;
+    --ude-text: #f8fafc;
+    --ude-text-secondary: #94a3b8;
+    --ude-text-muted: #64748b;
+    --ude-success-bg: #064e3b;
+    --ude-success-border: #059669;
+}
+
+/* Sayfa Tuval Alanı */
+.workspace-container {
+    background-color: var(--ude-canvas-bg) !important;
+}
+
+.page {
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid var(--ude-border) !important;
+    position: relative;
+}
+
+/* ==========================================================================
+   2. UDE Resmi Üst Belge İşlem Çubuğu (udf.adalet.gov.tr Screenshot 1 Paritesi)
+   ========================================================================== */
+.ude-top-viewer-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--ude-toolbar-bg);
+    border-bottom: 1px solid var(--ude-border);
+    padding: 6px 16px;
+    min-height: 52px;
+    box-sizing: border-box;
+    z-index: 80;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ude-toolbar-actions-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.ude-viewer-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 4px 10px;
+    min-width: 50px;
+    height: 42px;
+    cursor: pointer;
+    color: var(--ude-text-secondary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.ude-viewer-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #e2e8f0;
+}
+
+.ude-viewer-btn:active {
+    background: #e2e8f0;
+    transform: translateY(1px);
+}
+
+.ude-viewer-btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-bottom: 2px;
+    color: currentColor;
+}
+
+.ude-viewer-btn-label {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+/* Zoom Dropdown Açılır Kutusu */
+.ude-zoom-box {
+    display: flex;
+    align-items: center;
+    margin-left: 6px;
+}
+
+.ude-zoom-dropdown {
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--ude-border-strong);
+    border-radius: 6px;
+    background-color: var(--ude-toolbar-bg);
+    color: var(--ude-text);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.ude-zoom-dropdown:hover {
+    border-color: var(--ude-primary);
+}
+
+.ude-toolbar-divider {
+    width: 1px;
+    height: 28px;
+    background-color: var(--ude-border);
+    margin: 0 6px;
+}
+
+/* Sağ Bölüm Rozet ve Hızlı Eylem Butonları */
+.ude-toolbar-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ude-pill-feature {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
+    transition: all 0.15s ease;
+    font-family: system-ui, sans-serif;
+}
+
+.ude-pill-feature:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.ude-pill-ai {
+    background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+
+.ude-pill-ai:hover {
+    background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
+    border-color: #93c5fd;
+    color: #1e40af;
+}
+
+.ude-pill-kvkk {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #15803d;
+}
+
+.ude-pill-kvkk:hover {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+}
+
+/* ==========================================================================
+   3. Otantik UYAP Kırmızı Mühür Rozeti (udf.adalet.gov.tr Screenshot 2 Paritesi)
+   ========================================================================== */
+.ude-page-seal-ribbon {
+    position: absolute;
+    top: 14px;
+    left: 18px;
+    z-index: 25;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.15s ease, filter 0.15s ease;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.18));
+}
+
+.ude-page-seal-ribbon:hover {
+    transform: scale(1.06);
+    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.25));
+}
+
+.ude-medal-container {
+    position: relative;
+    width: 44px;
+    height: 56px;
+}
+
+.ude-medal-counter {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: #1d4ed8;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    font-family: system-ui, sans-serif;
+}
+
+/* ==========================================================================
+   4. Birebir "İmza Detayları" Modalı (udf.adalet.gov.tr Screenshot 1 Paritesi)
+   ========================================================================== */
+.ude-sign-dialog {
+    max-width: 540px !important;
+    border-radius: 10px !important;
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+.ude-sign-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--ude-border);
+    background: var(--ude-toolbar-bg);
+}
+
+.ude-sign-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ude-text);
+}
+
+.ude-sign-body {
+    padding: 20px;
+    background: #ffffff;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+[data-theme="dark"] .ude-sign-body {
+    background: #111827;
+}
+
+.ude-sign-top-card {
+    background: var(--ude-success-bg);
+    border: 1px solid var(--ude-success-border);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.ude-sign-icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    flex-shrink: 0;
+}
+
+.ude-sign-top-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ude-sign-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-family: system-ui, sans-serif;
+}
+
+[data-theme="dark"] .ude-sign-name {
+    color: #f8fafc;
+}
+
+.ude-sign-badge {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ude-success);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ude-sign-section {
+    margin-bottom: 18px;
+}
+
+.ude-sign-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #8c8c8c;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-family: system-ui, sans-serif;
+}
+
+.ude-sign-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 13px;
+    border-bottom: 1px dashed #f1f5f9;
+}
+
+[data-theme="dark"] .ude-sign-row {
+    border-bottom-color: #1e293b;
+}
+
+.ude-sign-row-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #64748b;
+}
+
+.ude-sign-row-val {
+    font-weight: 600;
+    color: #1e293b;
+    text-align: right;
+}
+
+[data-theme="dark"] .ude-sign-row-val {
+    color: #f1f5f9;
+}
+
+.ude-sign-security-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    margin-top: 6px;
+    font-size: 12.5px;
+}
+
+[data-theme="dark"] .ude-sign-security-box {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.ude-btn-verify {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #1e40af;
+    transition: all 0.15s ease;
+}
+
+.ude-btn-verify:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+
+.ude-sign-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-top: 1px solid var(--ude-border);
+    background: #f8fafc;
+}
+
+[data-theme="dark"] .ude-sign-footer {
+    background: #111827;
+}
+
+/* ==========================================================================
+   5. "Menülerde ara..." Command Palette (udf.adalet.gov.tr Screenshot 3 Paritesi)
+   ========================================================================== */
+.ude-palette-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 12vh;
+    animation: udeFadeIn 0.15s ease-out;
+}
+
+.ude-palette-dialog {
+    width: 520px;
+    max-width: calc(100vw - 32px);
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: udeScaleIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="dark"] .ude-palette-dialog {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
+}
+
+.ude-palette-search-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+[data-theme="dark"] .ude-palette-search-row {
+    border-bottom-color: #334155;
+}
+
+.ude-palette-search-icon {
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.ude-palette-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    color: #0f172a;
+    background: transparent;
+    font-family: inherit;
+}
+
+[data-theme="dark"] .ude-palette-input {
+    color: #f8fafc;
+}
+
+.ude-palette-esc-badge {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+}
+
+[data-theme="dark"] .ude-palette-esc-badge {
+    background: #334155;
+    border-color: #475569;
+    color: #cbd5e1;
+}
+
+.ude-palette-results {
+    max-height: 380px;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+.ude-palette-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 18px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    user-select: none;
+}
+
+.ude-palette-item:hover,
+.ude-palette-item.selected {
+    background-color: #f0f7ff;
+}
+
+[data-theme="dark"] .ude-palette-item:hover,
+[data-theme="dark"] .ude-palette-item.selected {
+    background-color: #2e3d55;
+}
+
+.ude-palette-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ude-palette-item-icon {
+    width: 22px;
+    text-align: center;
+    font-size: 15px;
+    color: #64748b;
+}
+
+.ude-palette-item-title {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+[data-theme="dark"] .ude-palette-item-title {
+    color: #f1f5f9;
+}
+
+.ude-palette-item-path {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.ude-palette-empty {
+    text-align: center;
+    padding: 28px 16px;
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+@keyframes udeFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes udeScaleIn {
+    from { opacity: 0; transform: scale(0.97) translateY(-6px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ==========================================================================
+   6. Diğer UDE Refinement Kuralları
+   ========================================================================== */
+.a4-watermark-layer, .floating-seal-widget { user-select: none; }
+input, select, textarea { accent-color: var(--ude-primary); }
+:is(button, summary, a, input, select, textarea):focus-visible { outline: 2px solid var(--ude-primary); outline-offset: 2px; }
+
+@media (max-width: 768px) {
+    .ude-top-viewer-toolbar {
+        padding: 4px 8px;
+        min-height: 44px;
+    }
+    .ude-viewer-btn {
+        min-width: 42px;
+        height: 38px;
+        padding: 2px 6px;
+    }
+    .ude-viewer-btn-icon {
+        width: 16px;
+        height: 16px;
+    }
+    .ude-viewer-btn-label {
+        font-size: 9.5px;
+    }
+    .ude-toolbar-actions-right {
+        overflow-x: auto;
+        width: 100%;
+        padding-top: 4px;
+        border-top: 1px dashed var(--ude-border);
+    }
 }

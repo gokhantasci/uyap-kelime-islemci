@@ -233,6 +233,98 @@
             </div>
         </header>
 
+        <!-- UDE RESMİ ÜST İŞLEM ÇUBUĞU (udf.adalet.gov.tr Paritesi) -->
+        <div class="ude-top-viewer-toolbar" id="ude-top-viewer-toolbar" role="region" aria-label="Belge Hızlı İşlem Çubuğu">
+            <div class="ude-toolbar-actions-left">
+                <button type="button" class="ude-viewer-btn" id="ude-btn-open" title="Belge Aç (UDF / Word / MD) - Ctrl+O">
+                    <span class="ude-viewer-btn-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+                        </svg>
+                    </span>
+                    <span class="ude-viewer-btn-label">Aç</span>
+                </button>
+                <button type="button" class="ude-viewer-btn" id="ude-btn-print" title="Yazdır / PDF Olarak Kaydet - Ctrl+P">
+                    <span class="ude-viewer-btn-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
+                        </svg>
+                    </span>
+                    <span class="ude-viewer-btn-label">Yazdır</span>
+                </button>
+                <button type="button" class="ude-viewer-btn" id="ude-btn-pdf" title="PDF Olarak İndir">
+                    <span class="ude-viewer-btn-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="12" y1="18" x2="12" y2="12"></line>
+                            <polyline points="9 15 12 18 15 15"></polyline>
+                        </svg>
+                    </span>
+                    <span class="ude-viewer-btn-label">PDF İndir</span>
+                </button>
+                <button type="button" class="ude-viewer-btn" id="ude-btn-save" title="UDF Olarak Kaydet - Ctrl+S">
+                    <span class="ude-viewer-btn-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                    </span>
+                    <span class="ude-viewer-btn-label">Kaydet</span>
+                </button>
+                <button type="button" class="ude-viewer-btn" id="ude-btn-sign" title="Elektronik İmzaları İncele veya İmzala">
+                    <span class="ude-viewer-btn-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                    </span>
+                    <span class="ude-viewer-btn-label">İmzala</span>
+                </button>
+                <button type="button" class="ude-viewer-btn" id="ude-btn-search" title="Menülerde ve Belgede Ara (Ctrl+K / Alt+M)">
+                    <span class="ude-viewer-btn-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                    </span>
+                    <span class="ude-viewer-btn-label">Bul</span>
+                </button>
+
+                <div class="ude-toolbar-divider"></div>
+
+                <div class="ude-zoom-box">
+                    <select id="ude-zoom-select" class="ude-zoom-dropdown" title="Sayfa Yakınlaştırma (Zoom)">
+                        <option value="50">50 %</option>
+                        <option value="75">75 %</option>
+                        <option value="100" selected>100 %</option>
+                        <option value="125">125 %</option>
+                        <option value="150">150 %</option>
+                        <option value="200">200 %</option>
+                        <option value="fit-width">Genişliğe Sığdır</option>
+                        <option value="fit-page">Sayfaya Sığdır</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="ude-toolbar-actions-right">
+                <button type="button" class="ude-pill-feature ude-pill-ai" id="ude-pill-ai" title="Yapay Zeka Hukuk Asistanı (Alt+A)">
+                    <span>✨</span>
+                    <span>AI Asistan</span>
+                </button>
+                <button type="button" class="ude-pill-feature ude-pill-kvkk" id="ude-pill-kvkk" title="Kişisel Verileri Arındır (KVKK)">
+                    <span>🔒</span>
+                    <span>KVKK Maskeleme</span>
+                </button>
+                <button type="button" class="ude-pill-feature" id="ude-pill-docx" title="Microsoft Word (.docx) Olarak İndir">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span>Word (.docx)</span>
+                </button>
+            </div>
+        </div>
+
         <!-- KLASİK UYAP MENÜ ÇUBUĞU (Yalnızca UYAP Tasarım Modunda Görünür) -->
         <div class="uyap-classic-menubar" role="menubar">
             <div class="uyap-menu-item" tabindex="0">
@@ -1096,28 +1188,48 @@
     </div>
 
     <!-- ==========================================================================
-         MODAL 2: ELEKTRONİK İMZALAR (E-SIGNATURES DETAILS)
+         MODAL: "MENÜLERDE ARA..." COMMAND PALETTE (udf.adalet.gov.tr Screenshot 3)
+         ========================================================================== -->
+    <div id="modal-command-palette" class="ude-palette-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-label="Menülerde ara">
+        <div class="ude-palette-dialog">
+            <div class="ude-palette-search-row">
+                <svg class="ude-palette-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="ude-palette-input" class="ude-palette-input" placeholder="Menülerde ara..." autocomplete="off" spellcheck="false">
+                <span id="ude-palette-esc-badge" class="ude-palette-esc-badge" title="Kapat (Esc)">Esc</span>
+            </div>
+            <div id="ude-palette-results" class="ude-palette-results" role="listbox">
+                <!-- Dinamik Menü Eylemleri -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         MODAL 2: ELEKTRONİK İMZA DETAYLARI (udf.adalet.gov.tr Screenshot 1 Paritesi)
          ========================================================================== -->
     <div id="modal-signatures" class="ax-modal-backdrop" style="display: none;">
-        <div class="ax-modal-dialog signatures-dialog">
-            <div class="ax-modal-header">
-                <h3>Elektronik İmzalar</h3>
+        <div class="ax-modal-dialog signatures-dialog ude-sign-dialog">
+            <div class="ax-modal-header ude-sign-header">
+                <h3>İmza Detayları</h3>
                 <button type="button" class="ax-modal-close" data-close-modal>&times;</button>
             </div>
 
-            <div class="ax-modal-body">
-                <div id="sign-meta-bar" class="sign-meta-bar">
+            <div class="ax-modal-body ude-sign-body">
+                <div id="sign-meta-bar" class="sign-meta-bar" style="margin-bottom: 12px; font-size: 11px; color: #64748b; display: flex; gap: 16px;">
                     <div><b>Doğrulama Kodu:</b> <span id="sign-dogrulama-kodu">-</span></div>
                     <div><b>Sicil No:</b> <span id="sign-sicil-no">-</span></div>
                 </div>
 
                 <div id="signatures-list" class="signatures-list">
-                    <!-- Dinamik imza kartları buraya yüklenir -->
+                    <!-- Dinamik UDE imza kartları buraya yüklenir -->
                 </div>
             </div>
 
-            <div class="ax-modal-footer" style="justify-content: space-between;">
+            <div class="ax-modal-footer ude-sign-footer">
                 <button type="button" id="btn-download-sgn" class="tool-btn-secondary" title="Orijinal PKCS#7 İmza Dosyasını İndir">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     İmza Dosyasını İndir (.sgn)
                 </button>
                 <button type="button" class="tool-btn-primary" data-close-modal>Kapat</button>

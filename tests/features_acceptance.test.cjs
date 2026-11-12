@@ -1077,10 +1077,67 @@ test('Enter ile yeni sayfaya geçişte dikey üst kenar boşluğu (top margin) v
     dom.window.close();
 });
 
+test('UDE (udf.adalet.gov.tr) Tasarım Paritesi: Üst Belge Çubuğu, Menülerde Ara Paleti ve İmza Detayları', async () => {
+    const fs = require('fs');
+    const path = require('path');
+    const { JSDOM } = require('jsdom');
+    const assert = require('assert');
 
+    const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf-8');
+    const dom = new JSDOM(html, {
+        runScripts: 'outside-only',
+        url: 'http://localhost/'
+    });
 
+    const doc = dom.window.document;
 
+    // 1. UDE Üst Belge İşlem Çubuğu Kontrolleri
+    const toolbar = doc.getElementById('ude-top-viewer-toolbar');
+    assert.ok(toolbar, 'ude-top-viewer-toolbar DOM\'da mevcut olmalı');
+    assert.ok(doc.getElementById('ude-btn-open'), 'ude-btn-open (Aç) butonu mevcut olmalı');
+    assert.ok(doc.getElementById('ude-btn-print'), 'ude-btn-print (Yazdır) butonu mevcut olmalı');
+    assert.ok(doc.getElementById('ude-btn-pdf'), 'ude-btn-pdf (PDF İndir) butonu mevcut olmalı');
+    assert.ok(doc.getElementById('ude-btn-save'), 'ude-btn-save (Kaydet) butonu mevcut olmalı');
+    assert.ok(doc.getElementById('ude-btn-sign'), 'ude-btn-sign (İmzala) butonu mevcut olmalı');
+    assert.ok(doc.getElementById('ude-btn-search'), 'ude-btn-search (Bul) butonu mevcut olmalı');
+    assert.ok(doc.getElementById('ude-zoom-select'), 'ude-zoom-select (Zoom) seçicisi mevcut olmalı');
 
+    // 2. Menülerde Ara Command Palette Kontrolleri
+    const palette = doc.getElementById('modal-command-palette');
+    assert.ok(palette, 'modal-command-palette DOM\'da mevcut olmalı');
+    const paletteInput = doc.getElementById('ude-palette-input');
+    assert.ok(paletteInput, 'ude-palette-input mevcut olmalı');
+    assert.equal(paletteInput.getAttribute('placeholder'), 'Menülerde ara...');
+    assert.ok(doc.getElementById('ude-palette-esc-badge'), 'ude-palette-esc-badge mevcut olmalı');
 
+    // 3. İmza Detayları Modalı Kontrolleri
+    const signModal = doc.getElementById('modal-signatures');
+    assert.ok(signModal, 'modal-signatures mevcut olmalı');
+    assert.ok(signModal.classList.contains('ude-sign-dialog') || signModal.querySelector('.ude-sign-dialog'), 'UDE imza dialog sınıfına sahip olmalı');
+    const modalTitle = signModal.querySelector('h3');
+    assert.ok(modalTitle && modalTitle.textContent.includes('İmza Detayları'), 'Başlık "İmza Detayları" olmalı');
+
+    // 4. UkiSeal Sayfa Madalyası Kontrolleri
+    const ukiSealCode = fs.readFileSync(path.join(__dirname, '../assets/js/uki-seal.js'), 'utf-8');
+    dom.window.eval(ukiSealCode);
+    assert.ok(dom.window.UkiSeal, 'UkiSeal pencerede tanımlı olmalı');
+    assert.equal(typeof dom.window.UkiSeal.renderPageMedal, 'function', 'renderPageMedal fonksiyonu tanımlı olmalı');
+    assert.equal(typeof dom.window.UkiSeal.removePageMedal, 'function', 'removePageMedal fonksiyonu tanımlı olmalı');
+
+    // Sahte imza ile sayfa madalyası testi
+    const pageWrapper = doc.getElementById('page-wrapper');
+    assert.ok(pageWrapper, 'page-wrapper DOM\'da olmalı');
+    dom.window.UkiSeal.setSignatures([
+        { name: 'AYŞENUR ÇİÇEK', type: 'Nitelikli Elektronik İmza', date: '2025-07-20' },
+        { name: 'AYŞE KAYA SAYDAM', type: 'Nitelikli Elektronik İmza', date: '2025-07-20' }
+    ]);
+    const ribbonSeal = doc.getElementById('ude-page-seal-ribbon');
+    assert.ok(ribbonSeal, 'Elektronik imza olduğunda ude-page-seal-ribbon sayfaya eklenmeli');
+    const counterBadge = ribbonSeal.querySelector('.ude-medal-counter');
+    assert.ok(counterBadge, 'Mühür madalyasında imza sayısı sayacı bulunmalı');
+    assert.equal(counterBadge.textContent.trim(), '2', '2 imza için sayaç 2 olmalı');
+
+    dom.window.close();
+});
 
 
