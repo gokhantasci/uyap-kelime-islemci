@@ -5680,6 +5680,20 @@ function openColorPicker(pickerId, ev) {
             path: 'Araçlar >',
             icon: '🌐',
             action: () => window.openEmbedGuideModal && window.openEmbedGuideModal()
+        },
+        {
+            id: 'udf-share',
+            title: 'UDF Yükle ve Paylaş (30 Dk Geçici Kod)',
+            path: 'Dosya >',
+            icon: '📤',
+            action: () => window.UkiShare && window.UkiShare.openShareModal()
+        },
+        {
+            id: 'udf-code-open',
+            title: 'Erişim Kodu ile Belge Aç',
+            path: 'Dosya >',
+            icon: '🔑',
+            action: () => window.UkiShare && window.UkiShare.openAccessCodeModal()
         }
     ];
 
@@ -5930,6 +5944,21 @@ function openColorPicker(pickerId, ev) {
             udePillDocx.addEventListener('click', () => {
                 const btnDocx = document.getElementById('btn-export-docx');
                 if (btnDocx) btnDocx.click();
+            });
+        }
+
+        const udePillShare = document.getElementById('ude-pill-share');
+        const udePillAccessCode = document.getElementById('ude-pill-access-code');
+
+        if (udePillShare) {
+            udePillShare.addEventListener('click', () => {
+                if (window.UkiShare && window.UkiShare.openShareModal) window.UkiShare.openShareModal();
+            });
+        }
+
+        if (udePillAccessCode) {
+            udePillAccessCode.addEventListener('click', () => {
+                if (window.UkiShare && window.UkiShare.openAccessCodeModal) window.UkiShare.openAccessCodeModal();
             });
         }
     }

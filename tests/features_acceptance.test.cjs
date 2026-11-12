@@ -1140,4 +1140,85 @@ test('UDE (udf.adalet.gov.tr) Tasarım Paritesi: Üst Belge Çubuğu, Menülerde
     dom.window.close();
 });
 
+test('UkiShare: UDF Yükle ve 30 Dakikalık Geçici Kod ile Paylaş (Zero Hetzner • Strict UDF Only)', async () => {
+    const fs = require('fs');
+    const path = require('path');
+    const { JSDOM } = require('jsdom');
+    const assert = require('assert');
+
+    const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf-8');
+    const dom = new JSDOM(html, {
+        runScripts: 'outside-only',
+        url: 'http://localhost/'
+    });
+
+    const doc = dom.window.document;
+
+    // 1. DOM Element Kontrolleri
+    assert.ok(doc.getElementById('ude-pill-share'), 'ude-pill-share butonu araç çubuğunda mevcut olmalı');
+    assert.ok(doc.getElementById('ude-pill-access-code'), 'ude-pill-access-code butonu mevcut olmalı');
+    assert.ok(doc.getElementById('modal-udf-share'), 'modal-udf-share modalı mevcut olmalı');
+    assert.ok(doc.getElementById('modal-udf-access-code'), 'modal-udf-access-code modalı mevcut olmalı');
+    assert.ok(doc.getElementById('ude-share-countdown-banner'), 'ude-share-countdown-banner mevcut olmalı');
+    assert.ok(doc.getElementById('ude-share-dropzone'), 'ude-share-dropzone sürükle-bırak alanı mevcut olmalı');
+
+    // 2. JSZip ve UkiShare Kodunu Yükle
+    const jszipCode = fs.readFileSync(path.join(__dirname, '../assets/vendor/jszip.min.js'), 'utf-8');
+    const ukiShareCode = fs.readFileSync(path.join(__dirname, '../assets/js/uki-share.js'), 'utf-8');
+    dom.window.eval(jszipCode);
+    dom.window.eval(ukiShareCode);
+
+    const UkiShare = dom.window.UkiShare;
+    assert.ok(UkiShare, 'UkiShare pencerede tanımlı olmalı');
+
+    // 3. Katı UDF Format Kontrolü (Non-UDF Reddi)
+    const fakeDocx = { name: 'karar.docx' };
+    await assert.rejects(
+        async () => await UkiShare.validateUdf(fakeDocx),
+        /Yalnızca UYAP Doküman Formatı \(\.udf\) dosyaları kabul edilmektedir/
+    );
+
+    const fakePdf = { name: 'tutanak.pdf' };
+    await assert.rejects(
+        async () => await UkiShare.validateUdf(fakePdf),
+        /Yalnızca UYAP Doküman Formatı \(\.udf\) dosyaları kabul edilmektedir/
+    );
+
+    // 4. Gerçek UDF ile Paylaşım Oluşturma
+    const sampleUdfBuffer = fs.readFileSync(path.join(__dirname, '../examples/ornek-metin.udf'));
+    const arrayBuffer = sampleUdfBuffer.buffer.slice(sampleUdfBuffer.byteOffset, sampleUdfBuffer.byteOffset + sampleUdfBuffer.byteLength);
+
+    const shareData = await UkiShare.createShare(arrayBuffer, 'ornek-metin.udf');
+    assert.ok(shareData, 'createShare sonuç döndürmeli');
+    assert.match(shareData.code, /^\d{6}$/, 'Erişim kodu 6 haneli olmalı');
+    assert.equal(shareData.minutes, 30, 'Süre 30 dakika olarak belirtilmeli');
+    assert.ok(shareData.expiresAt > Date.now(), 'Geçerlilik süresi gelecekte olmalı');
+    assert.ok(shareData.expiresAt <= Date.now() + 30 * 60 * 1000 + 1000, 'Geçerlilik süresi en fazla 30 dakika olmalı');
+    assert.ok(shareData.link.includes('#udfpaylas='), 'Bağlantı #udfpaylas= hash parametresi içermeli (Hetzner sunucusuna gitmez)');
+
+    // 5. Doğru Kod ile Çözümleme
+    const resolved = await UkiShare.resolveShare(shareData.link);
+    assert.ok(resolved && resolved.buffer, 'Doğru kod ve link ile belge çözülmeli');
+    const decBytes = new Uint8Array(resolved.buffer);
+    assert.equal(decBytes[0], 0x50, 'Çözülen dosya PK ZIP başlığına sahip olmalı');
+    assert.equal(decBytes[1], 0x4B);
+
+    // 6. 30 Dakika Sonra Süre Aşımı (TTL) Kuralı
+    const expiredPayload = {
+        v: 1,
+        fn: 'eski-karar.udf',
+        sz: 100,
+        exp: Date.now() - 60000, // 1 dakika önce süresi dolmuş
+        d: 'AAAA'
+    };
+    const expiredLink = `http://localhost/#udfpaylas=${encodeURIComponent(JSON.stringify(expiredPayload))}&kod=123456`;
+    await assert.rejects(
+        async () => await UkiShare.resolveShare(expiredLink),
+        /30 dakikalık süresi.*dolmuştur/
+    );
+
+    dom.window.close();
+});
+
+
 
