@@ -36,7 +36,7 @@ html, body { overflow-x: clip; }
 
 /* Sayfa Tuval Alanı */
 .workspace-container {
-    background-color: var(--ude-canvas-bg) !important;
+    background-color: var(--ude-canvas-bg);
 }
 
 .page {
@@ -429,7 +429,6 @@ body:not([data-ui-theme="uyap-classic"]) .toolbar #zoom-select {
 }
 
 .a4-page {
-    background-color: #ffffff !important;
     box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04) !important;
     border: 1px solid #d1d5db !important;
 }
@@ -1639,3 +1638,17 @@ body:not([data-ui-theme="uyap-classic"]) #group-grafik { display: none !importan
 body.ude-signed-readonly .toolbar,
 body.ude-signed-readonly .ude-toolbar-actions-right { display: none !important; }
 body.ude-signed-readonly #editor { cursor: default; }
+
+
+/* Renk paleti: daha geniş, çok renkli ızgara + özel renk satırı */
+.uki-palette-popover { width: 292px !important; max-height: calc(100vh - 24px); overflow-y: auto; }
+.uki-palette-popover .uki-palette-grid { grid-template-columns: repeat(8, 1fr); gap: 6px; }
+.uki-palette-popover .uki-palette-swatch { width: 26px; height: 26px; }
+.uki-palette-header { user-select: none; }
+.uki-palette-custom { display: flex; align-items: center; gap: 8px; margin: 2px 0 10px; }
+.uki-palette-customlabel { font-size: 11.5px; font-weight: 600; flex: 1; color: var(--ax-color-neutral-700, #334155); }
+.uki-palette-colorinput { width: 36px; height: 28px; padding: 0; border: 1px solid #cbd5e1; border-radius: 6px; background: none; cursor: pointer; }
+.uki-palette-hex { width: 78px; height: 28px; padding: 0 6px; font: 12px/1 ui-monospace, Consolas, monospace; border: 1px solid #cbd5e1; border-radius: 6px; text-transform: lowercase; }
+.uki-palette-hex.invalid { border-color: #ef4444; background: #fef2f2; }
+.uki-palette-recentlabel { font-size: 11px; color: #64748b; margin: 0 0 6px; }
+.ax-modal-header { user-select: none; cursor: grab; }

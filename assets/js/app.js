@@ -2051,6 +2051,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function buildCurrentUdfBlob() {
+        const pageProps = currentDocModel ? (currentDocModel.pageProperties || {}) : {};
+        const origZip = currentDocModel ? currentDocModel.zipInstance : null;
+        const liveConfig = (window.UkiPages && window.UkiPages.getConfig) ? window.UkiPages.getConfig() : {};
+        const liveHeader = (window.UkiPages && window.UkiPages.getHeader) ? window.UkiPages.getHeader() : null;
+        const docWebId = liveConfig.webId || (currentDocModel && currentDocModel.webId) || '';
+        return UkiCore.exportUdfBlob(editorEl, Object.assign({}, pageProps, {
+            headerInfo: liveHeader || (currentDocModel && (currentDocModel.headerInfo || currentDocModel.headerElement)),
+            footerInfo: liveConfig,
+            webId: docWebId,
+            footerElement: currentDocModel ? currentDocModel.footerElement : null
+        }), origZip);
+    }
+    window.__ukiBuildUdfBlob = buildCurrentUdfBlob;
+    window.__ukiDocTitle = () => (docTitleInput ? docTitleInput.value.trim() : '') || 'belge';
+
     async function triggerSave() {
         try {
             setStatus('UDF oluşturuluyor...');
@@ -3995,6 +4011,13 @@ Sakarya Yazı İşleri Müdürü – 139329`;
     // ====================================================
     // RENK PALETLERİ VE HAZIR SEÇENEKLER (SAYFA / TUVAL / YAZI)
     // ====================================================
+    function setCanvasBg(c) {
+        if (typeof workspaceContainerEl === 'undefined' || !workspaceContainerEl) return;
+        workspaceContainerEl.style.backgroundColor = c || '';
+        if (c) workspaceContainerEl.style.setProperty('--ax-surface-canvas', c);
+        else workspaceContainerEl.style.removeProperty('--ax-surface-canvas');
+    }
+
     let activeColorPopover = null;
 
     function closeColorPopover() {
@@ -4087,7 +4110,7 @@ Sakarya Yazı İşleri Müdürü – 139329`;
         localStorage.removeItem('uki-page-color');
 
         if (workspaceContainerEl) {
-            workspaceContainerEl.style.backgroundColor = '#1f819a';
+            setCanvasBg('#1f819a');
         }
         localStorage.removeItem('uki-canvas-color');
 
@@ -4164,7 +4187,7 @@ function openColorPicker(pickerId, ev) {
                 getCurrent: () => (workspaceContainerEl && workspaceContainerEl.style.backgroundColor) || localStorage.getItem('uki-canvas-color') || '#1f819a',
                 defaultColor: '#1f819a',
                 apply: (c, label) => {
-                    if (workspaceContainerEl) workspaceContainerEl.style.backgroundColor = c;
+                    if (workspaceContainerEl) setCanvasBg(c);
                     localStorage.setItem('uki-canvas-color', c);
                     input.value = c;
                     showToast(`Tuval Rengi: ${label}`, 'info');
@@ -4212,6 +4235,17 @@ function openColorPicker(pickerId, ev) {
             triggerNativeColorPicker(pickerId, ev);
             return;
         }
+
+
+        const EXTRA = {
+            'page-color-picker': ['#fffbeb:Açık Sarı','#fef2f2:Açık Pembe','#fdf4ff:Açık Lila','#ecfeff:Açık Turkuaz','#f0f9ff:Gök Mavisi','#f5f5f4:Taş Grisi','#e7e5e4:Duman','#fef9c3:Limon Sarısı','#dcfce7:Nane','#e0e7ff:Lavanta','#fce7f3:Gül Pembesi','#d1d5db:Gri','#334155:Koyu Arduvaz','#1f2937:Antrasit','#111827:Gece','#000000:Siyah'],
+            'canvas-color-picker': ['#eaedf1:UYAP Açık Gri (Resmî UDE)','#ffffff:Beyaz','#f1f5f9:Buz','#cbd5e1:Gümüş','#94a3b8:Çelik','#64748b:Arduvaz','#475569:Koyu Arduvaz','#0e7490:Petrol','#0369a1:Deniz Mavisi','#1d4ed8:Kraliyet Mavisi','#6d28d9:Mor','#a21caf:Fuşya','#be123c:Gül Kırmızısı','#b45309:Amber','#4d7c0f:Zeytin','#047857:Orman','#27272a:Kömür','#000000:Siyah'],
+            'text-color-picker': ['#0f172a:Gece Mavisi','#b91c1c:Koyu Kırmızı','#c2410c:Kiremit','#a16207:Hardal','#15803d:Koyu Yeşil','#0f766e:Petrol Yeşili','#0369a1:Deniz Mavisi','#4338ca:İndigo','#a21caf:Fuşya','#be123c:Gül','#52525b:Çelik Grisi','#a1a1aa:Açık Gri']
+        };
+        (EXTRA[pickerId] || []).forEach(x => {
+            const [hex, name] = x.split(':');
+            if (!config.colors.some(c => c.hex.toLowerCase() === hex)) config.colors.push({ hex, name });
+        });
 
         // Popover DOM
         const popover = document.createElement('div');
@@ -4265,15 +4299,69 @@ function openColorPicker(pickerId, ev) {
         const footer = document.createElement('div');
         footer.className = 'uki-palette-footer';
 
-        const customBtn = document.createElement('button');
-        customBtn.type = 'button';
-        customBtn.className = 'uki-palette-btn';
-        customBtn.textContent = '🎨 Özel Renk...';
-        customBtn.title = 'Tüm renk skalasından özel renk seçin';
-        customBtn.onclick = (e) => {
-            e.stopPropagation();
-            triggerNativeColorPicker(pickerId, ev);
+        const customWrap = document.createElement('div');
+        customWrap.className = 'uki-palette-custom';
+        const customInput = document.createElement('input');
+        customInput.type = 'color';
+        customInput.className = 'uki-palette-colorinput';
+        customInput.title = 'Özel renk seç';
+        const hexInput = document.createElement('input');
+        hexInput.type = 'text';
+        hexInput.className = 'uki-palette-hex';
+        hexInput.maxLength = 7;
+        hexInput.placeholder = '#RRGGBB';
+        hexInput.setAttribute('aria-label', 'Onaltılık renk kodu');
+        const normHex = (v) => { v = String(v || '').trim(); if (/^[0-9a-f]{6}$/i.test(v)) v = '#' + v; return /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : null; };
+        const startHex = normHex(curColor) || (() => { const m = /rgb\((\d+),\s*(\d+),\s*(\d+)/.exec(curColor || ''); return m ? '#' + [m[1], m[2], m[3]].map(n => Number(n).toString(16).padStart(2, '0')).join('') : '#000000'; })();
+        customInput.value = startHex;
+        hexInput.value = startHex;
+        const applyCustom = (hex, commit) => {
+            config.apply(hex, 'Özel (' + hex + ')');
+            customInput.value = hex;
+            hexInput.value = hex;
+            if (commit) {
+                try {
+                    const rec = JSON.parse(localStorage.getItem('uki-recent-colors') || '[]').filter(x => x !== hex);
+                    rec.unshift(hex);
+                    localStorage.setItem('uki-recent-colors', JSON.stringify(rec.slice(0, 10)));
+                } catch (_) { /* yoksay */ }
+            }
         };
+        customInput.addEventListener('input', () => applyCustom(customInput.value, false));
+        customInput.addEventListener('change', () => applyCustom(customInput.value, true));
+        hexInput.addEventListener('keydown', (e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') { const h = normHex(hexInput.value); if (h) applyCustom(h, true); else hexInput.classList.add('invalid'); }
+        });
+        hexInput.addEventListener('input', () => hexInput.classList.remove('invalid'));
+        const customLabel = document.createElement('span');
+        customLabel.className = 'uki-palette-customlabel';
+        customLabel.textContent = 'Özel renk';
+        customWrap.appendChild(customLabel);
+        customWrap.appendChild(customInput);
+        customWrap.appendChild(hexInput);
+        popover.appendChild(customWrap);
+
+        let recent = [];
+        try { recent = JSON.parse(localStorage.getItem('uki-recent-colors') || '[]'); } catch (_) { recent = []; }
+        if (recent.length) {
+            const rl = document.createElement('div');
+            rl.className = 'uki-palette-recentlabel';
+            rl.textContent = 'Son kullanılan özel renkler';
+            popover.appendChild(rl);
+            const rg = document.createElement('div');
+            rg.className = 'uki-palette-grid uki-palette-recent';
+            recent.forEach((hex) => {
+                const sw = document.createElement('button');
+                sw.type = 'button';
+                sw.className = 'uki-palette-swatch';
+                sw.style.backgroundColor = hex;
+                sw.title = hex;
+                sw.onclick = (e) => { e.stopPropagation(); applyCustom(hex, true); };
+                rg.appendChild(sw);
+            });
+            popover.appendChild(rg);
+        }
 
         const resetBtn = document.createElement('button');
         resetBtn.type = 'button';
@@ -4286,7 +4374,6 @@ function openColorPicker(pickerId, ev) {
             closeColorPopover();
         };
 
-        footer.appendChild(customBtn);
         footer.appendChild(resetBtn);
 
         const resetAllBtn = document.createElement('button');
@@ -4313,13 +4400,14 @@ function openColorPicker(pickerId, ev) {
         const e = ev || window.event;
         if (e) {
             const target = e.currentTarget || e.target;
-            if (target && typeof target.getBoundingClientRect === 'function') {
-                const rect = target.getBoundingClientRect();
-                if (rect.right + 260 <= window.innerWidth) {
+            const trect = target && typeof target.getBoundingClientRect === 'function' ? target.getBoundingClientRect() : null;
+            if (trect && trect.width > 0 && trect.height > 0 && trect.right > 0) {
+                const rect = trect;
+                if (rect.right + 300 <= window.innerWidth) {
                     posX = rect.right + 8;
                     posY = Math.max(12, rect.top - 10);
-                } else if (rect.left - 260 >= 12) {
-                    posX = rect.left - 260 - 8;
+                } else if (rect.left - 300 >= 12) {
+                    posX = rect.left - 300 - 8;
                     posY = Math.max(12, rect.top - 10);
                 } else {
                     posX = Math.max(12, rect.left);
@@ -4332,7 +4420,7 @@ function openColorPicker(pickerId, ev) {
         }
 
         // Ekran taşma kontrolleri
-        const popW = 250;
+        const popW = 292;
         const popH = popover.offsetHeight || 220;
         if (posX + popW > window.innerWidth - 12) posX = window.innerWidth - popW - 12;
         if (posX < 12) posX = 12;
@@ -4342,6 +4430,7 @@ function openColorPicker(pickerId, ev) {
 
         popover.style.left = `${Math.round(posX)}px`;
         popover.style.top = `${Math.round(posY)}px`;
+        if (window.UkiWinDrag) window.UkiWinDrag.attachFixed(popover, header, 'color-popover');
     }
     window.openColorPicker = openColorPicker;
 
@@ -4366,14 +4455,14 @@ function openColorPicker(pickerId, ev) {
     if (canvasColorPicker && workspaceContainerEl) {
         canvasColorPicker.addEventListener('input', () => {
             const color = canvasColorPicker.value;
-            workspaceContainerEl.style.backgroundColor = color;
+            setCanvasBg(color);
             localStorage.setItem('uki-canvas-color', color);
         });
 
         const savedCanvasColor = localStorage.getItem('uki-canvas-color');
         if (savedCanvasColor) {
             canvasColorPicker.value = savedCanvasColor;
-            workspaceContainerEl.style.backgroundColor = savedCanvasColor;
+            setCanvasBg(savedCanvasColor);
         }
     }
 
@@ -4391,7 +4480,7 @@ function openColorPicker(pickerId, ev) {
         // 2. Tuval / Masaüstü Rengi -> Varsayılan Tema Rengi (--ax-surface-canvas)
         localStorage.removeItem('uki-canvas-color');
         if (workspaceContainerEl) {
-            workspaceContainerEl.style.backgroundColor = '';
+            setCanvasBg('');
         }
         if (canvasColorPicker) {
             canvasColorPicker.value = '#1f819a';
@@ -6019,8 +6108,10 @@ function openColorPicker(pickerId, ev) {
                 const doc = currentDocModel || window.currentDocModel;
                 if (doc && doc.isSigned) {
                     showSignaturesModal();
+                } else if (window.UkiEsign) {
+                    window.UkiEsign.open();
                 } else {
-                    showToast('Yeni belge imzalamak için Araçlar > E-İmza veya UYAP e-imza kartınızı bağlayın.', 'info');
+                    showToast('E-imza modülü yüklenemedi.', 'error');
                 }
             });
         }
