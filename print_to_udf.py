@@ -211,7 +211,12 @@ def convert_pdf_to_udf(pdf_input, udf_output_path=None):
                 align = "3"
 
             para_runs = []
-            for line in b["lines"]:
+            # Satır sonu mu (yeni paragraf) yoksa kelime kaydırması mı (aynı paragraf, boşlukla birleştir)?
+            # Kaydırma: satır blok sağ kenarına ulaşıyor ve blok geniş / birden çok satır kenara ulaşıyor.
+            blk_lines = b["lines"]
+            edge_lines = sum(1 for l in blk_lines if l["bbox"][2] >= b_x1 - 4)
+            reflow_ok = edge_lines >= 2 or (b_x1 - b_x0) >= page_w * 0.5
+            for li, line in enumerate(blk_lines):
                 # Satır metnini birleştir
                 line_text = "".join(s.get("text", "") for s in line["spans"])
                 # UYAP İki Nokta (Colon) Tab Hizalaması Tespiti
@@ -260,6 +265,18 @@ def convert_pdf_to_udf(pdf_input, udf_output_path=None):
                     })
                 full_text += " "
                 current_offset += 1
+
+                # Satır sonu işleme: kaydırmaysa son parçaya boşluk ekle, değilse paragrafı bitir
+                is_last_line = (li == len(blk_lines) - 1)
+                soft_wrap = reflow_ok and (line["bbox"][2] >= b_x1 - 4) and not is_last_line
+                if para_runs and not is_last_line:
+                    if soft_wrap:
+                        if not para_runs[-1]["text"].endswith(" "):
+                            para_runs[-1]["text"] += " "
+                            para_runs[-1]["length"] += 1
+                    else:
+                        paras.append({"align": align, "runs": para_runs})
+                        para_runs = []
 
             if para_runs:
                 paras.append({"align": align, "runs": para_runs})
