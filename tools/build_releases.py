@@ -9,9 +9,11 @@ Tüm release varlıklarını (WordPress eklentisi, Offline Web Editor, Windows D
 import os
 import zipfile
 import shutil
+import json
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 RELEASES_DIR = os.path.join(ROOT_DIR, "releases")
+VERSION = json.load(open(os.path.join(ROOT_DIR, "package.json"), encoding="utf-8"))["version"]
 
 def make_zip(source_items, zip_dest, base_dir=ROOT_DIR):
     os.makedirs(os.path.dirname(zip_dest), exist_ok=True)
@@ -40,7 +42,7 @@ def main():
     
     # 2. Standalone Offline Web Editor ZIP
     offline_items = ["index.html", "embed.html", "embed.js", "robots.txt", "sitemap.xml", "llms.txt", "README.md", "LICENSE", "assets"]
-    offline_zip = os.path.join(RELEASES_DIR, "uyap-web-editor-v2.6.0.zip")
+    offline_zip = os.path.join(RELEASES_DIR, f"uyap-web-editor-v{VERSION}.zip")
     make_zip(offline_items, offline_zip, base_dir=ROOT_DIR)
 
     # 3. Windows Print & Desktop Suite ZIP

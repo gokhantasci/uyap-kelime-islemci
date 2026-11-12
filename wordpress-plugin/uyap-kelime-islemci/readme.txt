@@ -3,7 +3,7 @@ Contributors: gokhantasci
 Tags: uyap, udf, editor, viewer, legal, law, turkish
 Requires at least: 5.0
 Tested up to: 6.7
-Stable tag: 2.6.0
+Stable tag: 2.7.0
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 

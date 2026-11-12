@@ -186,6 +186,25 @@ python print_to_udf.py --daemon
 
 ---
 
+## 🆕 Son Sürüm: v2.7.0 (Kasım 2026)
+
+| Alan | Yenilik |
+| :--- | :--- |
+| **Masaüstü UYAP paritesi** | Örnek karar, masaüstü UYAP Doküman Editörü'nün PDF çıktısıyla satır satır karşılaştırıldı: etiket/değer sütunu, üst kenar, doğrulama satırı, sayfa numarası, üst bilgi, tablo boşlukları ve imza bloğu hizalandı (3 sayfada satır kırılma farkı yok). Karşılaştırma betiği: `tools/pdf_baseline_cmp.py`. |
+| **UDF dosya uyumu** | Resim boyutu UDF'de **pt** olarak yazılıp okunur (resmî editörde doğrulandı), barkod ölçüsü ve boş satır arka planı masaüstüyle aynı, başlık yazı stili dosyadan korunur, paragraf sonu satır sonu biçimi taşır. |
+| **Hukuki bölüm gezgini** | Belge Taslağı paneli İddia, Savunma, Beyanlar, Deliller, Gerekçe, Hukuki Nitelendirme, Hüküm, Kanun Yolu, Mütalaa, bilirkişi raporu ve dava/cevap/istinaf dilekçesi bölümlerini adli ve idari yargı kararlarında listeler (idari başlıklar Danıştay Karar Yazım Rehberi'nden). |
+| **Hukuk Asistanı** | Hüküm fıkraları madde madde sınıflanır; kanun yolu belgenin kendi fıkrasından okunur ve kanundaki süreyle çelişirse uyarılır. Eğitim seti 8 örneğe çıktı ve modele few-shot olarak verilir. |
+| **E-imza** | E-imzalı belgeler resmî editördeki gibi salt okunur açılır; **E-İmza ile imzala**, bilgisayarınızdaki Adalet E-İmza uygulamasına yerel olarak bağlanır (belge ve PIN sunucuya gönderilmez). |
+| **Sesli okuma** | Piper TTS (Fahrettin) tarayıcıda çalışır; modeller [657.com.tr](https://657.com.tr)'den iner (ilk kullanımda ~63 MB). WebGPU asistan modeli de 657.com.tr'den indirilir. |
+| **Canlı hukuk sözlüğü** | 657.com.tr sözlüğü canlı çekilir (12 saat önbellek); çevrimdışıyken paketli kopya kullanılır. |
+| **Arayüz** | Tüm pencereler taşınabilir ve son konumu hatırlanır; renk paleti 25+ renk + özel renk içerir ve sayfa/tuval rengi belgeye uygulanır; Düzenle ve Biçim menüleri eklendi; menülerde kaydırma çubuğu yok. |
+| **Print to UDF** | Sanal yazıcı çıktısında satır sonları artık paragraf olarak korunur (satırlar bitişik tek satıra dönüşmüyordu). |
+
+> [!NOTE]
+> **Bilinen sınırlar:** E-imza ile imzalama için bilgisayarda Adalet E-İmza uygulaması çalışıyor olmalıdır; imzalama istemcisi bu sürümde gerçek kartla test edilmemiştir. Mobil imza desteklenmez. Ema Lightning ses motoru için tarayıcıda çalışan bir sürüm henüz yoktur (yalnızca Piper tarayıcıda çalışır).
+
+---
+
 ## 🌟 Temel Özellikler
 
 - **Kurulumsuz & Sıfır Bağımlılık:** Java JRE veya yerel yazılım kurmaya gerek yoktur. Chrome, Firefox, Edge ve Safari gibi tüm modern masaüstü ve mobil tarayıcılarda çalışır.
@@ -202,6 +221,8 @@ python print_to_udf.py --daemon
 - **Elektronik İmza (.sgn) İnceleme:** İmzalı belgelerin sertifika bilgilerini, imzalayan kimliğini ve doğrulama kodlarını görüntüler.
 - **Word (.docx) Olarak İndirme:** Editördeki herhangi bir kararı veya metni, tabloları ve stilleri bozulmadan doğrudan Microsoft Word (.docx) olarak indirebilirsiniz.
 - **Yazdır & PDF Desteği:** A4 sayfa düzeni koruyarak doğrudan PDF veya fiziksel yazıcı çıktısı alabilirsiniz.
+- **E-imzalı belge koruması ve imzalama:** İmzalı belgeler salt okunur açılır; yerel Adalet E-İmza uygulamasıyla imzalama (PIN ve belge cihazınızdan çıkmaz).
+- **Sesli okuma (Piper TTS) ve canlı hukuk sözlüğü:** Modeller 657.com.tr'den indirilir ve tarayıcıda çalışır.
 
 ---
 
@@ -215,7 +236,7 @@ UYAP Web Editörü, yalnızca masaüstü UYAP Kelime İşlemci ve resmi UDE (`ud
 | **🕒 Sürüm Geçmişi & Zaman Makinesi (`UkiVersions`)** | *Google Docs Version History* | Her 2 dakikada bir yerel anlık görüntü (snapshot) alır. İsimlendirilmiş sürümler, eski sürüme tek tıkla geri dönme ve mevcut belgeyle farkı görme yeteneği (%100 Zero-Server yerel depolama). |
 | **✨ Notion Tarzı Slash Menüsü (`/`) (`UkiSlashMenu`)** | *Notion, TipTap & Coda* | Klavyede `/` tuşuna basıldığında açılan klavye navigasyonlu komut menüsü. `/tablo`, `/imza`, `/antet`, `/hüküm`, `/tarih`, `/kvkk`, `/ai` kısayollarıyla fareye dokunmadan hızlı yazım. |
 | **🧘 Zen / Odaklanma Modu & Daktilo Deneyimi (`UkiZen`)** | *iA Writer & Ulysses* | `F11` veya araç çubuğundan tek tıkla tüm menüleri gizler, daktilo kaydırma (imleci dikey merkezde tutma) ve mekanik daktilo tuş sesi / satır sonu zili (ding) sunar. |
-| **📑 Belge Taslağı / Başlık Gezgini (`UkiOutline`)** | *Google Docs Outline & Word Gezinti* | Sol panelde H1, H2, H3 ve adli karar başlıklarını (İddia, Savunma, Deliller, Gerekçe, Hüküm) hiyerarşik listeler; tıklandığında yumuşak kaydırma ve parlak mavi vurgu efekti uygular. |
+| **📑 Belge Taslağı / Hukuki Bölüm Gezgini (`UkiOutline`)** | *Google Docs Outline & Word Gezinti* | Sol panelde H1–H4 başlıklarını ve hukuki bölümleri (İddia, Savunma, Beyanlar, Deliller, Gerekçe, Hukuki Nitelendirme, Hüküm, Kanun Yolu, Mütalaa, bilirkişi raporu, dilekçeler) adli ve idari yargı kararlarında otomatik listeler; tıklandığında ilgili yere kayar. |
 | **⚡ Akıllı Hukuki Metin Genişletici (`UkiExpander`)** | *TextExpander, Raycast & Word AutoCorrect* | `\vekalet`, `\sure`, `\arz`, `\tebligat`, `\karar`, `\tarih` gibi kısayolları Boşluk veya Tab tuşlandığında uzun resmi adli kalıplara dönüştürür. Özel kalıp eklenebilir. |
 | **🧹 Adli Tipografi & Boşluk Temizleyici (`UkiLinter`)** | *Grammarly & MS Word Belge Denetçisi* | Adliye evraklarında kopyala-yapıştır sonucu oluşan çift/çoklu boşlukları, noktalama işaretleri öncesindeki hatalı boşlukları ve gereksiz boş paragrafları tek tıkla temizler. |
 | **📖 Hukuki Kısaltmalar Kılavuzu (`UkiLegalGlossary`)** | *Lexpera / Kazancı Adli Kılavuz* | HMK, CMK, TCK, İİK, AİHM, BAM, YHGK, AYM, KHK, CBS vb. 60+ adli kısaltmanın açılımını ve mevzuat tanımını anında arama ve belgeye tek tıkla ekleme. |
@@ -316,6 +337,11 @@ uyap-kelime-islemci/
 │   │   ├── uki-table.js                 # Excel / Word zengin tablo motoru
 │   │   ├── uki-ai.js                    # Tarayıcı içi yapay zeka & WebGPU belge analiz asistanı
 │   │   ├── uki-seal.js                  # Bağımsız elektronik imza mührü
+│   │   ├── uki-esign.js                 # Yerel Adalet E-İmza istemcisi ile imzalama (localhost:5975)
+│   │   ├── uki-outline.js               # Hukuki bölüm gezgini (adli ve idari yargı)
+│   │   ├── uki-window-drag.js           # Taşınabilir pencereler, konum hatırlama
+│   │   ├── uki-toolbar-compact.js       # Sadeleştirilmiş üst eylem menüsü (Daha Fazla)
+│   │   ├── piper-worker.js              # Tarayıcıda Piper TTS çalışanı (tools/piper-worker.src.js'ten derlenir)
 │   │   ├── uki-embed.js                 # Dış sitelerden linkac=URL ile döküman açıcı
 │   │   └── uki-stats.js                 # Anonim kullanım istatistiği
 │   └── vendor/
@@ -325,11 +351,13 @@ uyap-kelime-islemci/
 ├── releases/                            # İndirilebilir hazır dağıtım paketleri
 │   └── uyap-kelime-islemci-wordpress-plugin.zip # WordPress resmi eklenti arşivi
 ├── tests/                               # Otomasyon testleri
-│   ├── run_tests.js                     # 39 birim web test paketi
+│   ├── *.test.cjs                       # 60 birim/kabul testi (node --test): UDF, sayfalama, analizci, taslak, güvenlik
 │   ├── test_services.py                 # REST API, güvenlik ve CORS testleri
 │   └── test_uyap_parity.py              # UYAP XML şema uyumluluk ve parite testleri
 ├── tools/
-│   └── build_releases.py                # Dağıtım paketlerini ZIP olarak derleme betiği
+│   ├── build_releases.py                # Dağıtım paketlerini ZIP olarak derleme betiği
+│   ├── pdf_baseline_cmp.py              # Masaüstü UYAP PDF'i ile bizim PDF'in taban çizgisi karşılaştırması
+│   └── piper-worker.src.js              # Piper çalışanı kaynağı (npm run build:piper)
 ├── wordpress-plugin/                    # WordPress eklenti kaynak kodları
 │   └── uyap-kelime-islemci/
 │       ├── uyap-kelime-islemci.php
@@ -358,8 +386,11 @@ uyap-kelime-islemci/
 Projedeki tüm dönüştürme algoritmaları, UYAP XML şemaları ve REST servisleri kapsamlı test suiteleri ile güvence altına alınmıştır:
 
 ```bash
-# Web ve JavaScript testlerini çalıştırma (39 test):
+# Web ve JavaScript testlerini çalıştırma (60 test):
 npm test
+
+# Piper çalışanını yeniden derleme (yalnızca kaynağı değiştirirseniz):
+npm run build:piper
 
 # REST API ve Loopback güvenlik testlerini çalıştırma:
 python tests/test_services.py

@@ -3,7 +3,7 @@
  * Plugin Name: UYAP Kelime İşlemci (Web UDF Düzenleyici & Görüntüleyici)
  * Plugin URI: https://udf.657.com.tr
  * Description: WordPress sitenize tek satırla UYAP UDF doküman görüntüleyici ve düzenleyici ekler. [uyap_editor] ve [uyap_viewer src="..."] kısa kodlarını destekler.
- * Version: 2.6.0
+ * Version: 2.7.0
  * Author: 657.com.tr
  * Author URI: https://657.com.tr
  * License: MIT
