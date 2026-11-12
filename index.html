@@ -2361,14 +2361,14 @@
          MODAL: KVKK KİŞİSEL VERİLERDEN ARINDIRMA (MASKELEME)
          ========================================================================== -->
     <div id="modal-kvkk-setup" class="ax-modal-backdrop" style="display: none;">
-        <div class="ax-modal-dialog" style="max-width: 640px;">
+        <div class="ax-modal-dialog" style="max-width: 720px;">
             <div class="ax-modal-header">
                 <div>
                     <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
                         <span>🔒 Kişisel Verilerden Arındırma &amp; Maskeleme (KVKK)</span>
                     </h3>
                     <div style="font-size: 11px; color: var(--ax-color-neutral-500); margin-top: 2px;">
-                        T.C. Kimlik No, telefon, IBAN, plaka ve isimleri belgeden arındırır.
+                        T.C. Kimlik No, taraf/şahıs isimleri, adres, anne/baba adı, doğum bilgisi, telefon, IBAN ve plakaları belgeden arındırır.
                     </div>
                 </div>
                 <button type="button" class="ax-modal-close" onclick="document.getElementById('modal-kvkk-setup').style.display='none'">&times;</button>
@@ -2380,6 +2380,30 @@
                         <div>
                             <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 2px;">TC Kimlik Maskesi:</label>
                             <input type="text" id="kvkk-mask-tc" class="ax-input" value="[TC NO GİZLENDİ]" style="width: 100%; box-sizing: border-box; font-size: 11px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 2px;">Taraf / Şahıs Adı Maskesi:</label>
+                            <select id="kvkk-mask-person" class="ax-select" style="width: 100%; box-sizing: border-box; font-size: 11px;">
+                                <option value="initials" selected>Baş Harfler (A*** Y***)</option>
+                                <option value="[KİŞİ ADI GİZLENDİ]">[KİŞİ ADI GİZLENDİ]</option>
+                                <option value="***">Yıldız (***)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 2px;">Adres / Yerleşim Yeri:</label>
+                            <input type="text" id="kvkk-mask-address" class="ax-input" value="[ADRES GİZLENDİ]" style="width: 100%; box-sizing: border-box; font-size: 11px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 2px;">Anne / Baba Adı (Soybağı):</label>
+                            <select id="kvkk-mask-parent" class="ax-select" style="width: 100%; box-sizing: border-box; font-size: 11px;">
+                                <option value="initials" selected>Baş Harfler (A*** ve B*** kızı/oğlu)</option>
+                                <option value="[ANNE/BABA BİLGİSİ GİZLENDİ]">[ANNE/BABA BİLGİSİ GİZLENDİ]</option>
+                                <option value="***">Yıldız (***)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 2px;">Doğum Tarihi / Yeri:</label>
+                            <input type="text" id="kvkk-mask-birth" class="ax-input" value="[DOĞUM BİLGİSİ GİZLENDİ]" style="width: 100%; box-sizing: border-box; font-size: 11px;">
                         </div>
                         <div>
                             <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 2px;">Telefon Maskesi:</label>
@@ -2397,26 +2421,25 @@
                             <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 2px;">E-Posta Maskesi:</label>
                             <input type="text" id="kvkk-mask-email" class="ax-input" value="[E-POSTA GİZLENDİ]" style="width: 100%; box-sizing: border-box; font-size: 11px;">
                         </div>
-                        <div>
-                            <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 2px;">Taraf / Şahıs Adı Maskesi:</label>
-                            <select id="kvkk-mask-person" class="ax-select" style="width: 100%; box-sizing: border-box; font-size: 11px;">
-                                <option value="initials" selected>Baş Harfler (A*** Y***)</option>
-                                <option value="[KİŞİ ADI GİZLENDİ]">[KİŞİ ADI GİZLENDİ]</option>
-                                <option value="***">Yıldız (***)</option>
-                            </select>
-                        </div>
                     </div>
                 </fieldset>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <button type="button" id="btn-kvkk-scan" class="tool-btn-secondary" style="font-size: 11.5px; padding: 5px 12px;">🔍 Belgeyi Tara</button>
-                    <span id="kvkk-scan-status" style="font-size: 11px; color: #64748b;">Henüz taranmadı</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button type="button" id="btn-kvkk-scan" class="tool-btn-secondary" style="font-size: 11.5px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 5px;" title="Kural ve şablon tabanlı yerel hızlı tarama">
+                            <span>⚡</span> Hızlı Tara
+                        </button>
+                        <button type="button" id="btn-kvkk-ai-scan" class="tool-btn-primary" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none; color: #fff; font-size: 11.5px; padding: 5px 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(79,70,229,0.3); cursor: pointer;" title="Yapay zeka (Gemini Nano / Akıllı Hukuk Modeli) ile bağlamsal derin kişisel veri taraması">
+                            <span style="font-size: 13px;">🤖</span> Yapay Zeka ile Akıllı Arındır
+                        </button>
+                    </div>
+                    <span id="kvkk-scan-status" style="font-size: 11px; color: #64748b; font-weight: 500;">Henüz taranmadı</span>
                 </div>
 
                 <fieldset class="ax-fieldset">
                     <legend>Tespit Edilen Kişisel Veriler</legend>
-                    <div id="kvkk-findings-list" style="max-height: 180px; overflow-y: auto; font-size: 11.5px;">
-                        <p style="color: #94a3b8; margin: 8px 0; text-align: center;">Belgeyi taramak için yukarıdaki butona tıklayın.</p>
+                    <div id="kvkk-findings-list" style="max-height: 220px; overflow-y: auto; font-size: 11.5px;">
+                        <p style="color: #94a3b8; margin: 8px 0; text-align: center;">Belgeyi taramak için yukarıdaki butonlardan birine tıklayın.</p>
                     </div>
                 </fieldset>
             </div>

@@ -973,6 +973,77 @@
     }
 
     // --------------------------------------------------------------------------
+    // 7.1. KVKK & KİŞİSEL VERİLERİ YAPAY ZEKA İLE AKILLI TARAMA
+    // --------------------------------------------------------------------------
+
+    async function promptActiveModel(sysPrompt, userPrompt) {
+        if (aiStatus.hasChromeAi && aiStatus.chromeAiState === 'readily') {
+            return await promptChromeAi(sysPrompt, userPrompt);
+        }
+        if (gpuEngine) {
+            return await promptGpu(sysPrompt, userPrompt);
+        }
+        if (aiStatus.hasOllama) {
+            return await promptOllama(sysPrompt, userPrompt);
+        }
+        if (aiStatus.customApiKey) {
+            return await promptCustomApi(sysPrompt, userPrompt);
+        }
+        return null;
+    }
+
+    function extractJsonArray(raw) {
+        if (!raw) return [];
+        let clean = String(raw).trim();
+        if (clean.startsWith('```json')) clean = clean.slice(7);
+        if (clean.startsWith('```')) clean = clean.slice(3);
+        if (clean.endsWith('```')) clean = clean.slice(0, -3);
+        clean = clean.trim();
+        const start = clean.indexOf('[');
+        const end = clean.lastIndexOf(']');
+        if (start !== -1 && end !== -1 && end > start) {
+            clean = clean.slice(start, end + 1);
+        }
+        try {
+            const parsed = JSON.parse(clean);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            console.warn('[UkiAI] JSON ayrıştırma hatası:', e);
+            return [];
+        }
+    }
+
+    async function scanKvkkWithAI(docText) {
+        const text = String(docText || '').slice(0, 10000);
+        const sysPrompt = "Sen Türk hukuku, mahkeme kararları ve KVKK (Kişisel Verilerin Korunması) konusunda uzman bir yapay zekasın. Metindeki kişisel verileri (şahıs isimleri, TC kimlik, adresler, telefon, IBAN, anne-baba adı, doğum bilgileri, sicil) tespit et.";
+        const userPrompt = `Aşağıdaki hukuk metninde geçen tüm kişisel verileri tespit et ve SADECE JSON dizisi olarak döndür.
+Format:
+[
+  {"type": "person", "label": "Taraf / Şahıs Adı", "original": "Ahmet YILMAZ", "replacement": "A*** Y***"},
+  {"type": "tc", "label": "TC Kimlik No", "original": "12345678901", "replacement": "[TC NO GİZLENDİ]"},
+  {"type": "address", "label": "Yerleşim Yeri / Adres", "original": "Örnek Mah. ...", "replacement": "[ADRES GİZLENDİ]"},
+  {"type": "parent", "label": "Anne / Baba Adı", "original": "Mehmet ve Ayşe oğlu", "replacement": "M*** ve A*** oğlu"},
+  {"type": "birth", "label": "Doğum Tarihi / Yeri", "original": "01/01/1990 ANKARA doğumlu", "replacement": "[DOĞUM BİLGİSİ GİZLENDİ]"}
+]
+
+Metin:
+"""
+${text}
+"""
+Yalnızca geçerli JSON dizisi ver. Başka hiçbir açıklama yazma.`;
+
+        let raw = null;
+        try {
+            raw = await promptActiveModel(sysPrompt, userPrompt);
+        } catch (e) {
+            console.warn('[UkiAI] KVKK yapay zeka sorgulama hatası:', e);
+        }
+
+        if (!raw) return [];
+        return extractJsonArray(raw);
+    }
+
+    // --------------------------------------------------------------------------
     // 8. GLOBAL API DIŞA AKTARIMI
     // --------------------------------------------------------------------------
 
@@ -984,6 +1055,8 @@
         toggleDrawer: toggleDrawer,
         runAnalysis: runAnalysis,
         askQuestion: handleUserQuestion,
+        promptActiveModel: promptActiveModel,
+        scanKvkkWithAI: scanKvkkWithAI,
         getCapabilities: () => ({ ...aiStatus })
     };
 

@@ -4403,8 +4403,11 @@ function openColorPicker(pickerId, ev) {
     // =========================================================================
     // MODÜL: KVKK KİŞİSEL VERİLERDEN ARINDIRMA (MASKELEME)
     // =========================================================================
+    // MODÜL: KVKK KİŞİSEL VERİLERDEN ARINDIRMA (MASKELEME) & YAPAY ZEKA
+    // =========================================================================
     const modalKvkkSetup = document.getElementById('modal-kvkk-setup');
     const btnKvkkScan = document.getElementById('btn-kvkk-scan');
+    const btnKvkkAiScan = document.getElementById('btn-kvkk-ai-scan');
     const btnKvkkApply = document.getElementById('btn-kvkk-apply');
     const kvkkScanStatus = document.getElementById('kvkk-scan-status');
     const kvkkFindingsList = document.getElementById('kvkk-findings-list');
@@ -4413,7 +4416,7 @@ function openColorPicker(pickerId, ev) {
     window.openKvkkModal = function() {
         if (!modalKvkkSetup) return;
         openModal(modalKvkkSetup);
-        runKvkkScan();
+        runKvkkScan(false);
     };
 
     function getKvkkMaskConfig() {
@@ -4424,25 +4427,51 @@ function openColorPicker(pickerId, ev) {
             plate: (document.getElementById('kvkk-mask-plate') && document.getElementById('kvkk-mask-plate').value) || '[PLAKA GİZLENDİ]',
             email: (document.getElementById('kvkk-mask-email') && document.getElementById('kvkk-mask-email').value) || '[E-POSTA GİZLENDİ]',
             person: (document.getElementById('kvkk-mask-person') && document.getElementById('kvkk-mask-person').value) || 'initials',
-            address: '[ADRES GİZLENDİ]'
+            address: (document.getElementById('kvkk-mask-address') && document.getElementById('kvkk-mask-address').value) || '[ADRES GİZLENDİ]',
+            parent: (document.getElementById('kvkk-mask-parent') && document.getElementById('kvkk-mask-parent').value) || 'initials',
+            birth: (document.getElementById('kvkk-mask-birth') && document.getElementById('kvkk-mask-birth').value) || '[DOĞUM BİLGİSİ GİZLENDİ]',
+            sicil: '[SİCİL GİZLENDİ]'
         };
     }
 
-    function runKvkkScan() {
+    async function runKvkkScan(useAI = false) {
         if (!window.UkiKvkk || !kvkkFindingsList) return;
         const editorEl = document.getElementById('editor');
         if (!editorEl) return;
 
         window.UkiKvkk.defaultMasks = getKvkkMaskConfig();
-        const findings = window.UkiKvkk.scanDocument(editorEl);
+
+        if (useAI) {
+            if (btnKvkkAiScan) btnKvkkAiScan.disabled = true;
+            if (kvkkScanStatus) {
+                kvkkScanStatus.textContent = '🤖 Yapay Zeka ile derin taranıyor...';
+                kvkkScanStatus.style.color = '#7c3aed';
+            }
+            kvkkFindingsList.innerHTML = '<div style="text-align:center; padding:20px; color:#6366f1;"><span style="display:inline-block; animation:spin 1s linear infinite; font-size:20px;">🌀</span><div style="margin-top:8px; font-weight:500;">Yapay Zeka ve Anlamsal Hukuk Motoru belgeyi inceliyor...</div></div>';
+        }
+
+        let findings = [];
+        try {
+            if (useAI && typeof window.UkiKvkk.scanWithAI === 'function') {
+                findings = await window.UkiKvkk.scanWithAI(editorEl, getKvkkMaskConfig());
+            } else {
+                findings = window.UkiKvkk.scanDocument(editorEl, getKvkkMaskConfig());
+            }
+        } catch (err) {
+            console.error('[KVKK] Tarama hatası:', err);
+            findings = window.UkiKvkk.scanDocument(editorEl, getKvkkMaskConfig());
+        } finally {
+            if (btnKvkkAiScan) btnKvkkAiScan.disabled = false;
+        }
 
         if (kvkkScanStatus) {
-            kvkkScanStatus.textContent = findings.length ? `${findings.length} adet kişisel veri türü tespit edildi.` : 'Kişisel veri tespit edilmedi.';
-            kvkkScanStatus.style.color = findings.length ? '#b45309' : '#059669';
+            const aiPrefix = useAI ? '🤖 Yapay Zeka & Kural: ' : '⚡ Kural Motoru: ';
+            kvkkScanStatus.textContent = findings.length ? `${aiPrefix}${findings.length} adet kişisel veri türü tespit edildi.` : 'Kişisel veri tespit edilmedi.';
+            kvkkScanStatus.style.color = findings.length ? (useAI ? '#7c3aed' : '#b45309') : '#059669';
         }
 
         if (!findings.length) {
-            kvkkFindingsList.innerHTML = '<p style="color:#059669; margin:12px 0; text-align:center; font-weight:500;">✅ Belgede T.C. Kimlik, telefon, IBAN, plaka veya kişi adı gibi kişisel veriye rastlanmadı.</p>';
+            kvkkFindingsList.innerHTML = '<p style="color:#059669; margin:16px 0; text-align:center; font-weight:500;">✅ Belgede T.C. Kimlik, şahıs ismi, adres veya diğer kişisel verilere rastlanmadı.</p>';
             return;
         }
 
@@ -4450,30 +4479,55 @@ function openColorPicker(pickerId, ev) {
             <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
                 <thead>
                     <tr style="background:#f1f5f9; text-align:left; border-bottom:1px solid #cbd5e1;">
-                        <th style="padding:4px 6px; width:28px;"></th>
-                        <th style="padding:4px 6px; width:110px;">Veri Türü</th>
-                        <th style="padding:4px 6px;">Orijinal Değer</th>
-                        <th style="padding:4px 6px; width:200px;">Maske Değeri (Düzenlenebilir)</th>
+                        <th style="padding:5px 6px; width:28px;"></th>
+                        <th style="padding:5px 6px; width:110px;">Veri Türü</th>
+                        <th style="padding:5px 6px; width:65px;">Kaynak</th>
+                        <th style="padding:5px 6px;">Orijinal Değer</th>
+                        <th style="padding:5px 6px; width:220px;">Maske Değeri (Düzenlenebilir)</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
 
+        function escapeText(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        const badgeColors = {
+            tc: '#dc2626',
+            person: '#d97706',
+            address: '#059669',
+            parent: '#4f46e5',
+            birth: '#ea580c',
+            phone: '#2563eb',
+            iban: '#7c3aed',
+            plate: '#0891b2',
+            email: '#0284c7',
+            sicil: '#475569'
+        };
+
         findings.forEach((f, idx) => {
-            const badgeColor = f.type === 'tc' ? '#dc2626' : (f.type === 'phone' ? '#2563eb' : (f.type === 'iban' ? '#7c3aed' : (f.type === 'plate' ? '#0891b2' : '#d97706')));
+            const badgeColor = badgeColors[f.type] || '#64748b';
+            const sourceBadge = f.source === 'ai' 
+                ? '<span style="display:inline-block; padding:1px 5px; border-radius:3px; background:#f5f3ff; color:#7c3aed; font-weight:600; font-size:10px;">🤖 AI</span>'
+                : '<span style="display:inline-block; padding:1px 5px; border-radius:3px; background:#f1f5f9; color:#64748b; font-weight:600; font-size:10px;">⚡ Kural</span>';
+
             tableHtml += `
                 <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td style="padding:4px 6px; text-align:center;">
+                    <td style="padding:5px 6px; text-align:center;">
                         <input type="checkbox" class="kvkk-item-chk" data-idx="${idx}" checked>
                     </td>
-                    <td style="padding:4px 6px;">
-                        <span style="display:inline-block; padding:1px 6px; border-radius:3px; background:${badgeColor}15; color:${badgeColor}; font-weight:600; font-size:10.5px;">${f.label}</span>
+                    <td style="padding:5px 6px;">
+                        <span style="display:inline-block; padding:2px 6px; border-radius:3px; background:${badgeColor}18; color:${badgeColor}; font-weight:600; font-size:10.5px;">${escapeText(f.label)}</span>
                     </td>
-                    <td style="padding:4px 6px; font-family:monospace; color:#334155;">
-                        <b>${f.original}</b> <span style="font-size:10px; color:#94a3b8;">(${f.count} adet)</span>
+                    <td style="padding:5px 6px;">
+                        ${sourceBadge}
                     </td>
-                    <td style="padding:4px 6px;">
-                        <input type="text" class="ax-input kvkk-row-rep" data-idx="${idx}" value="${f.replacement}" style="width:100%; box-sizing:border-box; font-size:11px; padding:2px 6px;">
+                    <td style="padding:5px 6px; font-family:monospace; color:#334155; word-break:break-word;">
+                        <b>${escapeText(f.original)}</b> <span style="font-size:10px; color:#94a3b8;">(${f.count} adet)</span>
+                    </td>
+                    <td style="padding:5px 6px;">
+                        <input type="text" class="ax-input kvkk-row-rep" data-idx="${idx}" value="${escapeText(f.replacement)}" style="width:100%; box-sizing:border-box; font-size:11px; padding:3px 6px;">
                     </td>
                 </tr>
             `;
@@ -4484,7 +4538,11 @@ function openColorPicker(pickerId, ev) {
     }
 
     if (btnKvkkScan) {
-        btnKvkkScan.addEventListener('click', runKvkkScan);
+        btnKvkkScan.addEventListener('click', () => runKvkkScan(false));
+    }
+
+    if (btnKvkkAiScan) {
+        btnKvkkAiScan.addEventListener('click', () => runKvkkScan(true));
     }
 
     if (kvkkCheckAll) {
@@ -4512,7 +4570,7 @@ function openColorPicker(pickerId, ev) {
                         const customRep = repInput ? repInput.value.trim() : item.replacement;
                         selectedReplacements.push({
                             original: item.original,
-                            replacement: customRep || item.replacement
+                            replacement: customRep !== undefined && customRep !== null ? customRep : item.replacement
                         });
                     }
                 }

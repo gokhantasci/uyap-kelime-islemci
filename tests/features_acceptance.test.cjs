@@ -458,3 +458,75 @@ test('Resim Ekle/Düzenle (UkiImage) ve Grafik Şerit Paritesi: Görsel ekleme, 
     assert.ok(!editorEl.contains(insertedImg), 'Resim belgeden silinmeli');
 });
 
+test('KVKK & Yapay Zeka: Gerçek UDF belgesinde (örnek karar.udf) çoklu span taraf isimleri, adres, anne/baba adı ve TC maskeleme', async () => {
+    const dom = initDom();
+    const ukiCoreCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-core.js'), 'utf8');
+    eval(ukiCoreCode);
+    const ukiKvkkCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-kvkk.js'), 'utf8');
+    eval(ukiKvkkCode);
+
+    // Mock AI entegrasyonu
+    dom.window.UkiAI = {
+        scanKvkkWithAI: async (text) => {
+            return [
+                { type: 'person', label: 'Taraf / Şahıs Adı', original: 'BİLGE', replacement: 'B***', source: 'ai' },
+                { type: 'person', label: 'Taraf / Şahıs Adı', original: 'ÇAĞATAY', replacement: 'Ç***', source: 'ai' }
+            ];
+        }
+    };
+
+    const buf = fs.readFileSync(path.resolve(__dirname, '../examples/örnek karar.udf'));
+    const model = await dom.window.UkiCore.parseUdf(buf);
+    const html = dom.window.UkiCore.udfModelToHtml(model);
+    const editorEl = dom.window.document.getElementById('editor');
+    editorEl.innerHTML = html;
+
+    // 1. Kural tabanlı tarama
+    const findings = dom.window.UkiKvkk.scanDocument(editorEl);
+    assert.ok(findings.length >= 8, 'Gerçek UDF belgesinden en az 8 hassas veri türü tespit edilmeli');
+
+    // TC kontrolü
+    const tcs = findings.filter(f => f.type === 'tc');
+    assert.ok(tcs.some(f => f.original === '29155760072'), '29155760072 TC tespit edilmeli');
+    assert.ok(tcs.some(f => f.original === '28589334248'), '28589334248 TC tespit edilmeli');
+
+    // Taraf isimleri kontrolü
+    const persons = findings.filter(f => f.type === 'person');
+    assert.ok(persons.some(f => f.original === 'BİLGE DALGIÇ'), 'BİLGE DALGIÇ tespit edilmeli');
+    assert.ok(persons.some(f => f.original === 'ÇAĞATAY DALGIÇ'), 'ÇAĞATAY DALGIÇ tespit edilmeli');
+
+    // Mahkeme heyeti isimleri
+    assert.ok(persons.some(f => f.original === 'Ayşe KAYA SAYDAM'), 'Ayşe KAYA SAYDAM tespit edilmeli');
+    assert.ok(persons.some(f => f.original === 'Ayşenur ÇİÇEK'), 'Ayşenur ÇİÇEK tespit edilmeli');
+
+    // Anne/baba ve doğum bilgileri
+    const parents = findings.filter(f => f.type === 'parent');
+    assert.ok(parents.length >= 2, 'Anne/baba soybağı tespit edilmeli');
+
+    const births = findings.filter(f => f.type === 'birth');
+    assert.ok(births.length >= 2, 'Doğum bilgileri tespit edilmeli');
+
+    // Adres tespiti
+    const addresses = findings.filter(f => f.type === 'address');
+    assert.ok(addresses.length >= 2, 'İkametgah adresleri tespit edilmeli');
+
+    // 2. Yapay Zeka ile tarama (scanWithAI)
+    const aiFindings = await dom.window.UkiKvkk.scanWithAI(editorEl);
+    assert.ok(aiFindings.some(f => f.source === 'ai'), 'Yapay zeka bulguları kaynak etiketiyle listelenmeli');
+
+    // 3. Çoklu span üzerinden maskeleme (applyRedaction)
+    const replacedCount = dom.window.UkiKvkk.applyRedaction(editorEl, findings);
+    assert.ok(replacedCount >= 10, 'En az 10 hassas veri DOM içinde başarıyla maskelenmeli');
+
+    const textAfter = editorEl.textContent;
+    assert.ok(!textAfter.includes('29155760072'), 'TC kimlik silinmiş olmalı');
+    assert.ok(!textAfter.includes('28589334248'), 'TC kimlik silinmiş olmalı');
+    assert.ok(!textAfter.includes('BİLGE DALGIÇ'), 'BİLGE DALGIÇ silinmiş olmalı');
+    assert.ok(!textAfter.includes('ÇAĞATAY DALGIÇ'), 'ÇAĞATAY DALGIÇ silinmiş olmalı');
+    assert.ok(!textAfter.includes('Ayşe KAYA SAYDAM'), 'Ayşe KAYA SAYDAM silinmiş olmalı');
+    assert.ok(!textAfter.includes('Ayşenur ÇİÇEK'), 'Ayşenur ÇİÇEK silinmiş olmalı');
+    assert.ok(textAfter.includes('B*** D***'), 'B*** D*** maskesi yerleşmiş olmalı');
+    assert.ok(textAfter.includes('[TC NO GİZLENDİ]'), '[TC NO GİZLENDİ] maskesi yerleşmiş olmalı');
+});
+
+
