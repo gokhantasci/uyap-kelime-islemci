@@ -809,6 +809,7 @@ body {
 }
 
 .a4-page {
+    position: relative;
     width: 595.32pt;
     /* A4 genişliği (210mm) */
     min-height: 841.92pt;

@@ -419,15 +419,73 @@ test('Resim Ekle/Düzenle (UkiImage) ve Grafik Şerit Paritesi: Görsel ekleme, 
     const handles = overlay.querySelectorAll('.img-handle');
     assert.equal(handles.length, 8, '8 adet boyutlandırma kulpu bulunmalı (nw, n, ne, e, se, s, sw, w)');
 
-    // 3. Resim Boyut ve Stil Özellikleri
+    // 3. Resim Özellikleri & Düzenle Modal Etkileşimleri (Modal Canlı Önizleme & Uygulama)
+    const modalHtml = `
+    <div id="modal-image-edit" style="display: none;">
+        <img id="img-edit-preview" src="">
+        <span id="img-edit-info-dim"></span>
+        <input type="number" id="img-edit-width">
+        <input type="number" id="img-edit-height">
+        <input type="checkbox" id="img-edit-aspect-lock" checked>
+        <select id="img-edit-align"><option value="inline">Satır İçi</option><option value="center">Ortala</option></select>
+        <select id="img-edit-border-w"><option value="0">Yok</option><option value="2">2 px</option></select>
+        <select id="img-edit-border-style"><option value="solid">Düz</option></select>
+        <select id="img-edit-border-radius"><option value="0">0</option></select>
+        <input type="checkbox" id="img-edit-grayscale">
+        <button id="btn-img-scale-50"></button>
+        <button id="btn-img-scale-fit"></button>
+        <button id="btn-img-rotate-90"></button>
+        <button id="btn-save-image-edit"></button>
+    </div>`;
+    doc.body.insertAdjacentHTML('beforeend', modalHtml);
+    dom.window.UkiImage.init();
+
     insertedImg.style.width = '240px';
     insertedImg.style.height = '180px';
-    insertedImg.style.float = 'left';
-    insertedImg.style.border = '2px solid rgb(0, 0, 0)';
-    insertedImg.style.filter = 'grayscale(100%)';
+    dom.window.UkiImage.openEditModal(insertedImg);
+    const modalEdit = doc.getElementById('modal-image-edit');
+    assert.equal(modalEdit.style.display, 'flex', 'Resim düzenleme penceresi açılmalı');
+    
+    // Tıklamada seçimin kaybolmaması kontrolü
+    doc.getElementById('img-edit-width').click();
+    assert.ok(dom.window.UkiImage.getSelectedImage(), 'Modal içindeki tıklamalarda resim seçimi kaybolmamalı');
 
-    assert.equal(insertedImg.style.width, '240px');
-    assert.equal(insertedImg.style.float, 'left');
+    // %50 ölçekleme butonu
+    const btnScale50 = doc.getElementById('btn-img-scale-50');
+    btnScale50.click();
+    const inputW = doc.getElementById('img-edit-width');
+    const inputH = doc.getElementById('img-edit-height');
+    assert.equal(inputW.value, '120', 'Genişlik %50 ölçeklenmeli (240 * 0.5 = 120)');
+    assert.equal(inputH.value, '90', 'Yükseklik %50 ölçeklenmeli (180 * 0.5 = 90)');
+
+    // 90° Döndürme
+    const btnRotate = doc.getElementById('btn-img-rotate-90');
+    btnRotate.click();
+    const previewImg = doc.getElementById('img-edit-preview');
+    assert.ok(previewImg.style.transform.includes('rotate(90deg)'), 'Önizlemede 90° döndürme yansıtılmalı');
+
+    // Kâğıda Sığdır (Fit to Page)
+    const btnScaleFit = doc.getElementById('btn-img-scale-fit');
+    btnScaleFit.click();
+    assert.equal(inputW.value, '540', 'Kâğıda sığdır genişliği 540px yapmalı');
+
+    // Hizalama ve Efektler
+    const alignSelect = doc.getElementById('img-edit-align');
+    alignSelect.value = 'center';
+    const borderW = doc.getElementById('img-edit-border-w');
+    borderW.value = '2';
+    const chkGrayscale = doc.getElementById('img-edit-grayscale');
+    chkGrayscale.checked = true;
+
+    // Uygula (applyEditModalChanges)
+    dom.window.UkiImage.applyEditModalChanges();
+    assert.equal(modalEdit.style.display, 'none', 'Uygula tıklandığında modal kapanmalı');
+    assert.equal(insertedImg.style.width, '540px', 'Belgedeki resim genişliği 540px olmalı');
+    assert.equal(insertedImg.getAttribute('width'), '540', 'UDF XML uyumu için width özniteliği set edilmeli');
+    assert.equal(insertedImg.style.margin, '10px auto', 'Ortalama marjini uygulanmalı');
+    assert.ok(insertedImg.style.border.includes('2px'), '2px kenarlık uygulanmalı');
+    assert.ok(insertedImg.style.filter.includes('grayscale(100%)'), 'Gri tonlama filtresi uygulanmalı');
+    assert.equal(insertedImg.dataset.rotation, '90', '90 derece rotasyon verisi kaydedilmeli');
 
     // 4. UDF Dışa Aktarım (exportUdfBlob) ve Yeniden Açma (Roundtrip)
     const udfBlob = await dom.window.UkiCore.exportUdfBlob(editorEl, {});
@@ -443,8 +501,8 @@ test('Resim Ekle/Düzenle (UkiImage) ve Grafik Şerit Paritesi: Görsel ekleme, 
                 if (r.type === 'image' || r.imageData) {
                     foundImageRun = true;
                     assert.ok(r.imageData.length > 10, 'Görsel base64 verisi korunmalı');
-                    assert.equal(r.imgWidth, '240', 'Görsel genişliği korunmalı');
-                    assert.equal(r.imgHeight, '180', 'Görsel yüksekliği korunmalı');
+                    assert.equal(r.imgWidth, '540', 'Görsel genişliği korunmalı');
+                    assert.equal(r.imgHeight, '405', 'Görsel yüksekliği korunmalı');
                 }
             }
         }

@@ -6,6 +6,8 @@
     'use strict';
 
     let selectedImage = null;
+    let editingImage = null;
+    let modalRotation = 0;
     let overlayEl = null;
     let fileInputEl = null;
     let isReplacing = false;
@@ -28,9 +30,7 @@
     function getContainer() {
         const pw = document.getElementById('page-wrapper');
         if (pw) {
-            if (pw.style.position !== 'relative') {
-                pw.style.position = 'relative';
-            }
+            pw.style.position = 'relative';
             return pw;
         }
         const ed = getEditor();
@@ -91,13 +91,44 @@
         const reader = new FileReader();
         reader.onload = (ev) => {
             const dataUrl = ev.target.result;
-            if (replace && selectedImage && document.contains(selectedImage)) {
-                selectedImage.src = dataUrl;
-                updateOverlayPosition();
+            const targetImg = editingImage || selectedImage;
+            if (replace && targetImg && document.contains(targetImg)) {
+                targetImg.src = dataUrl;
+                const preview = document.getElementById('img-edit-preview');
+                if (preview) preview.src = dataUrl;
+
+                const ImageConstructor = (typeof window !== 'undefined' && window.Image) ? window.Image : (typeof Image !== 'undefined' ? Image : null);
+                if (ImageConstructor) {
+                    const temp = new ImageConstructor();
+                    temp.onload = () => {
+                        const nw = temp.naturalWidth;
+                        const nh = temp.naturalHeight;
+                        const inputW = document.getElementById('img-edit-width');
+                        const inputH = document.getElementById('img-edit-height');
+                        if (inputW && inputH && nw && nh) {
+                            const curW = nw > 540 ? 540 : nw;
+                            const curH = nw > 540 ? Math.round(nh * (540 / nw)) : nh;
+                            inputW.value = curW;
+                            inputH.value = curH;
+                            targetImg.style.width = curW + 'px';
+                            targetImg.style.height = curH + 'px';
+                            targetImg.setAttribute('width', String(curW));
+                            targetImg.setAttribute('height', String(curH));
+                        }
+                        updateModalPreview();
+                        updateOverlayPosition();
+                        triggerChange();
+                    };
+                    temp.src = dataUrl;
+                } else {
+                    updateModalPreview();
+                    updateOverlayPosition();
+                    triggerChange();
+                }
+
                 if (typeof window.showToast === 'function') {
                     window.showToast('Görsel başarıyla yenilendi.', 'success');
                 }
-                triggerChange();
             } else {
                 insertImage(dataUrl);
             }
@@ -354,10 +385,12 @@
     }
 
     function deleteSelectedImage() {
-        if (!selectedImage) return;
-        const img = selectedImage;
+        const img = editingImage || selectedImage;
+        if (!img) return;
+        editingImage = null;
         deselectImage();
         img.remove();
+        closeEditModal();
         triggerChange();
         if (typeof window.showToast === 'function') {
             window.showToast('Resim silindi.', 'info');
@@ -367,11 +400,96 @@
     // =========================================================================
     // RESİM ÖZELLİKLERİ & DÜZENLEME MODAL DİYALOĞU
     // =========================================================================
-    function openEditModal(img) {
+    function getModalAspect() {
+        const img = editingImage || selectedImage;
+        if (img && img.naturalWidth && img.naturalHeight) {
+            return img.naturalWidth / img.naturalHeight;
+        }
+        const inputW = document.getElementById('img-edit-width');
+        const inputH = document.getElementById('img-edit-height');
+        const w = parseFloat(inputW ? inputW.value : 0) || 1;
+        const h = parseFloat(inputH ? inputH.value : 0) || 1;
+        return w / h;
+    }
+
+    function updateModalPreview() {
+        const preview = document.getElementById('img-edit-preview');
+        const infoDim = document.getElementById('img-edit-info-dim');
+        const inputW = document.getElementById('img-edit-width');
+        const inputH = document.getElementById('img-edit-height');
+        const borderW = document.getElementById('img-edit-border-w');
+        const borderStyle = document.getElementById('img-edit-border-style');
+        const borderRadius = document.getElementById('img-edit-border-radius');
+        const chkGrayscale = document.getElementById('img-edit-grayscale');
+
+        const img = editingImage || selectedImage;
+        const natW = img ? (img.naturalWidth || parseInt(img.style.width, 10) || 0) : 0;
+        const natH = img ? (img.naturalHeight || parseInt(img.style.height, 10) || 0) : 0;
+        const wVal = parseInt(inputW ? inputW.value : 0, 10) || natW;
+        const hVal = parseInt(inputH ? inputH.value : 0, 10) || natH;
+
+        if (infoDim) {
+            const natStr = (natW && natH) ? `Doğal: ${natW} × ${natH} px` : '';
+            const selStr = `Seçili: ${wVal} × ${hVal} px`;
+            const rotStr = modalRotation ? ` • ${modalRotation}°` : '';
+            infoDim.textContent = natStr ? `${natStr} (${selStr}${rotStr})` : `${selStr}${rotStr}`;
+        }
+
+        if (preview) {
+            // Siyah-Beyaz Filtre
+            if (chkGrayscale && chkGrayscale.checked) {
+                preview.style.filter = 'grayscale(100%)';
+            } else {
+                preview.style.filter = 'none';
+            }
+
+            // Kenarlık
+            const bw = parseInt(borderW ? borderW.value : 0, 10) || 0;
+            const bs = borderStyle ? borderStyle.value : 'solid';
+            if (bw > 0) {
+                preview.style.border = `${bw}px ${bs} #1e293b`;
+            } else {
+                preview.style.border = 'none';
+            }
+
+            // Köşe Yuvarlaklığı
+            const br = parseInt(borderRadius ? borderRadius.value : 0, 10) || 0;
+            preview.style.borderRadius = br > 0 ? (br + 'px') : '0';
+
+            // Döndürme
+            preview.style.transform = modalRotation ? `rotate(${modalRotation}deg)` : 'none';
+            preview.style.transition = 'transform 0.2s ease, filter 0.15s ease';
+        }
+    }
+
+    function applyModalScale(factor) {
+        const img = editingImage || selectedImage;
         if (!img) return;
+        const inputW = document.getElementById('img-edit-width');
+        const inputH = document.getElementById('img-edit-height');
+        const curW = parseInt(inputW ? inputW.value : 0, 10) || parseInt(img.style.width, 10) || img.offsetWidth || 400;
+        const curH = parseInt(inputH ? inputH.value : 0, 10) || parseInt(img.style.height, 10) || img.offsetHeight || 300;
+        const nw = img.naturalWidth || curW;
+        const nh = img.naturalHeight || curH;
+        if (inputW) inputW.value = Math.max(20, Math.round(nw * factor));
+        if (inputH) inputH.value = Math.max(20, Math.round(nh * factor));
+        updateModalPreview();
+    }
+
+    function rotateModalImage() {
+        modalRotation = (modalRotation + 90) % 360;
+        updateModalPreview();
+    }
+
+    function openEditModal(img) {
+        if (!img && selectedImage) img = selectedImage;
+        if (!img) return;
+        editingImage = img;
         selectedImage = img;
         const modal = document.getElementById('modal-image-edit');
         if (!modal) return;
+
+        modalRotation = parseInt(img.dataset.rotation || '0', 10);
 
         // Modal Alanlarını Doldur
         const preview = document.getElementById('img-edit-preview');
@@ -382,7 +500,6 @@
         const alignSelect = document.getElementById('img-edit-align');
         const borderW = document.getElementById('img-edit-border-w');
         const borderStyle = document.getElementById('img-edit-border-style');
-        const borderColor = document.getElementById('img-edit-border-color');
         const borderRadius = document.getElementById('img-edit-border-radius');
         const chkGrayscale = document.getElementById('img-edit-grayscale');
 
@@ -390,29 +507,9 @@
         const curW = parseInt(img.style.width, 10) || img.offsetWidth || img.naturalWidth || 300;
         const curH = parseInt(img.style.height, 10) || img.offsetHeight || img.naturalHeight || 200;
 
-        if (infoDim) {
-            infoDim.textContent = `Doğal Boyut: ${img.naturalWidth || curW} × ${img.naturalHeight || curH} px`;
-        }
         if (inputW) inputW.value = curW;
         if (inputH) inputH.value = curH;
         if (lockAspect) lockAspect.checked = true;
-
-        // Oran kilidi dinleyicisi
-        if (inputW && inputH) {
-            const aspect = (img.naturalWidth && img.naturalHeight) ? (img.naturalWidth / img.naturalHeight) : (curW / (curH || 1));
-            inputW.oninput = () => {
-                if (lockAspect && lockAspect.checked) {
-                    const wVal = parseFloat(inputW.value) || 0;
-                    inputH.value = Math.round(wVal / aspect);
-                }
-            };
-            inputH.oninput = () => {
-                if (lockAspect && lockAspect.checked) {
-                    const hVal = parseFloat(inputH.value) || 0;
-                    inputW.value = Math.round(hVal * aspect);
-                }
-            };
-        }
 
         // Hizalama
         if (alignSelect) {
@@ -435,17 +532,16 @@
         if (borderStyle) {
             borderStyle.value = img.style.borderStyle || 'solid';
         }
-        if (borderColor) {
-            borderColor.value = '#000000';
-        }
         if (borderRadius) {
-            borderRadius.value = parseInt(img.style.borderRadius, 10) || 0;
+            borderRadius.value = String(parseInt(img.style.borderRadius, 10) || 0);
         }
 
         // Filtreler
         if (chkGrayscale) {
-            chkGrayscale.checked = (img.style.filter && img.style.filter.includes('grayscale'));
+            chkGrayscale.checked = !!(img.style.filter && img.style.filter.includes('grayscale'));
         }
+
+        updateModalPreview();
 
         modal.style.display = 'flex';
     }
@@ -453,40 +549,50 @@
     function closeEditModal() {
         const modal = document.getElementById('modal-image-edit');
         if (modal) modal.style.display = 'none';
+        editingImage = null;
     }
 
     function applyEditModalChanges() {
-        if (!selectedImage) {
+        const img = editingImage || selectedImage;
+        if (!img) {
             closeEditModal();
             return;
         }
-        const img = selectedImage;
+
         const inputW = document.getElementById('img-edit-width');
         const inputH = document.getElementById('img-edit-height');
         const alignSelect = document.getElementById('img-edit-align');
         const borderW = document.getElementById('img-edit-border-w');
         const borderStyle = document.getElementById('img-edit-border-style');
-        const borderColor = document.getElementById('img-edit-border-color');
         const borderRadius = document.getElementById('img-edit-border-radius');
         const chkGrayscale = document.getElementById('img-edit-grayscale');
 
-        if (inputW && inputW.value) img.style.width = parseInt(inputW.value, 10) + 'px';
-        if (inputH && inputH.value) img.style.height = parseInt(inputH.value, 10) + 'px';
+        const newW = parseInt(inputW ? inputW.value : 0, 10) || img.offsetWidth || img.naturalWidth || 300;
+        const newH = parseInt(inputH ? inputH.value : 0, 10) || img.offsetHeight || img.naturalHeight || 200;
+
+        img.style.width = newW + 'px';
+        img.style.height = newH + 'px';
+        img.style.maxWidth = '100%';
+        img.setAttribute('width', String(newW));
+        img.setAttribute('height', String(newH));
 
         if (alignSelect) {
             const align = alignSelect.value;
             if (align === 'left') {
                 img.style.display = 'block';
                 img.style.float = 'left';
-                img.style.margin = '4px 14px 4px 0';
+                img.style.margin = '4px 16px 4px 0';
+                img.style.verticalAlign = 'baseline';
             } else if (align === 'right') {
                 img.style.display = 'block';
                 img.style.float = 'right';
-                img.style.margin = '4px 0 4px 14px';
+                img.style.margin = '4px 0 4px 16px';
+                img.style.verticalAlign = 'baseline';
             } else if (align === 'center') {
                 img.style.display = 'block';
                 img.style.float = 'none';
-                img.style.margin = '8px auto';
+                img.style.margin = '10px auto';
+                img.style.verticalAlign = 'baseline';
             } else {
                 img.style.display = 'inline-block';
                 img.style.float = 'none';
@@ -496,18 +602,19 @@
         }
 
         if (borderW) {
-            const bw = parseInt(borderW.value, 10);
+            const bw = parseInt(borderW.value, 10) || 0;
+            const bs = borderStyle ? borderStyle.value : 'solid';
             if (bw > 0) {
                 img.style.borderWidth = bw + 'px';
-                img.style.borderStyle = borderStyle ? borderStyle.value : 'solid';
-                img.style.borderColor = borderColor ? borderColor.value : '#000000';
+                img.style.borderStyle = bs;
+                img.style.borderColor = '#1e293b';
             } else {
                 img.style.border = 'none';
             }
         }
 
         if (borderRadius) {
-            const br = parseInt(borderRadius.value, 10);
+            const br = parseInt(borderRadius.value, 10) || 0;
             img.style.borderRadius = br > 0 ? (br + 'px') : '0';
         }
 
@@ -519,11 +626,20 @@
             }
         }
 
+        // 90° Döndürme
+        img.dataset.rotation = String(modalRotation);
+        if (modalRotation) {
+            img.style.transform = `rotate(${modalRotation}deg)`;
+        } else {
+            img.style.transform = '';
+        }
+
         closeEditModal();
-        updateOverlayPosition();
+        selectImage(img);
         triggerChange();
+
         if (typeof window.showToast === 'function') {
-            window.showToast('Resim özellikleri güncellendi.', 'success');
+            window.showToast('Resim özellikleri başarıyla güncellendi.', 'success');
         }
     }
 
@@ -626,8 +742,13 @@
 
         // Dışarı tıklandığında seçimi kaldır
         document.addEventListener('click', (e) => {
+            const modal = document.getElementById('modal-image-edit');
+            if (modal && modal.style.display !== 'none') return;
+            if (e.target.closest('#modal-image-edit') || e.target.closest('.ax-modal-backdrop')) return;
             if (overlayEl && (overlayEl.contains(e.target) || overlayEl === e.target)) return;
+            if (e.target.closest('.uki-img-overlay') || e.target.closest('.uki-img-toolbar')) return;
             if (e.target && (e.target.tagName === 'IMG' || (e.target.classList && e.target.classList.contains('udf-img')))) return;
+            if (e.target.closest('#group-grafik') || e.target.closest('#btn-insert-image')) return;
             deselectImage();
         });
 
@@ -734,16 +855,19 @@
         const btnModalReplace = document.getElementById('btn-img-modal-replace');
         if (btnModalReplace) {
             btnModalReplace.addEventListener('click', () => {
-                closeEditModal();
                 openFilePicker(true);
             });
         }
 
         const btnModalDelete = document.getElementById('btn-img-modal-delete');
         if (btnModalDelete) {
-            btnModalDelete.addEventListener('click', () => {
-                closeEditModal();
-                deleteSelectedImage();
+            btnModalDelete.addEventListener('click', deleteSelectedImage);
+        }
+
+        const modalImageEdit = document.getElementById('modal-image-edit');
+        if (modalImageEdit) {
+            modalImageEdit.querySelectorAll('[data-close-modal], .ax-modal-close').forEach(b => {
+                b.addEventListener('click', closeEditModal);
             });
         }
 
@@ -752,49 +876,72 @@
         bindScaleBtn('btn-img-scale-50', 0.50);
         bindScaleBtn('btn-img-scale-75', 0.75);
         bindScaleBtn('btn-img-scale-100', 1.00);
-        
+
         const btnScaleFit = document.getElementById('btn-img-scale-fit');
         if (btnScaleFit) {
             btnScaleFit.addEventListener('click', () => {
-                if (!selectedImage) return;
+                const img = editingImage || selectedImage;
+                if (!img) return;
+                const nw = img.naturalWidth || parseInt(img.style.width, 10) || 600;
+                const nh = img.naturalHeight || parseInt(img.style.height, 10) || 400;
+                const fitW = 540;
+                const fitH = Math.max(20, Math.round(nh * (fitW / nw)));
                 const inputW = document.getElementById('img-edit-width');
                 const inputH = document.getElementById('img-edit-height');
-                const nw = selectedImage.naturalWidth || 600;
-                const nh = selectedImage.naturalHeight || 400;
-                const fitW = 540;
-                const fitH = Math.round(nh * (fitW / nw));
                 if (inputW) inputW.value = fitW;
                 if (inputH) inputH.value = fitH;
+                updateModalPreview();
             });
         }
 
         // 90 Derece Döndürme
         const btnRotate = document.getElementById('btn-img-rotate-90');
         if (btnRotate) {
-            btnRotate.addEventListener('click', () => {
-                if (!selectedImage) return;
-                const curRot = parseInt(selectedImage.dataset.rotation || '0', 10);
-                const nextRot = (curRot + 90) % 360;
-                selectedImage.dataset.rotation = nextRot;
-                selectedImage.style.transform = `rotate(${nextRot}deg)`;
-                updateOverlayPosition();
+            btnRotate.addEventListener('click', rotateModalImage);
+        }
+
+        // Dinamik Giriş ve Değişiklik Olayları
+        const inputW = document.getElementById('img-edit-width');
+        const inputH = document.getElementById('img-edit-height');
+        const lockAspect = document.getElementById('img-edit-aspect-lock');
+        const borderW = document.getElementById('img-edit-border-w');
+        const borderStyle = document.getElementById('img-edit-border-style');
+        const borderRadius = document.getElementById('img-edit-border-radius');
+        const chkGrayscale = document.getElementById('img-edit-grayscale');
+
+        if (inputW) {
+            inputW.addEventListener('input', () => {
+                if (lockAspect && lockAspect.checked) {
+                    const aspect = getModalAspect();
+                    const wVal = parseFloat(inputW.value) || 0;
+                    if (inputH) inputH.value = Math.max(10, Math.round(wVal / aspect));
+                }
+                updateModalPreview();
             });
         }
+
+        if (inputH) {
+            inputH.addEventListener('input', () => {
+                if (lockAspect && lockAspect.checked) {
+                    const aspect = getModalAspect();
+                    const hVal = parseFloat(inputH.value) || 0;
+                    if (inputW) inputW.value = Math.max(10, Math.round(hVal * aspect));
+                }
+                updateModalPreview();
+            });
+        }
+
+        if (borderW) borderW.addEventListener('change', updateModalPreview);
+        if (borderStyle) borderStyle.addEventListener('change', updateModalPreview);
+        if (borderRadius) borderRadius.addEventListener('change', updateModalPreview);
+        if (chkGrayscale) chkGrayscale.addEventListener('change', updateModalPreview);
     }
 
     function bindScaleBtn(btnId, factor) {
         const btn = document.getElementById(btnId);
         if (!btn) return;
         btn.addEventListener('click', () => {
-            if (!selectedImage) return;
-            const inputW = document.getElementById('img-edit-width');
-            const inputH = document.getElementById('img-edit-height');
-            const nw = selectedImage.naturalWidth || 400;
-            const nh = selectedImage.naturalHeight || 300;
-            const targetW = Math.round(nw * factor);
-            const targetH = Math.round(nh * factor);
-            if (inputW) inputW.value = targetW;
-            if (inputH) inputH.value = targetH;
+            applyModalScale(factor);
         });
     }
 

@@ -1295,6 +1295,9 @@
             let style = { ...inherited };
 
             if (node.nodeType === Node.ELEMENT_NODE) {
+                if (node.classList && (node.classList.contains('uki-img-overlay') || node.classList.contains('page-boundaries-layer') || node.classList.contains('uki-img-toolbar'))) {
+                    return leaves;
+                }
                 const tag = node.tagName.toLowerCase();
                 if (tag === 'span' && node.classList) {
                     if (node.classList.contains('udf-underline-dot') || node.classList.contains('udf-list-marker') || node.classList.contains('udf-empty-mark')) {
