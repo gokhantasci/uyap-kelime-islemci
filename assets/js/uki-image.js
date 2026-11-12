@@ -12,9 +12,33 @@
     let isDragging = false;
     let dragHandle = null;
     let startX = 0, startY = 0, startW = 0, startH = 0, aspectRatio = 1;
+    let imageObserver = null;
 
     function getEditor() {
         return document.getElementById('editor');
+    }
+
+    function getScale() {
+        const editor = getEditor();
+        if (!editor || !editor.offsetWidth) return 1;
+        const rect = editor.getBoundingClientRect();
+        return (rect.width / editor.offsetWidth) || 1;
+    }
+
+    function getContainer() {
+        const pw = document.getElementById('page-wrapper');
+        if (pw) {
+            if (pw.style.position !== 'relative') {
+                pw.style.position = 'relative';
+            }
+            return pw;
+        }
+        const ed = getEditor();
+        if (ed && ed.parentElement) {
+            ed.parentElement.style.position = 'relative';
+            return ed.parentElement;
+        }
+        return document.body;
     }
 
     function triggerChange() {
@@ -169,9 +193,22 @@
         selectedImage = img;
         img.classList.add('udf-img-selected');
         createOverlay(img);
+
+        if (typeof window !== 'undefined' && window.ResizeObserver) {
+            try {
+                imageObserver = new window.ResizeObserver(() => {
+                    if (selectedImage) updateOverlayPosition();
+                });
+                imageObserver.observe(img);
+            } catch (e) {}
+        }
     }
 
     function deselectImage() {
+        if (imageObserver) {
+            imageObserver.disconnect();
+            imageObserver = null;
+        }
         if (selectedImage) {
             selectedImage.classList.remove('udf-img-selected');
             selectedImage = null;
@@ -190,7 +227,7 @@
         removeOverlay();
         if (!img || !document.contains(img)) return;
 
-        const container = document.getElementById('page-wrapper') || document.body;
+        const container = getContainer();
 
         overlayEl = document.createElement('div');
         overlayEl.className = 'uki-img-overlay';
@@ -237,14 +274,15 @@
             removeOverlay();
             return;
         }
-        const container = document.getElementById('page-wrapper') || document.body;
+        const container = getContainer();
         const cRect = container.getBoundingClientRect();
         const iRect = selectedImage.getBoundingClientRect();
+        const scale = getScale();
 
-        const top = iRect.top - cRect.top + container.scrollTop;
-        const left = iRect.left - cRect.left + container.scrollLeft;
-        const width = iRect.width;
-        const height = iRect.height;
+        const top = (iRect.top - cRect.top + (container.scrollTop || 0)) / scale;
+        const left = (iRect.left - cRect.left + (container.scrollLeft || 0)) / scale;
+        const width = iRect.width / scale;
+        const height = iRect.height / scale;
 
         overlayEl.style.top = top + 'px';
         overlayEl.style.left = left + 'px';
@@ -266,12 +304,13 @@
                 startW = selectedImage.offsetWidth || selectedImage.naturalWidth || 100;
                 startH = selectedImage.offsetHeight || selectedImage.naturalHeight || 100;
                 aspectRatio = startW / (startH || 1);
+                const scale = getScale();
 
                 const onMouseMove = (ev) => {
                     if (!isDragging || !selectedImage) return;
                     ev.preventDefault();
-                    const dx = ev.clientX - startX;
-                    const dy = ev.clientY - startY;
+                    const dx = (ev.clientX - startX) / scale;
+                    const dy = (ev.clientY - startY) / scale;
 
                     let newW = startW;
                     let newH = startH;
@@ -568,25 +607,27 @@
 
         // Editör içindeki resimlere tıklama ve çift tıklama
         editor.addEventListener('click', (e) => {
-            if (e.target && e.target.classList && e.target.classList.contains('udf-img')) {
+            let targetImg = e.target;
+            if (targetImg && (targetImg.tagName === 'IMG' || (targetImg.classList && targetImg.classList.contains('udf-img')))) {
                 e.stopPropagation();
-                selectImage(e.target);
-            } else if (!e.target.closest('.uki-img-overlay')) {
+                selectImage(targetImg);
+            } else if (!e.target.closest('.uki-img-overlay') && !e.target.closest('.uki-img-toolbar')) {
                 deselectImage();
             }
         });
 
         editor.addEventListener('dblclick', (e) => {
-            if (e.target && e.target.classList && e.target.classList.contains('udf-img')) {
+            let targetImg = e.target;
+            if (targetImg && (targetImg.tagName === 'IMG' || (targetImg.classList && targetImg.classList.contains('udf-img')))) {
                 e.stopPropagation();
-                openEditModal(e.target);
+                openEditModal(targetImg);
             }
         });
 
         // Dışarı tıklandığında seçimi kaldır
         document.addEventListener('click', (e) => {
-            if (overlayEl && overlayEl.contains(e.target)) return;
-            if (e.target && e.target.classList && e.target.classList.contains('udf-img')) return;
+            if (overlayEl && (overlayEl.contains(e.target) || overlayEl === e.target)) return;
+            if (e.target && (e.target.tagName === 'IMG' || (e.target.classList && e.target.classList.contains('udf-img')))) return;
             deselectImage();
         });
 
@@ -640,6 +681,22 @@
         // Sayfa kaydırma veya pencere boyutu değiştiğinde kulp konumunu güncelle
         window.addEventListener('resize', updateOverlayPosition);
         window.addEventListener('scroll', updateOverlayPosition, true);
+
+        const wsContainer = document.getElementById('workspace-container');
+        if (wsContainer) {
+            wsContainer.addEventListener('scroll', updateOverlayPosition, { passive: true });
+        }
+
+        const zoomSelect = document.getElementById('zoom-select');
+        if (zoomSelect) {
+            zoomSelect.addEventListener('change', () => {
+                setTimeout(updateOverlayPosition, 50);
+            });
+        }
+
+        document.addEventListener('uki-document-change', () => {
+            if (selectedImage) updateOverlayPosition();
+        });
 
         // Araç çubuğu buton bağlama
         const btnInsertImage = document.getElementById('btn-insert-image');

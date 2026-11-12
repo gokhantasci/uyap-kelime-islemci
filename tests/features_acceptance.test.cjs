@@ -6,7 +6,7 @@ const { JSDOM } = require('jsdom');
 
 function initDom() {
     const store = {};
-    const dom = new JSDOM('<!DOCTYPE html><html><body><div id="editor" contenteditable="true"><p>Test</p></div></body></html>', {
+    const dom = new JSDOM('<!DOCTYPE html><html><body><div id="workspace-container" class="workspace-container"><div id="page-wrapper" class="page-wrapper"><div id="editor" contenteditable="true"><p>Test</p></div></div></div></body></html>', {
         url: 'http://localhost:8080/'
     });
     global.window = dom.window;
@@ -403,10 +403,18 @@ test('Resim Ekle/Düzenle (UkiImage) ve Grafik Şerit Paritesi: Görsel ekleme, 
     assert.ok(editorEl.contains(insertedImg), 'Resim editör içine yerleştirilmeli');
 
     // 2. Resim Seçme (selectImage) ve Kulp/Araç Çubuğu Kontrolü
+    const pageWrapper = doc.getElementById('page-wrapper');
+    pageWrapper.getBoundingClientRect = () => ({ top: 40, left: 300, width: 794, height: 1122 });
+    insertedImg.getBoundingClientRect = () => ({ top: 120, left: 390, width: 240, height: 180 });
+
     dom.window.UkiImage.selectImage(insertedImg);
     assert.ok(insertedImg.classList.contains('udf-img-selected'), 'Seçilen resim .udf-img-selected almalı');
     const overlay = doc.querySelector('.uki-img-overlay');
     assert.ok(overlay, 'Overlay katmanı oluşturulmalı');
+    assert.ok(pageWrapper.contains(overlay), 'Overlay katmanı page-wrapper içine konumlanmalı');
+    assert.equal(pageWrapper.style.position, 'relative', 'page-wrapper position: relative olmalı');
+    assert.equal(overlay.style.top, '80px', 'Overlay top resim ile birebir eşleşmeli (120 - 40)');
+    assert.equal(overlay.style.left, '90px', 'Overlay left resim ile birebir eşleşmeli (390 - 300)');
     const handles = overlay.querySelectorAll('.img-handle');
     assert.equal(handles.length, 8, '8 adet boyutlandırma kulpu bulunmalı (nw, n, ne, e, se, s, sw, w)');
 

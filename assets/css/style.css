@@ -803,6 +803,7 @@ body {
 }
 
 .page-wrapper {
+    position: relative;
     transition: transform var(--ax-transition-base);
     transform-origin: top center;
 }
