@@ -6101,6 +6101,33 @@ function openColorPicker(pickerId, ev) {
                 if (window.UkiVersions && window.UkiVersions.openModal) window.UkiVersions.openModal();
             });
         }
+
+        const udePillRibbonToggle = document.getElementById('ude-pill-ribbon-toggle');
+        const ribbonToggleText = document.getElementById('ribbon-toggle-text');
+
+        function toggleRibbon() {
+            const isCollapsed = document.body.classList.toggle('ribbon-collapsed');
+            if (ribbonToggleText) {
+                ribbonToggleText.textContent = isCollapsed ? 'Düzenle' : 'Biçimlendirme';
+            }
+            if (udePillRibbonToggle) {
+                udePillRibbonToggle.classList.toggle('active', !isCollapsed);
+            }
+            try {
+                localStorage.setItem('uki-ribbon-collapsed', isCollapsed ? '1' : '0');
+            } catch (_) {}
+        }
+
+        if (udePillRibbonToggle) {
+            udePillRibbonToggle.addEventListener('click', toggleRibbon);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'F1') {
+                e.preventDefault();
+                toggleRibbon();
+            }
+        });
     }
 
     // Sidebar Tabs (Sayfalar & Belge Taslağı)

@@ -379,7 +379,11 @@
                 }
             });
 
-            pageWrapper.appendChild(medalEl);
+            const targetPage = pageWrapper.querySelector('.a4-page') || pageWrapper;
+            if (targetPage !== pageWrapper) {
+                targetPage.style.position = 'relative';
+            }
+            targetPage.appendChild(medalEl);
         },
 
         removePageMedal: function() {

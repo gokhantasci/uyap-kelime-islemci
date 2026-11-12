@@ -311,9 +311,9 @@
             </div>
 
             <div class="ude-toolbar-actions-right">
-                <button type="button" class="ude-pill-feature" id="ude-pill-zen" title="Zen / Odaklanma Modu (F11)">
-                    <span>🧘</span>
-                    <span>Zen Modu</span>
+                <button type="button" class="ude-pill-feature" id="ude-pill-ribbon-toggle" title="Biçimlendirme Araç Çubuğunu Aç / Kapat (Ctrl+F1)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    <span id="ribbon-toggle-text">Biçimlendirme</span>
                 </button>
                 <button type="button" class="ude-pill-feature" id="ude-pill-diff" title="Belge Karşılaştır & Fark İncele (Google Docs & Word Paritesi)">
                     <span>⚖️</span>
@@ -337,11 +337,15 @@
                 </button>
                 <button type="button" class="ude-pill-feature ude-pill-kvkk" id="ude-pill-kvkk" title="Kişisel Verileri Arındır (KVKK)">
                     <span>🔒</span>
-                    <span>KVKK Maskeleme</span>
+                    <span>KVKK</span>
+                </button>
+                <button type="button" class="ude-pill-feature" id="ude-pill-zen" title="Zen / Odaklanma Modu (F11)">
+                    <span>🧘</span>
+                    <span>Zen</span>
                 </button>
                 <button type="button" class="ude-pill-feature" id="ude-pill-docx" title="Microsoft Word (.docx) Olarak İndir">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                    <span>Word (.docx)</span>
+                    <span>Word</span>
                 </button>
             </div>
         </div>
@@ -1927,6 +1931,21 @@
 
                 <!-- Sürüm Zaman Çizelgesi -->
                 <div class="whats-new-timeline">
+                    <div class="timeline-item" style="margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                            <span class="brand-badge" style="background: #1e40af; color: #ffffff;">v2.6.0</span>
+                            <strong style="color: var(--ax-color-neutral-900);">Resmî UDE (udf.adalet.gov.tr) Tasarım Paritesi &amp; Hukuk Araçları Paketi</strong>
+                            <span style="font-size: 11px; color: var(--ax-color-neutral-500); margin-left: auto;">Kasım 2026</span>
+                        </div>
+                        <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: var(--ax-color-neutral-700); line-height: 1.6;">
+                            <li><b>udf.adalet.gov.tr Resmî Tasarım Paritesi:</b> Sade, ferah ve resmî üst belge çubuğu, açılır menülerde ara komut paleti ve otantik kırmızı mühür rozeti.</li>
+                            <li><b>Birebir İmza Detayları Pencerisi:</b> Nitelikli elektronik imza sertifika zinciri, KEP/KSM bilgileri ve anlık geçerlilik sorgulama ekranı.</li>
+                            <li><b>UkiDiff &amp; Sürüm Geçmişi:</b> Karşılaştırma, kelime/satır fark analizi ve zaman makinesi sürüm geçmişi.</li>
+                            <li><b>UDF 30 Dakikalık Geçici Paylaşım:</b> Sunucusuz, güvenli, şifreli ve süre bitiminde otomatik imha olan dosya paylaşımı.</li>
+                            <li><b>Boş Belgede Doğrudan Yazma İyileştirmesi:</b> Sıfır boş belge oluşturulduğunda odaklanma ve yazma davranışı optimize edildi.</li>
+                        </ul>
+                    </div>
+
                     <div class="timeline-item" style="margin-bottom: 16px;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                             <span class="brand-badge" style="background: #047857; color: #ffffff;">v2.5</span>
