@@ -911,8 +911,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Sol marjin 2cm (56.69pt) olduğunda metin fiziksel olarak 67.92pt (2.4cm)'den başlar.
         // Sağ marjin 2.5cm (70.87pt) olduğunda UYAP PDF metin sınırı 522.50pt (marjin 72.82pt)'dedir.
         const leftEffPt = Math.abs(props.leftMargin - 56.69) < 2.0 ? 67.92 : props.leftMargin;
-        const rightEffPt = Math.abs(props.rightMargin - 70.87) < 2.0 ? 70.87 : props.rightMargin;
-        editorEl.style.padding = `${props.topMargin}pt ${rightEffPt}pt ${props.bottomMargin}pt ${leftEffPt}pt`;
+        const rightEffPt = Math.abs(props.rightMargin - 70.87) < 2.0 ? 70.2 : props.rightMargin;
+        // Masaüstü UYAP PDF çıktısı (ölçüldü): 2.5cm üst kenarda ilk satır tabanı bizden ~1.5pt yukarıdadır
+        const topEffPt = Math.abs(props.topMargin - 70.87) < 2.0 ? props.topMargin - 1.5 : props.topMargin;
+        editorEl.style.padding = `${topEffPt}pt ${rightEffPt}pt ${props.bottomMargin}pt ${leftEffPt}pt`;
 
         // Yatay Cetvel Marjin İşaretçilerini Güncelle
         updateRulerMarkers(parseFloat(props.leftMarginCm) || 2.0, parseFloat(props.rightMarginCm) || 2.5);

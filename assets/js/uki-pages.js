@@ -681,7 +681,7 @@
                     startHeaderInlineEdit(h);
                 });
                 const hTopPt = cfg.headerOffsetPt > 0 ? cfg.headerOffsetPt : 15;
-                const hTopPx = pageTop + Math.round(hTopPt * 96 / 72);
+                const hTopPx = pageTop + Math.round(hTopPt * 96 / 72) + 2; // masaüstü PDF: üst bilgi tabanı 1.5pt aşağıda
                 h.style.cssText = `top:${hTopPx}px;left:${g.Ml}px;right:${g.Mr}px;`;
 
                 const leftEl = document.createElement('div');
@@ -797,7 +797,7 @@
                 });
 
                 const align = cfg.pageNumberAlign || 'right';
-                let alignCss = `right:${g.Mr}px; text-align: right;`;
+                let alignCss = `right:${(g.Mr - 2.67).toFixed(2)}px; text-align: right;`; // masaüstü PDF: numara 2pt daha sağda
                 if (align === 'center') {
                     alignCss = `left:0; right:0; text-align: center; margin: 0 auto; width: 100%;`;
                 } else if (align === 'left') {
@@ -837,7 +837,7 @@
                     ev.stopPropagation();
                     if (window.openFooterSetupModal) window.openFooterSetupModal();
                 });
-                const lineTopPx = pageTop + Math.round(811.20 * 96 / 72);
+                const lineTopPx = pageTop + Math.round(807.00 * 96 / 72); // masaüstü PDF taban çizgisi ölçümüne göre (811.2pt kutu üstü -> 4.2pt yukarı)
                 line.style.cssText = `top:${lineTopPx}px;left:87.84px;width:636.48px;`;
                 if (cfg.qrCode) {
                     const qr = document.createElement('div');

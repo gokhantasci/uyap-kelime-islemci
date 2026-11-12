@@ -801,6 +801,17 @@
                     img.style.height = hPx + 'px';
                     img.setAttribute('height', String(hPx));
                 }
+                // Boyutsuz resimde masaüstü UYAP 1 resim pikselini ~1pt (0.98pt) çizer: 16px simge 15.7pt = ~20.9 CSS px
+                if (!(wPx > 0) && !(hPx > 0)) {
+                    const applyNaturalSize = () => {
+                        if (!img.naturalWidth || img.hasAttribute('width') || img.style.width) return;
+                        const k = 0.98 * 96 / 72;
+                        img.style.width = Math.round(img.naturalWidth * k * 100) / 100 + 'px';
+                        img.style.height = Math.round(img.naturalHeight * k * 100) / 100 + 'px';
+                    };
+                    img.addEventListener('load', applyNaturalSize);
+                    if (img.complete) applyNaturalSize();
+                }
                 pEl.appendChild(img);
                 return;
             }
@@ -909,12 +920,15 @@
                         segW = r.getBoundingClientRect().width / (scale || 1) / PX;
                     }
                 }
+                // Masaüstü UYAP (PDF çıktısıyla ölçüldü): iki nokta başlıklı satırlarda durak HAM değerdir (183pt → iki nokta
+                // x=247.2pt'de başlar, 250.9pt'de biter); 0.98 yazı ölçeği yalnızca diğer sekmelerde uygulanır.
+                const stopPos = (isColonHeader && stop.rawPos) ? stop.rawPos : stop.pos;
                 if (stop.align === 2) {
-                    width = isColonHeader ? Math.max(0, stop.pos - x - colonWidth) : Math.max(0, stop.pos - x - segW / 2);
+                    width = isColonHeader ? Math.max(0, stopPos - x - colonWidth) : Math.max(0, stop.pos - x - segW / 2);
                 } else if (stop.align === 1) {
                     width = Math.max(0, stop.pos - x - segW);
                 } else {
-                    width = Math.max(0, stop.pos - x - colonWidth);
+                    width = Math.max(0, stopPos - x - colonWidth);
                 }
                 const wPx = Math.max(0, width * PX);
                 t.style.display = 'inline-block';
@@ -962,7 +976,7 @@
         if (tbl.tableName) tableEl.setAttribute('data-table-name', tbl.tableName);
         tableEl.style.width = '100%';
         tableEl.style.borderCollapse = 'collapse';
-        tableEl.style.margin = '8pt 0';
+        tableEl.style.margin = '0';
 
         const isBorderNone = tbl.border === 'borderNone';
         tableEl.setAttribute('data-border', tbl.border);
@@ -981,7 +995,7 @@
             r.cells.forEach((c, idx) => {
                 const td = document.createElement('td');
                 td.style.border = isBorderNone ? 'none' : '1px solid #777';
-                td.style.padding = '4pt 6pt';
+                td.style.padding = '0 6pt';
                 td.style.verticalAlign = 'top';
 
                 td.style.width = (spans[idx] / spanSum * 100) + '%';

@@ -197,6 +197,8 @@
             clone.removeAttribute('spellcheck');
             clone.querySelectorAll('[id]').forEach((e) => e.removeAttribute('id'));
             clone.querySelectorAll('[contenteditable]').forEach((e) => e.removeAttribute('contenteditable'));
+            // Ekrandaki e-imza rozeti arayüz öğesidir; masaüstü UYAP çıktısında yer almaz
+            clone.querySelectorAll('.ude-page-seal-ribbon, .e-sign-seal-badge, .udf-seal-stamp').forEach((e) => e.remove());
             clone.style.setProperty('top', '-' + (k * g.S) + 'px', 'important');
             clone.style.minHeight = '0';
             sheet.appendChild(clone);
