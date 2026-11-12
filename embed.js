@@ -8,12 +8,37 @@
 (function(window, document) {
     'use strict';
 
-    const BASE_HOST = 'https://udf.657.com.tr';
+    function resolveBaseHost() {
+        let script = document.currentScript;
+        if (!script) {
+            const scripts = document.querySelectorAll('script[src*="embed.js"]');
+            if (scripts.length > 0) script = scripts[scripts.length - 1];
+        }
+        if (script && script.src) {
+            try {
+                const u = new URL(script.src, window.location.href);
+                return u.origin;
+            } catch (e) {}
+        }
+        return 'https://udf.657.com.tr';
+    }
 
     const UkiEmbed = {
         create(options = {}) {
-            const container = typeof options.container === 'string' ? document.querySelector(options.container) : options.container;
-            if (!container) return null;
+            let container = typeof options.container === 'string' ? document.querySelector(options.container) : options.container;
+            
+            // Eğer container bulunamazsa veya belirtilmemişse body'e ekle
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'uki-embed-wrapper';
+                if (document.body) {
+                    document.body.appendChild(container);
+                } else {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        document.body.appendChild(container);
+                    });
+                }
+            }
 
             const mode = options.mode || 'editor';
             const src = options.src || '';
@@ -27,12 +52,15 @@
             if (src) query.set('src', src);
             if (theme) query.set('theme', theme);
 
-            iframe.src = BASE_HOST + '/embed.html?' + query.toString();
+            const baseHost = resolveBaseHost();
+            iframe.src = baseHost + '/embed.html?' + query.toString();
             iframe.style.width = width;
+            iframe.style.maxWidth = '100%';
             iframe.style.height = height;
             iframe.style.border = '1px solid #cbd5e1';
             iframe.style.borderRadius = '8px';
             iframe.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+            iframe.style.display = 'block';
             iframe.setAttribute('allowfullscreen', 'true');
             iframe.setAttribute('loading', 'lazy');
 
@@ -58,7 +86,25 @@
                 if (!targetEl) {
                     targetEl = document.createElement('div');
                     targetEl.className = 'uki-embed-wrapper';
-                    s.parentNode.insertBefore(targetEl, s.nextSibling);
+                    targetEl.style.width = width;
+                    targetEl.style.maxWidth = '100%';
+                    targetEl.style.marginBottom = '24px';
+
+                    // <head> içine iframe eklenmesini engelle
+                    const parent = s.parentNode;
+                    const inHead = !parent || parent.tagName === 'HEAD' || (s.closest && s.closest('head'));
+
+                    if (inHead) {
+                        if (document.body) {
+                            document.body.appendChild(targetEl);
+                        } else {
+                            document.addEventListener('DOMContentLoaded', () => {
+                                document.body.appendChild(targetEl);
+                            });
+                        }
+                    } else {
+                        parent.insertBefore(targetEl, s.nextSibling);
+                    }
                 }
 
                 UkiEmbed.create({
@@ -80,4 +126,3 @@
         UkiEmbed.autoInit();
     }
 })(window, document);
-

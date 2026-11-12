@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     UYAP Kelime İşlemci & Print to UDF - Tek Komutla Otomatik Kurulum Betiği
 .DESCRIPTION

@@ -226,22 +226,45 @@ Yazılarınıza veya sayfalarınıza tek bir kısa kod ekleyerek editörü veya 
 
 * **Belirli Bir UDF / Karar Dosyasını Görüntüleme (Viewer):**
   ```text
-  [uyap_viewer src="https://site.com/emsal-karar.udf" width="100%" height="650px"]
+  [uyap_viewer src="https://udf.657.com.tr/assets/data/ornek-belge.udf" width="100%" height="650px"]
   ```
 
 ---
 
 ## 🌐 Web Sitenize Gömme: Hafif Editör & Görüntüleyici (Embed SDK)
 
-Kendi web sitenize veya hukuk portalınıza tek satır kodla hafif UDF doküman görüntüleyicisi gömebilirsiniz:
+Kendi web sitenize veya hukuk portalınıza tek satır kodla hafif UDF doküman düzenleyicisi veya görüntüleyicisi gömebilirsiniz:
+
+### 1. Tek Satır Script ile Kullanım
 
 ```html
-<!-- Hafif Düzenleyici (Editor Modu) -->
+<!-- Hafif Düzenleyici (Editor Modu: Yazma, Biçimlendirme, UDF İndirme) -->
 <script src="https://udf.657.com.tr/embed.js" data-mode="editor" data-theme="light" data-width="100%" data-height="700px"></script>
 
-<!-- Salt Okunur Görüntüleyici (Viewer Modu) -->
-<script src="https://udf.657.com.tr/embed.js" data-mode="viewer" data-src="https://site.com/ornek-karar.udf" data-theme="light"></script>
+<!-- Salt Okunur Görüntüleyici (Viewer Modu: Uzak UDF dosyasını sayfada okutma) -->
+<script src="https://udf.657.com.tr/embed.js" data-mode="viewer" data-src="https://udf.657.com.tr/assets/data/ornek-belge.udf" data-theme="light" data-width="100%" data-height="700px"></script>
 ```
+
+### 2. Boş Bir HTML Dosyasında Doğrudan Test Etme (Örnek Şablon)
+
+Boş bir HTML belgesinde denemek için dosyanızı aşağıdaki gibi standart `<body>` etiketleri arasına yerleştirerek oluşturabilirsiniz:
+
+```html
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>UYAP Editör Embed Testi</title>
+</head>
+<body style="font-family: sans-serif; background: #f8fafc; padding: 20px;">
+    <h2>UYAP Doküman Editörü</h2>
+    <!-- Editör burada otomatik olarak oluşturulacaktır -->
+    <script src="https://udf.657.com.tr/embed.js" data-mode="editor" data-theme="light" data-width="100%" data-height="700px"></script>
+</body>
+</html>
+```
+
+*(Detaylı çalışan tam örnek için depodaki [`examples/embed-demo.html`](examples/embed-demo.html) dosyasına göz atabilirsiniz.)*
 
 ---
 

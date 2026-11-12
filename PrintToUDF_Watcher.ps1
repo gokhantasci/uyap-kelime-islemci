@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Print to UDF - Bağımsız Windows Yazıcı İzleyicisi (Python Bağımsız / Fallback Watcher)
 .DESCRIPTION
@@ -105,3 +105,4 @@ while ($true) {
         Start-Sleep -Seconds 2
     }
 }
+

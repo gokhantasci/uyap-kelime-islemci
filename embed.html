@@ -30,6 +30,8 @@
             padding: 6px 12px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06);
             z-index: 10;
+            flex-wrap: wrap;
+            gap: 6px;
         }
         .embed-toolbar-left, .embed-toolbar-right {
             display: flex;
@@ -48,6 +50,7 @@
             align-items: center;
             gap: 4px;
             color: #334155;
+            transition: all 0.15s ease;
         }
         .embed-btn:hover {
             background: #e2e8f0;
@@ -69,9 +72,11 @@
             display: flex;
             justify-content: center;
             padding: 24px 12px;
+            box-sizing: border-box;
         }
         .embed-page {
             width: 794px;
+            max-width: 100%;
             min-height: 1123px;
             background: #ffffff;
             box-shadow: 0 4px 20px rgba(0,0,0,0.18);
@@ -81,9 +86,16 @@
             font-size: 12pt;
             line-height: 1.25;
             color: #000000;
+            position: relative;
         }
         .embed-page[contenteditable="false"] {
             cursor: default;
+        }
+        .embed-page:empty:before {
+            content: attr(data-placeholder);
+            color: #94a3b8;
+            pointer-events: none;
+            display: block;
         }
         .embed-brand {
             font-weight: 700;
@@ -94,6 +106,14 @@
             align-items: center;
             gap: 4px;
             font-family: sans-serif;
+        }
+        @media (max-width: 768px) {
+            .embed-page {
+                padding: 36px 20px;
+            }
+            .embed-toolbar {
+                padding: 4px 8px;
+            }
         }
     </style>
 </head>
@@ -112,6 +132,8 @@
             </div>
 
             <div class="embed-toolbar-right">
+                <input type="file" id="embed-file-input" accept=".udf,.docx" style="display:none">
+                <button type="button" class="embed-btn" id="btn-embed-open" title="Bilgisayardan UDF veya Word aç">📂 Dosya Aç</button>
                 <button type="button" class="embed-btn" onclick="window.print()" title="Yazdır / PDF Kaydet">🖨️ Yazdır</button>
                 <button type="button" class="embed-btn embed-btn-primary" id="btn-embed-save" title="UDF Olarak İndir">💾 UDF İndir</button>
                 <a href="https://udf.657.com.tr" target="_blank" rel="noopener noreferrer" class="embed-brand" title="UYAP Kelime İşlemci">
@@ -121,8 +143,8 @@
         </header>
 
         <main class="embed-viewport" id="embed-viewport">
-            <div id="embed-editor" class="embed-page" contenteditable="true" spellcheck="true">
-                <p>Belge yükleniyor veya düzenlemeye hazır...</p>
+            <div id="embed-editor" class="embed-page" contenteditable="true" spellcheck="true" data-placeholder="Metninizi buraya yazın veya bir UDF dosyasını sürükleyip bırakın...">
+                <p><br></p>
             </div>
         </main>
     </div>
@@ -138,6 +160,9 @@
             const editorEl = document.getElementById('embed-editor');
             const editTools = document.getElementById('embed-edit-tools');
             const saveBtn = document.getElementById('btn-embed-save');
+            const openBtn = document.getElementById('btn-embed-open');
+            const fileInput = document.getElementById('embed-file-input');
+            const viewport = document.getElementById('embed-viewport');
 
             if (mode === 'viewer') {
                 editorEl.contentEditable = 'false';
@@ -150,27 +175,89 @@
                 editorEl.style.color = '#f8fafc';
             }
 
+            // UDF / DOCX ArrayBuffer Yükleme Fonksiyonu
+            async function loadBuffer(buf, filename = 'belge.udf') {
+                try {
+                    editorEl.innerHTML = '<div style="text-align:center; padding:60px 20px; color:#64748b; font-family:sans-serif;">⏳ Belge ayrıştırılıyor...</div>';
+                    let model;
+                    if (filename.toLowerCase().endsWith('.docx')) {
+                        model = await window.UkiCore.parseDocx(buf);
+                    } else {
+                        model = await window.UkiCore.parseUdf(buf);
+                    }
+                    editorEl.innerHTML = window.UkiCore.udfModelToHtml(model);
+                } catch (err) {
+                    showError('Belge ayrıştırılamadı: ' + err.message);
+                }
+            }
+
+            function showError(msg) {
+                editorEl.innerHTML = `
+                    <div style="text-align:center; padding:40px 20px; color:#334155; font-family:sans-serif;">
+                        <div style="font-size:32px; margin-bottom:8px;">⚠️</div>
+                        <h4 style="margin:0 0 8px 0; color:#ef4444;">${msg}</h4>
+                        <p style="color:#64748b; font-size:13px; max-width:440px; margin:0 auto 16px auto;">
+                            Uzak sunucu CORS paylaşımına izin vermiyor olabilir veya bağlantı adresi geçersiz.
+                        </p>
+                        <div style="display:inline-flex; gap:8px;">
+                            <button type="button" class="embed-btn embed-btn-primary" onclick="document.getElementById('embed-file-input').click()">📂 Bilgisayardan UDF Seç</button>
+                            <button type="button" class="embed-btn" id="btn-load-sample">📄 Örnek Belge Yükle</button>
+                        </div>
+                    </div>
+                `;
+                const btnSample = document.getElementById('btn-load-sample');
+                if (btnSample) {
+                    btnSample.onclick = () => loadRemote('assets/data/ornek-belge.udf');
+                }
+            }
+
             // Uzak UDF / DOCX yükleme
-            if (src) {
-                fetch(src)
-                    .then(res => res.arrayBuffer())
-                    .then(async buf => {
-                        try {
-                            if (src.toLowerCase().endsWith('.docx')) {
-                                const model = await window.UkiCore.parseDocx(buf);
-                                editorEl.innerHTML = window.UkiCore.udfModelToHtml(model);
-                            } else {
-                                const model = await window.UkiCore.parseUdf(buf);
-                                editorEl.innerHTML = window.UkiCore.udfModelToHtml(model);
-                            }
-                        } catch (err) {
-                            editorEl.innerHTML = '<p style="color:#ef4444;">Belge yüklenemedi: ' + err.message + '</p>';
-                        }
+            function loadRemote(url) {
+                editorEl.innerHTML = '<div style="text-align:center; padding:60px 20px; color:#64748b; font-family:sans-serif;">⏳ Uzak belge getiriliyor...</div>';
+                fetch(url)
+                    .then(res => {
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        return res.arrayBuffer();
                     })
+                    .then(buf => loadBuffer(buf, url))
                     .catch(err => {
-                        editorEl.innerHTML = '<p style="color:#ef4444;">Kaynak dosyaya erişilemedi: ' + err.message + '</p>';
+                        showError('Kaynak dosyaya erişilemedi (' + err.message + ')');
                     });
             }
+
+            if (src) {
+                loadRemote(src);
+            }
+
+            // Dosya Aç Butonu
+            if (openBtn && fileInput) {
+                openBtn.addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (evt) => loadBuffer(evt.target.result, file.name);
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+
+            // Sürükle & Bırak Desteği
+            [viewport, editorEl].forEach(target => {
+                target.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+                target.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (evt) => loadBuffer(evt.target.result, file.name);
+                        reader.readAsArrayBuffer(file);
+                    }
+                });
+            });
 
             // UDF İndirme
             if (saveBtn) {
@@ -194,4 +281,3 @@
     </script>
 </body>
 </html>
-
