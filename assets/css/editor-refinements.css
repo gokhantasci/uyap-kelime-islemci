@@ -1568,8 +1568,8 @@ body.zen-mode-active:hover .zen-mode-top-bar,
 
 .header-bar .fm-menu {
     top: calc(100% + 2px) !important;
-    max-height: calc(100vh - 65px) !important;
-    overflow-y: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
     z-index: 10050 !important;
 }
 
@@ -1652,3 +1652,14 @@ body.ude-signed-readonly #editor { cursor: default; }
 .uki-palette-hex.invalid { border-color: #ef4444; background: #fef2f2; }
 .uki-palette-recentlabel { font-size: 11px; color: #64748b; margin: 0 0 6px; }
 .ax-modal-header { user-select: none; cursor: grab; }
+
+
+/* Menülerde kaydırma çubuğu yok: alt menüler taşabilsin, alçak pencerede satırlar sıkılaşsın */
+.fm-menu, .fm-sub { max-height: none !important; overflow: visible !important; }
+@media (max-height: 760px) {
+    .header-bar .fm-item, .fm-item { min-height: 28px !important; }
+    .fm-menu hr, .fm-sep, .fm-divider { margin: 2px 0 !important; }
+}
+@media (max-height: 620px) {
+    .header-bar .fm-item, .fm-item { min-height: 24px !important; font-size: 12px !important; }
+}

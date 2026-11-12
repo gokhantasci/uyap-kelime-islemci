@@ -118,14 +118,6 @@
                 document.dispatchEvent(new CustomEvent('uki-menu-open', { detail: 'topbar' })); // Dosya menüsünü kapat
                 panel.querySelectorAll('.fm-item').forEach((b) => b._refresh && b._refresh());
                 panel.hidden = false; root.classList.add('open'); trigger.setAttribute('aria-expanded', 'true');
-                try {
-                    const rect = panel.getBoundingClientRect();
-                    const maxAllowed = (typeof window !== 'undefined' ? window.innerHeight : 800) - rect.top - 12;
-                    if (maxAllowed > 100 && rect.bottom > (typeof window !== 'undefined' ? window.innerHeight : 800)) {
-                        panel.style.maxHeight = maxAllowed + 'px';
-                        panel.style.overflowY = 'auto';
-                    }
-                } catch (_) {}
             }
         };
         specs.forEach((s) => panel.appendChild(makeItem(s, menu)));
@@ -218,7 +210,7 @@
             '-',
             { icon: I.thumbs, label: 'Sayfa önizlemeleri', kbd: 'Ctrl+G', check: isActive('btn-toggle-thumbnails'), run: () => click('btn-toggle-thumbnails') },
             { icon: I.ruler, label: 'Cetvel', check: isActive('btn-toggle-ruler'), run: () => click('btn-toggle-ruler') },
-            { icon: I.ruler, label: 'Mizanpaj denetçisi (Layout Debugger)', kbd: 'Ctrl+Alt+D', check: () => !!(window.UkiLayoutDebugger && window.UkiLayoutDebugger.isEnabled()), run: () => window.UkiLayoutDebugger && window.UkiLayoutDebugger.toggle() },
+            { icon: I.ruler, label: 'Mizanpaj denetçisi', kbd: 'Ctrl+Alt+D', check: () => !!(window.UkiLayoutDebugger && window.UkiLayoutDebugger.isEnabled()), run: () => window.UkiLayoutDebugger && window.UkiLayoutDebugger.toggle() },
             { icon: I.watermark, label: 'Güvenlik filigranı', check: isActive('btn-toggle-watermark'), run: () => click('btn-toggle-watermark') },
             { icon: I.moon, label: 'Sayfa koyu (gece okuma)', check: isActive('btn-doc-dark'), run: () => click('btn-doc-dark') },
             '-',

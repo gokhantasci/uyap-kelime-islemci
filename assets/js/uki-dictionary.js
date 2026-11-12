@@ -555,21 +555,80 @@
         return lookupIn(NORMALIZED_MAP, word) || (deep ? lookupIn(MAP_657, word) : null);
     }
 
+    // Paketli kopya (tam tanımlar, çevrimdışı çalışır) + canlı 657.com.tr JSON'u (yeni/güncel terimler)
     const DATA_657_URL = 'assets/data/sozluk-657.json';
+    const LIVE_657_URL = 'https://657.com.tr/hukuk-sozlugu/ara.json';
+    const LIVE_CACHE_KEY = 'uki-657-live-v1';
+    const LIVE_TTL_MS = 12 * 60 * 60 * 1000;
+    const sourceInfo = { bundled: 0, live: 0, liveAt: 0, liveState: 'bekliyor' };
     let loaded657 = false;
+
+    const isTruncated = (d) => /…\s*$|\.\.\.\s*$/.test(String(d || ''));
+
+    // Satırları sözlüğe işler. Var olan kayıtta yalnızca kısaltılmış (…) tanım tam tanımla değişir.
+    function ingest657(rows) {
+        let added = 0;
+        (rows || []).forEach((r) => {
+            if (!Array.isArray(r) || !r[0]) return;
+            const norm = normalizeTurkish(r[0]);
+            if (NORMALIZED_MAP.has(norm)) return; // özenle yazılmış kayıt öncelikli
+            const existing = MAP_657.get(norm);
+            if (existing) {
+                if (isTruncated(existing.shortDef) && r[2] && !isTruncated(r[2])) existing.shortDef = r[2];
+                if (!existing.slug && r[1]) existing.slug = r[1];
+                return;
+            }
+            const item = { term: r[0], slug: r[1], shortDef: r[2] || '', fullDef: '', origin: '', category: 'Hukuk Sözlüğü', src657: true };
+            MAP_657.set(norm, item);
+            TERMS_DB.push(item);
+            added++;
+        });
+        return added;
+    }
+
+    function refreshDictionaryView() {
+        if (modalEl && modalEl.style.display !== 'none') filterTerms();
+    }
+
+    function loadLive657() {
+        let cached = null;
+        try { cached = JSON.parse(localStorage.getItem(LIVE_CACHE_KEY) || 'null'); } catch (_) { cached = null; }
+        if (cached && Array.isArray(cached.rows)) {
+            ingest657(cached.rows);
+            sourceInfo.live = cached.rows.length;
+            sourceInfo.liveAt = cached.at || 0;
+        }
+        if (cached && Date.now() - (cached.at || 0) < LIVE_TTL_MS) {
+            sourceInfo.liveState = 'önbellekte güncel';
+            refreshDictionaryView();
+            return;
+        }
+        const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timer = ctl ? setTimeout(() => ctl.abort(), 8000) : null;
+        fetch(LIVE_657_URL, ctl ? { signal: ctl.signal } : undefined)
+            .then((r) => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
+            .then((rows) => {
+                if (!Array.isArray(rows) || !rows.length) throw new Error('boş yanıt');
+                ingest657(rows);
+                sourceInfo.live = rows.length;
+                sourceInfo.liveAt = Date.now();
+                sourceInfo.liveState = 'canlı';
+                try { localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify({ at: sourceInfo.liveAt, rows })); } catch (_) { /* kota dolu: yoksay */ }
+                refreshDictionaryView();
+            })
+            .catch(() => { if (!sourceInfo.liveAt) sourceInfo.liveState = 'çevrimdışı (paketli kopya)'; })
+            .then(() => { if (timer) clearTimeout(timer); });
+    }
+
     function load657() {
         if (loaded657) return;
         loaded657 = true;
         fetch(DATA_657_URL).then((r) => (r.ok ? r.json() : [])).then((rows) => {
-            rows.forEach((r) => {
-                const item = { term: r[0], slug: r[1], shortDef: r[2], fullDef: '', origin: '', category: 'Hukuk Sözlüğü', src657: true };
-                const norm = normalizeTurkish(item.term);
-                if (NORMALIZED_MAP.has(norm)) return; // özenle yazılmış kayıt öncelikli
-                if (!MAP_657.has(norm)) MAP_657.set(norm, item);
-                TERMS_DB.push(item);
-            });
-            if (modalEl && modalEl.style.display !== 'none') filterTerms();
-        }).catch(() => { loaded657 = false; });
+            sourceInfo.bundled = rows.length;
+            ingest657(rows);
+            refreshDictionaryView();
+        }).catch(() => { /* paketli kopya yoksa yalnızca canlı veri kullanılır */ })
+            .then(loadLive657);
     }
 
     /**
