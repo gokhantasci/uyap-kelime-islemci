@@ -27,6 +27,13 @@
             this.el.addEventListener('mouseup', () => this.updateToolbarState());
             this.el.addEventListener('paste', (e) => this.handlePaste(e));
 
+            // Editörde mutlaka yazılabilir en az bir paragraf bulunmalıdır
+            if (!this.el.querySelector('p, div:not(.page-boundaries-layer):not(.a4-antet-layer):not(.a4-watermark-layer):not(.pb-spacer)')) {
+                const p = document.createElement('p');
+                p.innerHTML = '<br>';
+                this.el.appendChild(p);
+            }
+
             // Başlangıç istatistikleri
             this.updateStats();
         }
@@ -201,6 +208,11 @@
                 c.id === 'antet-layer' || c.id === 'watermark-layer' ||
                 c.id === 'e-sign-seal-badge' || c.id === 'page-boundaries-layer');
             this.el.innerHTML = html;
+            if (!this.el.querySelector('p, div:not(.page-boundaries-layer):not(.a4-antet-layer):not(.a4-watermark-layer):not(.pb-spacer)')) {
+                const p = document.createElement('p');
+                p.innerHTML = '<br>';
+                this.el.appendChild(p);
+            }
             keep.reverse().forEach(c => this.el.insertBefore(c, this.el.firstChild));
             this.updateStats();
             this.updateToolbarState();
@@ -211,8 +223,8 @@
 
         clear() {
             this.setContentHtml('<p><br></p>'); // katmanları (antet, filigran...) korur
-            return;
             this.updateStats();
+            try { this.el.focus(); } catch (_) {}
         }
     }
 

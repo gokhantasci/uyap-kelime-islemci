@@ -413,6 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function triggerNewDoc() {
         if (!window.UkiApp.isDirty() || await UkiDialog.confirm('Geçerli belgedeki kaydedilmemiş değişiklikler kaybolabilir. Yeni boş belge açılsın mı?', { title: 'Yeni belge', okText: 'Yeni belge aç' })) {
+            removeAntetFromEditor();
             editor.clear();
             if (docTitleInput) docTitleInput.value = 'Yeni Belge';
             currentFileName = 'Yeni Belge.udf';
@@ -422,6 +423,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.UkiSeal) window.UkiSeal.setSignatures([]);
             recalculatePagesAndThumbnails();
             window.UkiApp.markSaved();
+
+            // İmleci doğrudan ilk paragrafa konumlandır ve odakla
+            let p = editorEl.querySelector('p');
+            if (!p) {
+                p = document.createElement('p');
+                p.innerHTML = '<br>';
+                editorEl.appendChild(p);
+            }
+            editorEl.focus();
+            try {
+                const range = document.createRange();
+                const sel = window.getSelection();
+                range.selectNodeContents(p);
+                range.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            } catch (_) {}
             showToast('Yeni boş belge oluşturuldu.', 'info');
         }
     }
@@ -3765,6 +3783,27 @@ Sakarya Yazı İşleri Müdürü – 139329`;
         stopRaf = requestAnimationFrame(renderRulerStops);
     });
 
+    // Boş belgeye veya sayfa kenar boşluklarına tıklandığında doğrudan yazılabilir paragrafa odaklanma
+    editorEl.addEventListener('click', (e) => {
+        let p = editorEl.querySelector('p:not(.pb-spacer)');
+        if (!p) {
+            p = document.createElement('p');
+            p.innerHTML = '<br>';
+            editorEl.appendChild(p);
+        }
+        if (e.target === editorEl || (e.target.classList && (e.target.classList.contains('page-boundaries-layer') || e.target.classList.contains('a4-antet-layer') || e.target.classList.contains('a4-watermark-layer')))) {
+            editorEl.focus();
+            try {
+                const sel = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(p);
+                range.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            } catch (_) {}
+        }
+    });
+
     // Tab ve Enter tuşları yönetimi: sekme durağına gitme ve yeni paragrafta özellikleri devralma
     editorEl.addEventListener('keydown', (e) => {
         // Enter tuşu: Paragraf özelliklerini sonraki paragrafa aktar ve sayfa düzenini dikey üst kenar boşluğuyla anında yenile
@@ -5308,6 +5347,51 @@ function openColorPicker(pickerId, ev) {
             localStorage.setItem('uki-visited-v24', 'true');
         } else if (!editor.getContentHtml().trim() || editor.getContentHtml() === '<p><br></p>') {
             loadWhatsNewDocument();
+        }
+
+        // Showcase & Tanıtım Ekran Görüntüleri Otomasyonu (100% KVKK ve Gizlilik Güvenceli Kurgusal Veri)
+        const showcaseMode = urlParams.get('showcase');
+        if (showcaseMode) {
+            if (showcaseMode === 'ai') {
+                setTimeout(() => {
+                    if (window.UkiAI && window.UkiAI.openDrawer) {
+                        window.UkiAI.openDrawer();
+                        const resultCard = document.getElementById('ai-analysis-result');
+                        if (resultCard) {
+                            resultCard.style.display = 'block';
+                            resultCard.innerHTML = `
+                                <div class="ai-summary-header" style="font-weight:700;color:#4f46e5;margin-bottom:8px;">🤖 UYAP HUKUK ASİSTANI — BELGE ANALİZİ</div>
+                                <div class="ai-summary-row" style="margin-bottom:4px;font-size:12px;"><b>Belge Türü:</b> Resmî Duyuru / Sürüm Raporu</div>
+                                <div class="ai-summary-row" style="margin-bottom:4px;font-size:12px;"><b>Geliştirici:</b> Gökhan TAŞÇI (Sakarya Yazı İşleri Müdürü - Sicil: 139329)</div>
+                                <div class="ai-summary-row" style="margin-bottom:4px;font-size:12px;"><b>Sürüm:</b> v2.6.0 (UDF 1.8 Paritesi)</div>
+                                <div class="ai-summary-row" style="margin-bottom:4px;font-size:12px;"><b>Özet:</b> %100 İstemci taraflı (Zero-Server) çalışan sistem; Diff karşılaştırma, sürüm geçmişi zaman makinesi, slash komut menüsü ve KVKK anonimleştirme motoru içermektedir.</div>
+                                <div class="ai-summary-badge" style="background:#ecfdf5;color:#059669;padding:6px 10px;border-radius:4px;font-weight:600;margin-top:10px;font-size:11.5px;display:inline-block;">✅ Gizlilik Güvencesi: Sıfır Sunucu (Zero-Server)</div>
+                            `;
+                        }
+                    }
+                }, 400);
+            } else if (showcaseMode === 'kvkk') {
+                setTimeout(() => {
+                    // Tamamen kurgusal anonim test verileriyle KVKK modalını aç
+                    window.UkiApp.replaceDocument(`
+                        <p><b>DAVACI:</b> Ahmet YILMAZ, TC Kimlik No: 10000000146, Atatürk Bulvarı No:10 Çankaya/ANKARA</p>
+                        <p><b>DAVALI:</b> Mehmet DEMİR, TC Kimlik No: 20000000122, İnönü Cad. No:5 Kadıköy/İSTANBUL</p>
+                        <p>Yukarıda açık kimliği yazılı davacı Ahmet YILMAZ vekili tarafından sunulan dava dilekçesinde...</p>
+                    `, 'Kurgusal Dava Metni', {clean:true});
+                    setTimeout(() => {
+                        const modal = document.getElementById('modal-kvkk-setup');
+                        if (modal && typeof openModal === 'function') {
+                            openModal(modal);
+                            if (typeof runKvkkScan === 'function') runKvkkScan(false);
+                        }
+                    }, 200);
+                }, 300);
+            } else if (showcaseMode === 'image') {
+                setTimeout(() => {
+                    const modal = document.getElementById('modal-image-properties');
+                    if (modal && typeof openModal === 'function') openModal(modal);
+                }, 400);
+            }
         }
     }
 
