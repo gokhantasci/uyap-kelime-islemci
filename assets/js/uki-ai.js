@@ -147,14 +147,55 @@
     // --------------------------------------------------------------------------
 
     function getCleanDocumentText() {
-        if (window.UkiApp) return window.UkiApp.text();
         const editor = document.getElementById('editor');
-        if (!editor) return '';
-        // Editör içindeki antet, filigran ve sayfa ayraçları hariç saf metni al
-        const clone = editor.cloneNode(true);
-        const ignored = clone.querySelectorAll('#page-boundaries-layer, #antet-layer, #watermark-layer, .page-break-line');
-        ignored.forEach(el => el.remove());
-        return (clone.innerText || clone.textContent || '').trim();
+        if (!editor) {
+            if (window.UkiApp && typeof window.UkiApp.text === 'function') {
+                return window.UkiApp.text();
+            }
+            return '';
+        }
+        function walk(node) {
+            if (!node) return '';
+            if (node.nodeType === Node.TEXT_NODE) return node.nodeValue;
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                const tag = node.tagName.toLowerCase();
+                if (node.classList && (node.classList.contains('pb-header') || node.classList.contains('pb-footer') || node.classList.contains('udf-watermark') || node.id === 'page-boundaries-layer' || node.id === 'antet-layer' || node.id === 'watermark-layer')) {
+                    return '';
+                }
+                if (tag === 'br') return '\n';
+                let str = '';
+                for (let child of node.childNodes) {
+                    str += walk(child);
+                }
+                if (['p', 'div', 'tr', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)) {
+                    return '\n' + str + '\n';
+                }
+                return str;
+            }
+            return '';
+        }
+        const text = walk(editor).replace(/\r\n/g, '\n').replace(/\u00A0/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+        if (text && text.length > 10) return text;
+        if (window.UkiApp && typeof window.UkiApp.text === 'function') return window.UkiApp.text();
+        return (editor.innerText || editor.textContent || '').trim();
+    }
+
+    function prepareDocumentContext(text, maxLength = 8500) {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+
+        // Metin uzunsa başlık, taraflar, iddia ve MUTLAKA HÜKÜM / SONUÇ fıkrasını içeren akıllı bağlam oluştur
+        const hukümIdx = text.search(/\b(?:H\s*Ü\s*K\s*Ü\s*M|HÜKÜM|GEREĞİ\s+DÜŞÜNÜLDÜ|SONUÇ)\s*:/i);
+        if (hukümIdx !== -1) {
+            const headBudget = Math.floor(maxLength * 0.45);
+            const tailBudget = Math.floor(maxLength * 0.50);
+            const headPart = text.slice(0, headBudget);
+            const verdictPart = text.slice(hukümIdx, hukümIdx + tailBudget);
+            return `${headPart}\n\n[...METNİN GEREKÇE BÖLÜMÜ DEVAM EDİYOR...]\n\n${verdictPart}`;
+        }
+
+        const half = Math.floor(maxLength / 2);
+        return `${text.slice(0, half)}\n\n[...]\n\n${text.slice(-half)}`;
     }
 
     // --------------------------------------------------------------------------
@@ -198,6 +239,10 @@ TEMEL YARGISAL KURALLAR:
             };
         }
 
+        // Eğer blok elementleri satır sonu olmadan textContent ile birleştirilmişse, etiketler arasına \n koy:
+        text = String(text || '').replace(/\r\n/g, '\n');
+        text = text.replace(/([0-9.,;)])(?=(?:MÜŞTEKİ\s*[-/]?\s*SANIK|SANIK|DAVACI|DAVALI|MÜŞTEKİ|KATILAN|ŞÜPHELİ|MAĞDUR|VEKİLİ?|MÜDAFİİ?|SUÇ(?:\s+TARİHİ|\s+YERİ)?|DAVA\s+KONUSU|TALEP\s+KONUSU|KARAR\s+TARİHİ|DOSYA\s+NO|ESAS\s+NO|KARAR\s+NO|HAK[İI]M|K[AÂ]T[İI]P|SAVCI|İDDİA|SAVUNMA|DELİLLER|GEREKÇE|H\s*Ü\s*K\s*Ü\s*M)\s*[:.\s-])/gi, '$1\n');
+
         const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
         const facts = {
             docType: "Hukuki Belge",
@@ -221,25 +266,30 @@ TEMEL YARGISAL KURALLAR:
         };
 
         // Belge Türü & Mahkeme Tespiti
-        for (let i = 0; i < Math.min(15, lines.length); i++) {
-            const l = lines[i];
-            if (/MAHKEMESİ|HUKUK DAİRESİ|CEZA DAİRESİ|BAŞSAVCILIĞI|HAKİMLİĞİ|İCRA MÜDÜRLÜĞÜ/i.test(l)) {
+        for (let i = 0; i < Math.min(25, lines.length); i++) {
+            const rawLine = lines[i].replace(/^T\.?C\.?\s*/i, '').trim();
+            if (/MAHKEMESİ|HUKUK DAİRESİ|CEZA DAİRESİ|BAŞSAVCILIĞI|HAKİMLİĞİ|İCRA MÜDÜRLÜĞÜ/i.test(rawLine)) {
                 if (!facts.court) {
-                    if (i > 0 && /^[A-ZÇĞİÖŞÜ\s]{3,30}$/.test(lines[i-1]) && !/T\.?C\.?/i.test(lines[i-1])) {
-                        facts.court = lines[i-1] + ' ' + l;
-                    } else {
-                        facts.court = l;
+                    let c = rawLine;
+                    if (i > 0) {
+                        const prev = lines[i-1].replace(/^T\.?C\.?\s*/i, '').trim();
+                        if (/^[A-ZÇĞİÖŞÜ\s]{3,30}$/.test(prev) && !/MAHKEMESİ|DAİRESİ|HAKİMLİĞİ|BAŞSAVCILIĞI/i.test(prev)) {
+                            c = prev + ' ' + rawLine;
+                        }
                     }
+                    // Mahkeme isminden sonra gelen ek ibareleri (karar türü, usul, dosya no vb.) ayıkla
+                    c = c.split(/\s{2,}|\t|\b(?:BASİT|DURUŞMA|GEREKÇELİ|TENSİP|DOSYA|ESAS|KARAR)\b/i)[0].trim();
+                    facts.court = c;
                 }
             }
-            if (/GEREKÇELİ KARAR/i.test(l)) facts.docType = "Gerekçeli Mahkeme Kararı";
-            else if (/TENSİP ZAPTI/i.test(l)) facts.docType = "Tensip Zaptı";
-            else if (/İDDİANAME/i.test(l)) facts.docType = "Cumhuriyet Başsavcılığı İddianamesi";
-            else if (/DAVA DİLEKÇESİ/i.test(l)) facts.docType = "Dava Dilekçesi";
-            else if (/CEVAP DİLEKÇESİ/i.test(l)) facts.docType = "Cevap Dilekçesi";
-            else if (/BİLİRKİŞİ RAPORU/i.test(l)) facts.docType = "Bilirkişi Raporu";
-            else if (/İCRA EMRİ/i.test(l)) facts.docType = "İcra Emri / Takip Talebi";
-            else if (/İHTARNAME/i.test(l)) facts.docType = "Noter İhtarnamesi";
+            if (/GEREKÇELİ KARAR/i.test(lines[i])) facts.docType = "Gerekçeli Mahkeme Kararı";
+            else if (/TENSİP ZAPTI/i.test(lines[i])) facts.docType = "Tensip Zaptı";
+            else if (/İDDİANAME/i.test(lines[i])) facts.docType = "Cumhuriyet Başsavcılığı İddianamesi";
+            else if (/DAVA DİLEKÇESİ/i.test(lines[i])) facts.docType = "Dava Dilekçesi";
+            else if (/CEVAP DİLEKÇESİ/i.test(lines[i])) facts.docType = "Cevap Dilekçesi";
+            else if (/BİLİRKİŞİ RAPORU/i.test(lines[i])) facts.docType = "Bilirkişi Raporu";
+            else if (/İCRA EMRİ/i.test(lines[i])) facts.docType = "İcra Emri / Takip Talebi";
+            else if (/İHTARNAME/i.test(lines[i])) facts.docType = "Noter İhtarnamesi";
         }
 
         // Esas ve Karar No (DOSYA NO : 2025/416 Esas, ESAS NO: 2025/416 vb. dahil)
@@ -257,15 +307,61 @@ TEMEL YARGISAL KURALLAR:
         const isCriminal = /(?:CEZA|AĞIR CEZA|ASLİYE CEZA|SULH CEZA|BAŞSAVCILIK|İDDİANAME|SANIK|SUÇ|CMK)/i.test((facts.court || '') + ' ' + text.slice(0, 3000));
         const isAdministrative = /(?:İDARE MAHKEMESİ|VERGİ MAHKEMESİ|DANIŞTAY|BÖLGE İDARE|İYUK)/i.test((facts.court || '') + ' ' + text.slice(0, 3000));
 
-        // Taraflar
-        const mDavaci = text.match(/(?:DAVACI|MÜŞTEKİ|KATILAN|ŞİKAYETÇİ|ALACAKLI)\s*[:.\s]+([^\n\r]+)/i);
-        if (mDavaci) facts.parties.plaintiff = mDavaci[1].replace(/T\.?C\.?\s*No.*/i, '').trim();
+        // Taraflar (Çoklu Taraf, Müşteki Sanık ve Temiz İsim Çıkarımı)
+        function extractCleanPartyName(rawStr) {
+            if (!rawStr) return '';
+            let s = rawStr.split(/[,;\n\r]/)[0].trim();
+            s = s.replace(/^[\s:.\t-]+/, '');
+            s = s.replace(/\s+(?:kızı|oğlu|doğumlu|ikamet|adresinde|TC|T\.C\.).*/i, '').trim();
+            s = s.replace(/\s+\d{4,7}$/, '').trim(); // Sicil no
+            return s;
+        }
 
-        const mDavali = text.match(/(?:DAVALI|SANIK|ŞÜPHELİ|BORÇLU)\s*[:.\s]+([^\n\r]+)/i);
-        if (mDavali) facts.parties.defendant = mDavali[1].replace(/T\.?C\.?\s*No.*/i, '').trim();
+        const headerEnd = text.search(/\b(?:İDDİA|DAVA\s+KONUSU|TALEP\s+KONUSU|GEREKÇE|GEREĞİ\s+DÜŞÜNÜLDÜ|Yukarıda\s+açık\s+kimliği|Açık\s+kimliği\s+yazılı)\b/i);
+        const headerRegion = headerEnd !== -1 ? text.slice(0, headerEnd) : text.slice(0, 2500);
 
-        const mVekil = text.match(/(?:VEKİLİ?|MÜDAFİİ?)\s*[:.\s]+([^\n\r]+)/i);
-        if (mVekil) facts.parties.lawyer = mVekil[1].trim();
+        const partyLines = headerRegion.match(/(?:MÜŞTEKİ\s*[-/]?\s*SANIK|SANIK|DAVACI|DAVALI|MÜŞTEKİ|KATILAN|ŞÜPHELİ|MAĞDUR|VEKİLİ?|MÜDAFİİ?)\s*[:.\t\s-][^\n\r]+/gi) || [];
+        const plaintiffList = [];
+        const defendantList = [];
+        const lawyerList = [];
+
+        partyLines.forEach(line => {
+            const m = line.match(/^(MÜŞTEKİ\s*[-/]?\s*SANIK|SANIK|DAVACI|DAVALI|MÜŞTEKİ|KATILAN|ŞÜPHELİ|MAĞDUR|VEKİLİ?|MÜDAFİİ?)\s*[:.\t\s-]+(.*)$/i);
+            if (!m) return;
+            const role = m[1].toUpperCase();
+            const clean = extractCleanPartyName(m[2]);
+            if (!clean || clean.length < 2) return;
+
+            if (/DAVACI|KATILAN|ŞİKAYETÇİ/i.test(role)) {
+                if (!plaintiffList.includes(clean)) plaintiffList.push(clean);
+            } else if (/MÜŞTEKİ\s*[-/]?\s*SANIK/i.test(role)) {
+                if (!defendantList.includes(clean)) defendantList.push(clean);
+            } else if (/SANIK|DAVALI|ŞÜPHELİ|BORÇLU/i.test(role)) {
+                if (!defendantList.includes(clean)) defendantList.push(clean);
+            } else if (/MÜŞTEKİ|MAĞDUR/i.test(role)) {
+                if (!plaintiffList.includes(clean)) plaintiffList.push(clean);
+            } else if (/VEKİL|MÜDAFİ/i.test(role)) {
+                if (!lawyerList.includes(clean)) lawyerList.push(clean);
+            }
+        });
+
+        // Eğer başlık bloğundan bulunamadıysa metin içi genel aramayı yedek olarak çalıştır
+        if (!plaintiffList.length) {
+            const mDavaci = text.match(/(?:DAVACI|MÜŞTEKİ|KATILAN|ŞİKAYETÇİ|ALACAKLI)\s*[:.\s]+([^\n\r]+)/i);
+            if (mDavaci) plaintiffList.push(extractCleanPartyName(mDavaci[1]));
+        }
+        if (!defendantList.length) {
+            const mDavali = text.match(/(?:DAVALI|SANIK|ŞÜPHELİ|BORÇLU)\s*[:.\s]+([^\n\r]+)/i);
+            if (mDavali) defendantList.push(extractCleanPartyName(mDavali[1]));
+        }
+        if (!lawyerList.length) {
+            const mVekil = text.match(/(?:VEKİLİ?|MÜDAFİİ?)\s*[:.\s]+([^\n\r]+)/i);
+            if (mVekil) lawyerList.push(extractCleanPartyName(mVekil[1]));
+        }
+
+        facts.parties.plaintiff = plaintiffList.filter(Boolean).join(', ');
+        facts.parties.defendant = defendantList.filter(Boolean).join(', ');
+        facts.parties.lawyer = lawyerList.filter(Boolean).join(', ');
 
         // Dava / Suç Konusu
         const mKonu = text.match(/(?:DAVA\s*KONUSU|DAVANIN\s*KONUSU|SUÇ|TALEP\s*KONUSU|TALEP)\s*[:.\s]+([^\n\r]+)/i);
@@ -816,9 +912,17 @@ TEMEL YARGISAL KURALLAR:
     function generateAccurateLegalNarrative(facts, text) {
         const courtStr = facts.court ? `${facts.court}'nin` : 'Mahkemenin';
         const dosyaStr = facts.basisNo && facts.decisionNo ? `${facts.basisNo} Esas, ${facts.decisionNo} Karar sayılı ` : (facts.basisNo ? `${facts.basisNo} sayılı ` : '');
-        const partiesStr = (facts.parties.plaintiff || facts.parties.defendant)
-            ? `${[facts.parties.plaintiff ? 'müşteki ' + facts.parties.plaintiff : '', facts.parties.defendant ? 'sanık ' + facts.parties.defendant : ''].filter(Boolean).join(' ile ')} arasındaki `
-            : '';
+        
+        let defStr = '';
+        if (facts.parties.defendant) {
+            const defs = facts.parties.defendant.split(',').map(s => s.trim());
+            defStr = defs.length > 1 ? `sanıklar ${defs.join(' ve ')}` : `sanık ${defs[0]}`;
+        }
+        let plStr = '';
+        if (facts.parties.plaintiff) {
+            plStr = facts.parties.plaintiff === 'K.H.' ? 'kamu davası kapsamında' : `müşteki ${facts.parties.plaintiff}`;
+        }
+        const partiesStr = (plStr && defStr) ? `${plStr} ${defStr} hakkındaki ` : (defStr ? `${defStr} hakkındaki ` : '');
         const subjectStr = facts.subject ? `${facts.subject} suçuna / uyuşmazlığına ilişkin ` : '';
 
         let verdictText = '';
@@ -841,7 +945,7 @@ TEMEL YARGISAL KURALLAR:
         // Kritik yargısal halüsinasyon kontrolü:
         // Eğer mahkeme BERAAT veya CEZA VERİLMESİNE YER OLMADIĞINA karar verdiyse ama model "cezalandırılmasına karar vermiştir" dediyse:
         const isAcquitted = /(?:BERAAT|CEZA VERİLMESİNE YER OLMADIĞI)/i.test(facts.verdictSummary || facts.verdict || '');
-        const claimsPunished = /(?:cezalandırılmasına karar vermiş|mahkumiyetine karar vermiş|hapis cezası ile cezalandırıl|sanıkların cezalandırılmasına)/i.test(narrative);
+        const claimsPunished = /(?:cezalandırılmasına karar vermiş|mahkumiyetine karar vermiş|hapis cezası ile cezalandırıl|sanıkların cezalandırılmasına|sanığın cezalandırılmasına)/i.test(narrative);
 
         if (isAcquitted && claimsPunished) {
             console.warn('[UkiAI Guardrail] Modelin hüküm fıkrasını yanlış anlama halüsinasyonu engellendi (Beraat kararı cezalandırılma sanıldı). Düzeltilmiş hukuki özet uygulanıyor.');
@@ -885,22 +989,34 @@ TEMEL YARGISAL KURALLAR:
             let aiNarrativeSummary = '';
             let modelBadge = '✨ Yargısal Belge Özeti';
 
+            const docContext = prepareDocumentContext(text, 9000);
+            const summaryPrompt = `Aşağıdaki mahkeme belgesini / adli evrakı incele.
+HUKUKİ ÇEKİRDEK VERİLER (DOĞRULANMIŞTIR):
+- Belge Türü: ${facts.docType}
+- Mahkeme / Merci: ${facts.court || 'Mahkeme'}
+- Taraflar: ${facts.parties.plaintiff ? 'Davacı/Müşteki: ' + facts.parties.plaintiff : ''} | ${facts.parties.defendant ? 'Davalı/Sanık: ' + facts.parties.defendant : ''}
+- MAHKEMENİN NİHAİ HÜKMÜ: ${facts.verdictSummary || (facts.verdict ? facts.verdict.slice(0, 300) : 'Belirtilmemiş')}
+
+DİKKAT KURALI: Savcılığın iddianamedeki cezalandırma talebini veya iddiaları MAHKEME KARARI ZANNETME! Mahkeme nihai hüküm fıkrasında ne karar verdiyse (örneğin BERAAT / CEZA VERİLMESİNE YER OLMADIĞINA) ona göre özet çıkar.
+Belgenin ne hakkında olduğunu, taraflar arasındaki uyuşmazlığı ve mahkemenin nihai olarak ne karar verdiğini 3-4 akıcı cümleyle açıkla:
+
+${docContext}`;
+
             if (aiStatus.hasChromeAi && aiStatus.chromeAiState === 'readily') {
                 try {
-                    const prompt = `Aşağıdaki mahkeme belgesini / adli evrakı incele. DİKKAT: Hüküm fıkrasına (BERAAT / CEZA VERİLMESİNE YER OLMADIĞI / MAHKUMİYET) dikkat et. İddianame talebini mahkeme kararı zannetme. Belgenin ne hakkında olduğunu ve mahkemenin ne karar verdiğini 3-4 cümleyle açıkla:\n\n${text.slice(0, 4500)}`;
-                    aiNarrativeSummary = await promptChromeAi(MASTER_LEGAL_SYSTEM_PROMPT, prompt);
+                    aiNarrativeSummary = await promptChromeAi(MASTER_LEGAL_SYSTEM_PROMPT, summaryPrompt);
                     modelBadge = '✨ Chrome Built-in AI (Gemini Nano)';
                 } catch (err) {
                     console.warn('Chrome AI özeti alınamadı:', err);
                 }
             } else if (gpuEngine) {
                 try {
-                    aiNarrativeSummary = await promptGpu(MASTER_LEGAL_SYSTEM_PROMPT, text.slice(0, 10000) + '\n\nLütfen belgenin ve mahkemenin nihai hükmünün özetini yaz:');
+                    aiNarrativeSummary = await promptGpu(MASTER_LEGAL_SYSTEM_PROMPT, summaryPrompt);
                     modelBadge = '✨ WebGPU Yerel Model Özeti';
                 } catch (_) {}
             } else if (aiStatus.hasOllama) {
                 try {
-                    aiNarrativeSummary = await promptOllama(MASTER_LEGAL_SYSTEM_PROMPT, `Aşağıdaki mahkeme belgesinin özetini çıkar:\n\n${text.slice(0, 4000)}`);
+                    aiNarrativeSummary = await promptOllama(MASTER_LEGAL_SYSTEM_PROMPT, summaryPrompt);
                     modelBadge = `✨ Ollama (${aiStatus.ollamaModel})`;
                 } catch (_) {}
             }
@@ -1015,24 +1131,36 @@ TEMEL YARGISAL KURALLAR:
             const facts = currentSummaryData || extractLegalFacts(docText);
 
             let answer = '';
+            const docContext = prepareDocumentContext(docText, 9000);
+            const userQPrompt = `DÖKÜMAN BİLGİSİ VE HÜKÜM:
+- Merci: ${facts.court || 'Mahkeme'}
+- Taraflar: ${facts.parties.plaintiff ? 'Davacı/Müşteki: ' + facts.parties.plaintiff : ''} | ${facts.parties.defendant ? 'Davalı/Sanık: ' + facts.parties.defendant : ''}
+- Mahkeme Hükmü: ${facts.verdictSummary || (facts.verdict ? facts.verdict.slice(0, 250) : '-')}
+- Kanun Yolu / Süre: ${facts.legalRemedy || '-'}
+
+DÖKÜMAN METNİ:
+"""
+${docContext}
+"""
+
+SORU: ${question}
+
+Lütfen yukarıdaki döküman metnine, hüküm fıkrasına ve Türk hukuk mevzuatına (CMK / HMK) harfiyen sadık kalarak, halüsinasyon üretmeden net ve doğru yanıt ver:`;
 
             // 1. Chrome Built-in AI Modeli Varsa
             if (aiStatus.hasChromeAi && aiStatus.chromeAiState === 'readily') {
-                const prompt = `DÖKÜMAN METNİ:\n"""\n${docText.slice(0, 5000)}\n"""\n\nSORU: ${question}\n\nLütfen belgedeki verilere ve hüküm fıkrasına göre hukuki doğrulukta yanıt ver:`;
-                answer = await promptChromeAi(MASTER_LEGAL_SYSTEM_PROMPT, prompt);
+                answer = await promptChromeAi(MASTER_LEGAL_SYSTEM_PROMPT, userQPrompt);
             }
             else if (gpuEngine) {
-                answer = await promptGpu(MASTER_LEGAL_SYSTEM_PROMPT, docText.slice(0,12000)+'\nSORU: '+question);
+                answer = await promptGpu(MASTER_LEGAL_SYSTEM_PROMPT, userQPrompt);
             }
             // 2. Ollama Varsa
             else if (aiStatus.hasOllama) {
-                const prompt = `DÖKÜMAN:\n${docText.slice(0, 4000)}\n\nSORU: ${question}`;
-                answer = await promptOllama(MASTER_LEGAL_SYSTEM_PROMPT, prompt);
+                answer = await promptOllama(MASTER_LEGAL_SYSTEM_PROMPT, userQPrompt);
             }
             // 3. Özel API Anahtarı Varsa
             else if (aiStatus.customApiKey) {
-                const prompt = `DÖKÜMAN:\n${docText.slice(0, 5000)}\n\nSORU: ${question}`;
-                answer = await promptCustomApi(MASTER_LEGAL_SYSTEM_PROMPT, prompt);
+                answer = await promptCustomApi(MASTER_LEGAL_SYSTEM_PROMPT, userQPrompt);
             }
             // 4. %100 Çevrimdışı Akıllı Hukuk Motoru (Rule-Based & Semantic Matching)
             else {
@@ -1146,9 +1274,11 @@ TEMEL YARGISAL KURALLAR:
         const text = String(docText || '').slice(0, 10000);
         const sysPrompt = "Sen Türk hukuku, mahkeme kararları ve KVKK (Kişisel Verilerin Korunması) konusunda uzman bir yapay zekasın. Metindeki kişisel verileri (şahıs isimleri, TC kimlik, adresler, telefon, IBAN, anne-baba adı, doğum bilgileri, sicil) tespit et.";
         const userPrompt = `Aşağıdaki hukuk metninde geçen tüm kişisel verileri tespit et ve SADECE JSON dizisi olarak döndür.
+ÖNEMLİ KURAL: Şahısların hem tam adlarını (örn: "Bilge DALGIÇ", "Çağatay DALGIÇ"), hem de metin içerisinde tek başına geçen ön adlarını (örn: "Bilge", "Çağatay") ve soyadlarını ayrı ayrı tespit et.
 Format:
 [
   {"type": "person", "label": "Taraf / Şahıs Adı", "original": "Ahmet YILMAZ", "replacement": "A*** Y***"},
+  {"type": "person", "label": "Şahıs Adı (Tekil)", "original": "Ahmet", "replacement": "A***"},
   {"type": "tc", "label": "TC Kimlik No", "original": "12345678901", "replacement": "[TC NO GİZLENDİ]"},
   {"type": "address", "label": "Yerleşim Yeri / Adres", "original": "Örnek Mah. ...", "replacement": "[ADRES GİZLENDİ]"},
   {"type": "parent", "label": "Anne / Baba Adı", "original": "Mehmet ve Ayşe oğlu", "replacement": "M*** ve A*** oğlu"},
@@ -1188,6 +1318,7 @@ Yalnızca geçerli JSON dizisi ver. Başka hiçbir açıklama yazma.`;
         scanKvkkWithAI: scanKvkkWithAI,
         extractLegalFacts: extractLegalFacts,
         generateAccurateLegalNarrative: generateAccurateLegalNarrative,
+        sanitizeAndFactCheckNarrative: sanitizeAndFactCheckNarrative,
         MASTER_LEGAL_SYSTEM_PROMPT: MASTER_LEGAL_SYSTEM_PROMPT,
         getCapabilities: () => ({ ...aiStatus })
     };

@@ -590,7 +590,15 @@ test('KVKK & Yapay Zeka: Gerçek UDF belgesinde (örnek karar.udf) çoklu span t
     assert.ok(!textAfter.includes('29155760072'), 'TC kimlik silinmiş olmalı');
     assert.ok(!textAfter.includes('28589334248'), 'TC kimlik silinmiş olmalı');
     assert.ok(!textAfter.includes('BİLGE DALGIÇ'), 'BİLGE DALGIÇ silinmiş olmalı');
+    assert.ok(!textAfter.includes('Bilge DALGIÇ'), 'Bilge DALGIÇ silinmiş olmalı');
+    assert.ok(!textAfter.includes('Bilge Dalgıç'), 'Bilge Dalgıç silinmiş olmalı');
     assert.ok(!textAfter.includes('ÇAĞATAY DALGIÇ'), 'ÇAĞATAY DALGIÇ silinmiş olmalı');
+    assert.ok(!textAfter.includes('Çağatay DALGIÇ'), 'Çağatay DALGIÇ silinmiş olmalı');
+    assert.ok(!textAfter.includes('Çağatay Dalgıç'), 'Çağatay Dalgıç silinmiş olmalı');
+    assert.ok(!textAfter.includes("Bilge'nin"), "Bilge'nin metin içinde kalmamalı");
+    assert.ok(!textAfter.includes("Çağatay'a"), "Çağatay'a metin içinde kalmamalı");
+    assert.ok(!textAfter.includes("Çağatay'ın"), "Çağatay'ın metin içinde kalmamalı");
+    assert.ok(!textAfter.includes("Bilge'ye"), "Bilge'ye metin içinde kalmamalı");
     assert.ok(!textAfter.includes('Ayşe KAYA SAYDAM'), 'Ayşe KAYA SAYDAM silinmiş olmalı');
     assert.ok(!textAfter.includes('Ayşenur ÇİÇEK'), 'Ayşenur ÇİÇEK silinmiş olmalı');
     assert.ok(textAfter.includes('B*** D***'), 'B*** D*** maskesi yerleşmiş olmalı');
@@ -785,6 +793,13 @@ test('UYAP Hukuk Asistanı (Yapay Zeka): Karar özeti, Esas No, CMK kanun yolu v
     assert.ok(facts.basisNo.includes('2025/416'), 'Esas No 2025/416 olarak tespit edilmeli');
     assert.equal(facts.decisionNo, '2025/885', 'Karar No 2025/885 olmalı');
     assert.ok(facts.court.includes('11. ASLİYE CEZA MAHKEMESİ'), 'Mahkeme 11. Asliye Ceza Mahkemesi olmalı');
+    assert.ok(!facts.court.includes('BASİT YARGILAMA'), 'Mahkeme adına usul veya karar türü eklenmemeli');
+
+    // Taraflar tespiti: Her iki müşteki sanık temiz isimleriyle listelenmeli, TC/Adres sızmamalı
+    assert.ok(facts.parties.defendant.includes('BİLGE DALGIÇ'), 'Bilge Dalgıç sanıklar arasında olmalı');
+    assert.ok(facts.parties.defendant.includes('ÇAĞATAY DALGIÇ'), 'Çağatay Dalgıç sanıklar arasında olmalı');
+    assert.ok(!facts.parties.defendant.includes('29155760072'), 'Sanıklar alanına TC sızmamalı');
+    assert.ok(!facts.parties.defendant.includes('adresinde'), 'Sanıklar alanına adres sızmamalı');
 
     // Hüküm fıkrası: Beraat ve Ceza Verilmesine Yer Olmadığı tespiti
     assert.ok(facts.verdict.includes('BERAATİNE'), 'Hüküm metninde BERAATİNE yer almalı');
@@ -798,11 +813,15 @@ test('UYAP Hukuk Asistanı (Yapay Zeka): Karar özeti, Esas No, CMK kanun yolu v
 
     // 2. generateAccurateLegalNarrative Testi
     const narrative = dom.window.UkiAI.generateAccurateLegalNarrative(facts, docText);
-    // console.log('FACTS COURT:', facts.court);
-    // console.log('NARRATIVE:', narrative);
     assert.ok(narrative.includes('ASLİYE CEZA MAHKEMESİ') || narrative.includes('Asliye Ceza Mahkemesi'), 'Özet mahkeme adını içermeli');
     assert.ok(narrative.includes('BERAAT'), 'Özet aklanma/beraat sonucunu doğru yansıtmalı');
     assert.ok(!narrative.includes('sanıkların cezalandırılmasına karar vermiştir'), 'Özet asla yanlış mahkumiyet halüsinasyonu içermemeli');
+
+    // Model halüsinasyonu engelleme testi (Guardrail): Model beraat kararında "cezalandırılmasına karar verdi" derse düzeltilmeli
+    const hallucinatedNarrative = "Mahkeme, uzlaşmanın sağlanamadığı gerekçesiyle gerekçeli kararıyla sanıkların cezalandırılmasına karar vermiştir.";
+    const guardrailed = dom.window.UkiAI.sanitizeAndFactCheckNarrative(hallucinatedNarrative, facts, docText);
+    assert.ok(!guardrailed.includes('cezalandırılmasına karar vermiştir'), 'Model halüsinasyonu guardrail tarafından engellenmeli');
+    assert.ok(guardrailed.includes('BERAAT'), 'Guardrail beraat hükmünü korumalı');
 
     // 3. MASTER_LEGAL_SYSTEM_PROMPT kuralları testi
     assert.ok(dom.window.UkiAI.MASTER_LEGAL_SYSTEM_PROMPT.includes('HÜKÜM FIKRASI ÖNCELİĞİ'), 'Sistem promptunda hüküm fıkrası önceliği kuralı bulunmalı');

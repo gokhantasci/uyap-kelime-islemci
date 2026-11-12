@@ -58,6 +58,43 @@
         return walk(editorEl).replace(/\r\n/g, '\n').replace(/\u00A0/g, ' ').replace(/\n{3,}/g, '\n\n');
     }
 
+    function isWordChar(ch) {
+        if (!ch) return false;
+        return /[a-zA-Z0-9çğıöşüÇĞİÖŞÜ]/.test(ch);
+    }
+
+    function findMatchRange(fullText, orig, searchStart) {
+        if (!fullText || !orig || searchStart >= fullText.length) return null;
+
+        const lowerFull = fullText.toLocaleLowerCase('tr-TR');
+        const lowerOrig = orig.toLocaleLowerCase('tr-TR');
+
+        let pos = searchStart;
+        while (pos < lowerFull.length) {
+            const idx = lowerFull.indexOf(lowerOrig, pos);
+            if (idx === -1) return null;
+
+            const start = idx;
+            const end = idx + orig.length;
+
+            // Kelime sınırı kontrolü:
+            // Öncesinde Türkçe kelime karakteri (harf/rakam) olmamalı (örn: "Can", "Sercan" içinde yanlışlıkla eşleşmesin)
+            const prevChar = start > 0 ? fullText[start - 1] : null;
+            const nextChar = end < fullText.length ? fullText[end] : null;
+
+            const validBefore = !prevChar || !isWordChar(prevChar);
+            // Sonrasında harf/rakam olmamalı (kesme işareti ' ve ’ kelime sınırı sayılır; Bilge'nin -> B***'nin olur)
+            const validAfter = !nextChar || !isWordChar(nextChar);
+
+            if (validBefore && validAfter) {
+                return { start, end };
+            }
+
+            pos = idx + 1;
+        }
+        return null;
+    }
+
     // DOM içinde birden fazla span/düğüme bölünmüş metinleri biçimlendirmeyi bozmadan güvenle değiştirir
     function replaceTextInElement(element, orig, rep) {
         if (!element || !orig || rep === undefined || rep === null || orig === rep) return 0;
@@ -97,11 +134,11 @@
                 fullText += val;
             }
 
-            const matchIdx = fullText.indexOf(orig, searchStart);
-            if (matchIdx === -1) break;
+            const match = findMatchRange(fullText, orig, searchStart);
+            if (!match) break;
 
-            const matchStart = matchIdx;
-            const matchEnd = matchIdx + orig.length;
+            const matchStart = match.start;
+            const matchEnd = match.end;
             replaceCount++;
 
             const overlapping = [];
@@ -177,12 +214,14 @@
                 if (seen.has(key)) return;
                 seen.add(key);
 
-                // Belge içindeki gerçek tekrarlanma adedini hesapla
+                // Belge içindeki gerçek tekrarlanma adedini hesapla (Türkçe harf duyarsız)
                 let count = 0;
-                let pos = text.indexOf(cleanOrig);
+                const lowerText = text.toLocaleLowerCase('tr-TR');
+                const lowerClean = cleanOrig.toLocaleLowerCase('tr-TR');
+                let pos = lowerText.indexOf(lowerClean);
                 while (pos !== -1) {
                     count++;
-                    pos = text.indexOf(cleanOrig, pos + cleanOrig.length);
+                    pos = lowerText.indexOf(lowerClean, pos + lowerClean.length);
                 }
 
                 findings.push({
@@ -216,13 +255,16 @@
             });
 
             // 2. Telefon Numaraları (+90 / 05xx ve Sabit Hatlar)
-            const phoneRegex = /(?:\+90\s*|0)?\s*5\d{2}[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}/g;
+            const phoneRegex = /(?<!\d)(?:\+90\s*|0)?5\d{2}[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}(?!\d)/g;
             const phoneMatches = text.match(phoneRegex) || [];
             phoneMatches.forEach(phone => {
-                addFinding('phone', 'Telefon Numarası', phone.trim(), masks.phone);
+                const digits = phone.replace(/\D/g, '');
+                if (digits.length >= 10 && digits.length <= 12) {
+                    addFinding('phone', 'Telefon Numarası', phone.trim(), masks.phone);
+                }
             });
 
-            const fixedPhoneRegex = /(?:\+90\s*|0)?\s*[2-4]\d{2}[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}/g;
+            const fixedPhoneRegex = /(?<!\d)(?:\+90\s*|\(?0[2-4]\d{2}\)?\s*|\b0[2-4]\d{2}[\s.-]?)[2-9]\d{2}[\s.-]?\d{2}[\s.-]?\d{2}(?!\d)/g;
             const fixedPhoneMatches = text.match(fixedPhoneRegex) || [];
             fixedPhoneMatches.forEach(phone => {
                 addFinding('phone', 'Telefon Numarası', phone.trim(), masks.phone);
@@ -250,7 +292,7 @@
             });
 
             // 6. Taraf ve Mahkeme Heyeti İsimleri (Tüm Yargı Rolleri & Büyük/Küçük Harf)
-            const partyRoles = '(?:MÜŞTEKİ(?:\\s*[-/]?\\s*SANIK)?|SANIK|DAVACI|DAVALI|TANIK|MAĞDUR|VEK[İI]L[İI]?|MÜDAF[İI][İI]?|ŞÜPHEL[İI]|KATILAN|MÜDAH[İI]L|HAK[İI]M|H[AÂ]K[İI]M|K[AÂ]T[İI]P|CUMHUR[İI]YET\\s+SAVCISI|C\\.\\s*SAVCISI|B[İI]L[İI]RK[İI]Ş[İI]|MÜBAŞ[İI]R|BORÇLU|ALACAKLI|SUÇA\\s+SÜRÜKLENEN\\s+ÇOCUK|SSÇ|İHBAR\\s+EDEN|ŞİKAYETÇİ|VAS[İI]|KAYYIM)';
+            const partyRoles = '(?:MÜŞTEKİ(?:\\s*[-/]?\\s*SANIK(?:LAR)?)?|SANIK(?:LAR)?|DAVACI(?:LAR)?|DAVALI(?:LAR)?|TANIK(?:LAR)?|MAĞDUR(?:LAR)?|VEK[İI]L(?:LER[İI]?)?|MÜDAF[İI](?:LER[İI]?)?|ŞÜPHEL[İI](?:LER)?|KATILAN(?:LAR)?|MÜDAH[İI]L(?:LER)?|HAK[İI]M|H[AÂ]K[İI]M|K[AÂ]T[İI]P|CUMHUR[İI]YET\\s+SAVCISI|C\\.\\s*SAVCISI|B[İI]L[İI]RK[İI]Ş[İI]|MÜBAŞ[İI]R|BORÇLU(?:LAR)?|ALACAKLI(?:LAR)?|SUÇA\\s+SÜRÜKLENEN\\s+ÇOCUK(?:LAR)?|SSÇ|İHBAR\\s+EDEN|ŞİKAYETÇİ(?:LER)?|VAS[İI]|KAYYIM)';
             const partyRegex = new RegExp(partyRoles + '\\s*[:\\t-]\\s*([A-ZÇĞİÖŞÜa-zçğıöşü]+(?:\\s+[A-ZÇĞİÖŞÜa-zçğıöşü]+){1,3})', 'gi');
             let m;
             while ((m = partyRegex.exec(text)) !== null) {
@@ -263,7 +305,7 @@
             }
 
             // 6.1 Gerekçe ve Metin İçi Taraf İsimleri (örn. "Müşteki Sanık BİLGE DALGIÇ adına...")
-            const narrativeRegex = /(?:Müşteki\s+Sanık|Sanık|Müşteki|Davacı|Davalı|Katılan|Mağdur|Tanık)\s+([A-ZÇĞİÖŞÜ][A-ZÇĞİÖŞÜa-zçğıöşü]+(?:\s+[A-ZÇĞİÖŞÜ][A-ZÇĞİÖŞÜa-zçğıöşü]+){1,2})/g;
+            const narrativeRegex = /(?:Müşteki\s+Sanıklar?|Sanıklar?|Davacılar?|Davalılar?|Katılanlar?|Mağdurlar?|Tanıklar?)\s+([A-ZÇĞİÖŞÜ][A-ZÇĞİÖŞÜa-zçğıöşü]+(?:\s+[A-ZÇĞİÖŞÜ][A-ZÇĞİÖŞÜa-zçğıöşü]+){1,2})/g;
             while ((m = narrativeRegex.exec(text)) !== null) {
                 let name = m[1].trim();
                 if (name.length >= 3 && !/MAHKEME|SAVCILIK|BAŞKANLIK|MÜDÜRLÜK|BAKANLIK|MİLLETİ|BARO|DAİRE|HUKUKU|K\.H\.|T\.C\./i.test(name)) {
@@ -273,6 +315,40 @@
                     }
                 }
             }
+
+            // 6.2 Çoğul taraf bağlaçlı isimler (örn: "müşteki sanıklar Çağatay ve Bilge'nin...")
+            const dualPartyRegex = /(?:Müşteki\s+sanıklar?|Sanıklar?|Davacılar?|Davalılar?|Müştekiler?|Taraflar)\s+([A-ZÇĞİÖŞÜ][a-zçğıöşü]+)\s+ve\s+([A-ZÇĞİÖŞÜ][a-zçğıöşü]+)/gi;
+            while ((m = dualPartyRegex.exec(text)) !== null) {
+                const p1 = m[1].trim();
+                const p2 = m[2].trim();
+                if (p1.length >= 2 && !/^(ve|ile|tarafından|hakkında)$/i.test(p1)) {
+                    addFinding('person', 'Taraf Adı', p1, masks.person === 'initials' ? (p1[0].toLocaleUpperCase('tr-TR') + '***') : masks.person);
+                }
+                if (p2.length >= 2 && !/^(ve|ile|tarafından|hakkında)$/i.test(p2)) {
+                    addFinding('person', 'Taraf Adı', p2, masks.person === 'initials' ? (p2[0].toLocaleUpperCase('tr-TR') + '***') : masks.person);
+                }
+            }
+
+            // 6.3 Tespit edilen tüm kişilerin (taraflar, sanıklar, mağdurlar) adlarını ve soyadlarını maskeleme listesine ekle
+            // Bu sayede "Bilge DALGIÇ", "Bilge Dalgıç", metindeki tekil "Bilge", "Çağatay", "DALGIÇ" eksiksiz maskelenir
+            const identifiedPeople = findings.filter(f => f.type === 'person').map(f => f.original);
+            identifiedPeople.forEach(fullName => {
+                const parts = fullName.split(/\s+/).filter(p => p.length >= 2);
+                if (parts.length >= 2) {
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        const firstName = parts[i];
+                        if (firstName.length >= 2 && !/^(ve|ile|kızı|oğlu|avukat|av|sayın|mahkemesi|karar|esas)$/i.test(firstName)) {
+                            const repFirst = masks.person === 'initials' ? (firstName[0].toLocaleUpperCase('tr-TR') + '***') : masks.person;
+                            addFinding('person', 'Şahıs Adı (Tekil)', firstName, repFirst);
+                        }
+                    }
+                    const lastName = parts[parts.length - 1];
+                    if (lastName.length >= 2 && !/^(ve|ile|kızı|oğlu|avukat|av|sayın)$/i.test(lastName)) {
+                        const repLast = masks.person === 'initials' ? (lastName[0].toLocaleUpperCase('tr-TR') + '***') : masks.person;
+                        addFinding('person', 'Soyadı (Tekil)', lastName, repLast);
+                    }
+                }
+            });
 
             // 7. Anne ve Baba Adı (Soybağı / Ebeveyn Bilgileri)
             const parentRegex = /([A-ZÇĞİÖŞÜa-zçğıöşü]+(?:\s+[A-ZÇĞİÖŞÜa-zçğıöşü]+)?)\s+(?:ve|ile)\s+([A-ZÇĞİÖŞÜa-zçğıöşü]+(?:\s+[A-ZÇĞİÖŞÜa-zçğıöşü]+)?)\s+(kızı|oğlu|çocuğu|evladı)/gi;
@@ -285,6 +361,12 @@
                     ? (maskNameInitials(father) + ' ve ' + maskNameInitials(mother) + ' ' + rel)
                     : (masks.parent || '[ANNE/BABA BİLGİSİ GİZLENDİ]');
                 addFinding('parent', 'Anne / Baba Adı (Soybağı)', fullParentPhrase, rep);
+                if (father.length >= 2 && !/^(ve|ile)$/i.test(father)) {
+                    addFinding('person', 'Ebeveyn Adı (Baba)', father, maskNameInitials(father));
+                }
+                if (mother.length >= 2 && !/^(ve|ile)$/i.test(mother)) {
+                    addFinding('person', 'Ebeveyn Adı (Anne)', mother, maskNameInitials(mother));
+                }
             }
 
             // 8. Doğum Tarihi ve Doğum Yeri
@@ -331,7 +413,10 @@
                         aiList.forEach(aiItem => {
                             if (!aiItem || !aiItem.original) return;
                             const key = (aiItem.type || 'person') + ':' + String(aiItem.original).trim().toLocaleLowerCase('tr-TR');
-                            if (!seen.has(key)) {
+                            const existing = ruleFindings.find(f => (f.type + ':' + f.original.toLocaleLowerCase('tr-TR')) === key);
+                            if (existing) {
+                                existing.source = 'ai';
+                            } else if (!seen.has(key)) {
                                 seen.add(key);
                                 ruleFindings.push({
                                     type: aiItem.type || 'person',
