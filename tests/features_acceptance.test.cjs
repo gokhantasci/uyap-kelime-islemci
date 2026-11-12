@@ -537,4 +537,104 @@ test('KVKK & Yapay Zeka: Gerçek UDF belgesinde (örnek karar.udf) çoklu span t
     assert.ok(textAfter.includes('[TC NO GİZLENDİ]'), '[TC NO GİZLENDİ] maskesi yerleşmiş olmalı');
 });
 
+test('Dil & Ses Araçları (UKİ): Astryx başlığı temizlenmiştir, Piper TTS ve Ema Lightning motorları Türkçe ses profilleriyle çalışır', async () => {
+    const dom = initDom();
+
+    // Mock SpeechSynthesis API
+    const spokenUtterances = [];
+    const mockVoices = [
+        { voiceURI: 'en-david', name: 'Microsoft David Desktop', lang: 'en-US', default: true },
+        { voiceURI: 'tr-ahmet', name: 'Microsoft Ahmet Online (Natural)', lang: 'tr-TR', default: false },
+        { voiceURI: 'tr-emel', name: 'Microsoft Emel Online (Natural)', lang: 'tr-TR', default: false },
+        { voiceURI: 'tr-google', name: 'Google Türkçe', lang: 'tr-TR', default: false }
+    ];
+
+    dom.window.speechSynthesis = {
+        speaking: false,
+        paused: false,
+        getVoices: () => mockVoices,
+        speak: (u) => {
+            spokenUtterances.push(u);
+            if (u.onend) setTimeout(u.onend, 10);
+        },
+        cancel: () => {},
+        pause: () => {},
+        resume: () => {},
+        addEventListener: () => {}
+    };
+
+    dom.window.SpeechSynthesisUtterance = function(text) {
+        this.text = text;
+        this.lang = 'tr-TR';
+        this.voice = null;
+        this.rate = 1;
+        this.pitch = 1;
+        this.onend = null;
+        this.onerror = null;
+    };
+    global.SpeechSynthesisUtterance = dom.window.SpeechSynthesisUtterance;
+    dom.window.fetch = async () => { throw new Error('Local server offline'); };
+    global.fetch = dom.window.fetch;
+
+    dom.window.UkiApp = {
+        text: () => 'T.C. Sakarya Asliye Ceza Mahkemesi Gerekçeli Kararı. Sanığın beraatine karar verildi.'
+    };
+
+    const langToolsCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-language-tools.js'), 'utf8');
+    dom.window.eval(langToolsCode);
+
+    // 1. Paneli aç ve başlıkta Astryx ibaresinin olmadığını doğrula
+    dom.window.UkiLanguageTools.open();
+    const dockHeader = dom.window.document.querySelector('.lang-dock-header h4');
+    assert.ok(dockHeader, 'Dil ve ses paneli başlığı mevcut olmalı');
+    assert.ok(!dockHeader.textContent.includes('Astryx'), 'Başlıkta dahili kod adı "Astryx" bulunmamalı');
+    assert.ok(dockHeader.textContent.includes('Dil & Ses Araçları'), 'Başlık Dil & Ses Araçları olmalı');
+
+    // 2. Piper TTS için doğal erkek (Ahmet / Bariton) ses profili çözümlenmeli
+    const piperVoice = dom.window.UkiLanguageTools.resolveEngineVoice('piper', 'auto');
+    assert.ok(piperVoice, 'Piper için ses çözümlenmeli');
+    assert.equal(piperVoice.name, 'Microsoft Ahmet Online (Natural)', 'Piper için doğal erkek Türkçe sesi seçilmeli');
+
+    // 3. Ema Lightning için hızlı ve çevik kadın (Emel / Lightning) ses profili çözümlenmeli
+    const emaVoice = dom.window.UkiLanguageTools.resolveEngineVoice('ema', 'auto');
+    assert.ok(emaVoice, 'Ema için ses çözümlenmeli');
+    assert.equal(emaVoice.name, 'Microsoft Emel Online (Natural)', 'Ema için hızlı kadın Türkçe sesi seçilmeli');
+
+    // 4. Piper TTS ile okuma testi
+    const engineSelect = dom.window.document.getElementById('speech-engine');
+    engineSelect.value = 'piper';
+    dom.window.UkiLanguageTools.updateVoiceDropdown();
+
+    dom.window.UkiLanguageTools.read();
+    await new Promise(r => setTimeout(r, 80));
+
+    assert.ok(spokenUtterances.length > 0, 'Piper motoru SpeechSynthesis Utterance üretmeli');
+    const lastPiperUtterance = spokenUtterances[spokenUtterances.length - 1];
+    assert.ok(lastPiperUtterance.voice, 'Utterance ses nesnesi boş kalmamalı');
+    assert.equal(lastPiperUtterance.voice.name, 'Microsoft Ahmet Online (Natural)');
+    assert.equal(lastPiperUtterance.pitch, 0.95, 'Piper için doğal bariton perde (0.95) atanmalı');
+
+    // 5. Ema Lightning ile okuma testi
+    dom.window.UkiLanguageTools.stop();
+    spokenUtterances.length = 0;
+
+    engineSelect.value = 'ema';
+    dom.window.UkiLanguageTools.updateVoiceDropdown();
+
+    dom.window.UkiLanguageTools.read();
+    await new Promise(r => setTimeout(r, 120));
+
+    assert.ok(spokenUtterances.length > 0, 'Ema motoru SpeechSynthesis Utterance üretmeli');
+    const lastEmaUtterance = spokenUtterances[spokenUtterances.length - 1];
+    assert.ok(lastEmaUtterance.voice, 'Ema için ses nesnesi boş kalmamalı');
+    assert.equal(lastEmaUtterance.voice.name, 'Microsoft Emel Online (Natural)');
+    assert.equal(lastEmaUtterance.pitch, 1.08, 'Ema için hızlı ve enerjik perde (1.08) atanmalı');
+
+    // 6. Durdurma kontrolü
+    dom.window.UkiLanguageTools.stop();
+    const statusEl = dom.window.document.getElementById('speech-status');
+    assert.equal(statusEl.textContent, 'Okuma durduruldu.');
+});
+
+
 
