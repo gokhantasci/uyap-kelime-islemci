@@ -3765,49 +3765,8 @@ mark.find-hit.current {
 }
 
 /* ==========================================================================
-   UYAP GRAFİK ŞERİT GRUBU (RIBBON GRAFIK GROUP - SCREENSHOT PARİTESİ)
+   SEMBOL SEÇİCİ VE GRAFİK MODALLERİ
    ========================================================================== */
-.uyap-ribbon-grafik {
-    min-width: 178px;
-}
-
-.grafik-icon-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 2px;
-}
-
-.uyap-grafik-subgrid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2px 6px;
-    align-items: center;
-}
-
-.uyap-grafik-sub-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 3px;
-    padding: 2px 5px;
-    font-family: Tahoma, "Segoe UI", Arial, sans-serif;
-    font-size: 9.5px;
-    color: #1e293b;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.15s ease;
-    text-align: left;
-}
-
-.uyap-grafik-sub-btn:hover {
-    background: linear-gradient(to bottom, #fffde8 0%, #ffeaab 50%, #ffd66b 100%);
-    border-color: #d19a2e;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-}
-
 /* Sembol Seçici Butonları */
 .symbol-btn {
     background: var(--ax-surface-subtle);
@@ -3832,13 +3791,6 @@ mark.find-hit.current {
 }
 
 /* Karanlık Tema (Dark Mode) Uyumu */
-[data-theme="dark"] .uyap-grafik-sub-btn {
-    color: #f1f5f9;
-}
-[data-theme="dark"] .uyap-grafik-sub-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: #64748b;
-}
 [data-theme="dark"] .symbol-btn {
     background: #1e293b;
     border-color: #334155;
