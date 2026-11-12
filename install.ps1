@@ -121,28 +121,49 @@ if (-not (Test-Path -LiteralPath (Join-Path $targetDir 'index.html'))) {
 }
 
 # -----------------------------------------------------------------------------
-# 2. PYTHON VE GEREKSİNİM KONTROLÜ
 # -----------------------------------------------------------------------------
-Write-Host "[*] 1/6: Python ortamı denetleniyor..." -ForegroundColor Yellow
+# 2. PYTHON VE GEREKSİNİM KONTROLÜ (PYTHON'SUZ SİSTEM DESTEĞİ DAHİL)
+# -----------------------------------------------------------------------------
+Write-Host "[*] 1/6: Çalışma ortamı ve gereksinimler denetleniyor..." -ForegroundColor Yellow
 
 $pythonCmd = $null
-if (Get-Command "python" -ErrorAction SilentlyContinue) {
+$embedDir = Join-Path $targetDir "python-embed"
+$embedExe = Join-Path $embedDir "python.exe"
+
+if (Test-Path $embedExe) {
+    $pythonCmd = $embedExe
+} elseif (Get-Command "python" -ErrorAction SilentlyContinue) {
     $pythonCmd = "python"
 } elseif (Get-Command "py" -ErrorAction SilentlyContinue) {
     $pythonCmd = "py"
 }
 
 if (-not $pythonCmd) {
-    Write-Host "[!] Python bulunamadı. Microsoft Store veya python.org üzerinden Python 3.8+ kurulması önerilir." -ForegroundColor Yellow
+    Write-Host "[!] Sistemde kurulu Python tespit edilemedi." -ForegroundColor Yellow
+    Write-Host "    Python kurulu olmayan bilgisayarlar için bağımsız yerel çalışma ve sanal yazıcı desteği hazırlanıyor..." -ForegroundColor Cyan
+
+    # 1. winget ile sessiz kurulum denemesi
     if (Get-Command "winget" -ErrorAction SilentlyContinue) {
-        Write-Host "    'winget' tespit edildi. Otomatik Python kurulumu başlatılsın mı? (E/H): " -NoNewline -ForegroundColor White
-        # Non-interactive fallback
-        $autoInstall = $Host.UI.RawUI.KeyAvailable
-        Write-Host "winget install Python.Python.3.11 komutu ile kurulabilir." -ForegroundColor DarkGray
+        Write-Host "  [*] Windows Paket Yöneticisi (winget) tespit edildi; Python 3.11 kontrol ediliyor..." -ForegroundColor DarkGray
+        try {
+            & winget install Python.Python.3.11 --silent --accept-source-agreements --accept-package-agreements 2>$null | Out-Null
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            if (Get-Command "python" -ErrorAction SilentlyContinue) {
+                $pythonCmd = "python"
+                Write-Host "  [+] Python 3.11 winget ile başarıyla kuruldu!" -ForegroundColor Green
+            }
+        } catch {}
     }
-} else {
+
+    if (-not $pythonCmd) {
+        Write-Host "  [i] Bağımsız (Python-Free) mod aktif: Sanal yazıcı, masaüstü kısayolları ve yerel editör doğrudan PowerShell ve yerel tarayıcı üzerinden çalışacaktır." -ForegroundColor Green
+    }
+}
+
+$pyExeObj = $null
+if ($pythonCmd) {
     $pyVer = & $pythonCmd --version 2>&1
-    Write-Host "  [+] Tespit edilen Python: $pyVer" -ForegroundColor Green
+    Write-Host "  [+] Tespit edilen Python motoru: $pyVer" -ForegroundColor Green
 
     # PyMuPDF Kütüphanesini Kur / Güncelle
     Write-Host "  [*] PyMuPDF (PDF -> UDF dönüştürme motoru) kontrol ediliyor..." -ForegroundColor DarkGray
@@ -152,6 +173,9 @@ if (-not $pythonCmd) {
     } else {
         Write-Host "  [i] PyMuPDF kurulumu atlandı veya pip çevrimdışı. Temel mod çalışmaya devam edecek." -ForegroundColor DarkGray
     }
+
+    $pyExeObj = Get-Command "pythonw.exe" -ErrorAction SilentlyContinue
+    if (-not $pyExeObj) { $pyExeObj = Get-Command $pythonCmd -ErrorAction SilentlyContinue }
 }
 
 # -----------------------------------------------------------------------------
@@ -168,8 +192,13 @@ $wshShell = New-Object -ComObject WScript.Shell
 # Masaüstü Kısayolu
 $desktopShortcutPath = Join-Path $desktopPath "UYAP Kelime İşlemci.lnk"
 $shortcut = $wshShell.CreateShortcut($desktopShortcutPath)
-$shortcut.TargetPath = (Get-Command pythonw.exe -ErrorAction Stop).Source
-$shortcut.Arguments = '"' + (Join-Path $targetDir "open_in_editor.py") + '"'
+if ($pyExeObj) {
+    $shortcut.TargetPath = $pyExeObj.Source
+    $shortcut.Arguments = '"' + (Join-Path $targetDir "open_in_editor.py") + '"'
+} else {
+    $shortcut.TargetPath = $indexFile
+    $shortcut.Arguments = ""
+}
 $shortcut.WorkingDirectory = $targetDir
 $shortcut.Description = "UYAP Kelime İşlemci - Modern Web Editörü"
 $shortcut.Save()
@@ -178,8 +207,13 @@ Write-Host "  [+] Masaüstü Kısayolu: $desktopShortcutPath" -ForegroundColor G
 # Başlat Menüsü Kısayolu
 $startShortcutPath = Join-Path $startMenuPath "UYAP Kelime İşlemci.lnk"
 $scStart = $wshShell.CreateShortcut($startShortcutPath)
-$scStart.TargetPath = (Get-Command pythonw.exe -ErrorAction Stop).Source
-$scStart.Arguments = '"' + (Join-Path $targetDir "open_in_editor.py") + '"'
+if ($pyExeObj) {
+    $scStart.TargetPath = $pyExeObj.Source
+    $scStart.Arguments = '"' + (Join-Path $targetDir "open_in_editor.py") + '"'
+} else {
+    $scStart.TargetPath = $indexFile
+    $scStart.Arguments = ""
+}
 $scStart.WorkingDirectory = $targetDir
 $scStart.Description = "UYAP Kelime İşlemci - Modern Web Editörü"
 $scStart.Save()
@@ -202,7 +236,11 @@ foreach ($ext in $exts) {
     Set-ItemProperty -Path $menuKey -Name "Icon" -Value "shell32.dll,54"
 
     New-Item -Path $cmdKey -Force | Out-Null
-    $cmdVal = "powershell.exe -WindowStyle Hidden -NoProfile -Command `"Start-Process python -ArgumentList '`\`"$pyScript`\`"', '`\`"%1`\`"' -WindowStyle Hidden`""
+    if ($pyExeObj) {
+        $cmdVal = "powershell.exe -WindowStyle Hidden -NoProfile -Command `"Start-Process '$($pyExeObj.Source)' -ArgumentList '`\`"$pyScript`\`"', '`\`"%1`\`"' -WindowStyle Hidden`""
+    } else {
+        $cmdVal = "powershell.exe -WindowStyle Hidden -NoProfile -Command `"Start-Process 'https://udf.657.com.tr/?welcome=0'`""
+    }
     Set-ItemProperty -Path $cmdKey -Name "(Default)" -Value $cmdVal
 }
 Write-Host "  [+] Desteklenen formatlara (PDF, Word, Markdown, Metin, Resim) sağ tık menüsü eklendi." -ForegroundColor Green
@@ -215,14 +253,13 @@ Set-ItemProperty -Path $udfMenuKey -Name "Icon" -Value "imageres.dll,2"
 
 $udfCmdKey = "$udfMenuKey\command"
 New-Item -Path $udfCmdKey -Force | Out-Null
-$pyExeObj = Get-Command pythonw.exe -ErrorAction SilentlyContinue
-if (-not $pyExeObj) { $pyExeObj = Get-Command python.exe -ErrorAction SilentlyContinue }
-if (-not $pyExeObj -and $pythonCmd) { $pyExeObj = Get-Command $pythonCmd -ErrorAction SilentlyContinue }
-if (-not $pyExeObj) { throw "Python çalıştırıcısı (pythonw.exe veya python.exe) bulunamadı." }
-$pythonwPath = $pyExeObj.Source
 
 $localOpener = Join-Path $targetDir "open_in_editor.py"
-$browserCmd = '"' + $pythonwPath + '" "' + $localOpener + '" "%1"'
+if ($pyExeObj -and (Test-Path $localOpener)) {
+    $browserCmd = '"' + $pyExeObj.Source + '" "' + $localOpener + '" "%1"'
+} else {
+    $browserCmd = 'powershell.exe -WindowStyle Hidden -NoProfile -Command "Start-Process ''https://udf.657.com.tr/?welcome=0''"'
+}
 Set-ItemProperty -Path $udfCmdKey -Name "(Default)" -Value $browserCmd
 Write-Host "  [+] .UDF dosyaları için 'UYAP Editöründe Aç' menüsü eklendi." -ForegroundColor Green
 
@@ -233,7 +270,11 @@ Write-Host "[*] 4/6: Windows 'Gönder' (SendTo) menüsü yapılandırılıyor...
 $sendToDir = Join-Path $env:APPDATA "Microsoft\Windows\SendTo"
 if (Test-Path $sendToDir) {
     $sendToBat = Join-Path $sendToDir "UYAP'a Yazdır (Print to UDF).bat"
-    $batContent = "@echo off`r`npython `"$pyScript`" %*`r`npause"
+    if ($pyExeObj) {
+        $batContent = "@echo off`r`n`"$($pyExeObj.Source)`" `"$pyScript`" %*`r`npause"
+    } else {
+        $batContent = "@echo off`r`nstart https://udf.657.com.tr/?welcome=0"
+    }
     Set-Content -Path $sendToBat -Value $batContent -Encoding Ascii
     Write-Host "  [+] Gönder Menüsü: $sendToBat" -ForegroundColor Green
 }
@@ -245,12 +286,14 @@ Write-Host "[*] 5/6: Komut satırı (CLI) kısayolları (udf & print-to-udf) yap
 
 $appsDir = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps"
 if (Test-Path $appsDir) {
-    # udf.cmd
     $udfShim = Join-Path $appsDir "udf.cmd"
-    $udfContent = "@echo off`r`npython `"$pyScript`" %*"
+    if ($pyExeObj) {
+        $udfContent = "@echo off`r`n`"$($pyExeObj.Source)`" `"$pyScript`" %*"
+    } else {
+        $udfContent = "@echo off`r`necho UYAP Kelime Islemci tarayicida aciliyor...`r`nstart https://udf.657.com.tr/"
+    }
     Set-Content -Path $udfShim -Value $udfContent -Encoding Ascii
 
-    # print-to-udf.cmd
     $pShim = Join-Path $appsDir "print-to-udf.cmd"
     Set-Content -Path $pShim -Value $udfContent -Encoding Ascii
 
@@ -268,20 +311,30 @@ if ($PROFILE) {
         $profContent = Get-Content $PROFILE -Raw
     }
     if ($profContent -notmatch "UYAP Kelime Islemci CLI") {
-        $aliasBlock = @"
+        if ($pyExeObj) {
+            $aliasBlock = @"
 
 # >>> UYAP Kelime Islemci CLI >>>
-function udf { & python "$pyScript" `$args }
-function print-to-udf { & python "$pyScript" `$args }
+function udf { & "$($pyExeObj.Source)" "$pyScript" `$args }
+function print-to-udf { & "$($pyExeObj.Source)" "$pyScript" `$args }
 # <<< UYAP Kelime Islemci CLI <<<
 "@
+        } else {
+            $aliasBlock = @"
+
+# >>> UYAP Kelime Islemci CLI >>>
+function udf { Start-Process "https://udf.657.com.tr/" }
+function print-to-udf { Start-Process "https://udf.657.com.tr/" }
+# <<< UYAP Kelime Islemci CLI <<<
+"@
+        }
         Add-Content -Path $PROFILE -Value $aliasBlock
         Write-Host "  [+] PowerShell profiline 'udf' fonksiyonu eklendi ($PROFILE)" -ForegroundColor Green
     }
 }
 
 # -----------------------------------------------------------------------------
-# 7. SİSTEM SANAL YAZICISI ("UYAP'a Yazdır")
+# 7. SİSTEM SANAL YAZICISI ("UYAP'a Yazdır" - PYTHON BAĞIMSIZ NATIVE KURULUM)
 # -----------------------------------------------------------------------------
 Write-Host "[*] 6/6: Sistem Sanal Yazıcısı denetleniyor..." -ForegroundColor Yellow
 
@@ -290,8 +343,54 @@ $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 if (-not $NoPrinter) {
     if ($isAdmin) {
         Write-Host "  [*] Yönetici yetkisi onaylandı. 'UYAP'a Yazdır (Print to UDF)' sanal yazıcısı ekleniyor..." -ForegroundColor Cyan
-        & $pythonCmd "$pyScript" --install
-        Write-Host "  [+] Sanal yazıcı başarıyla sisteme kaydedildi!" -ForegroundColor Green
+
+        # 1. Spool Klasörü ve Dosyası
+        $spoolDir = Join-Path $env:LOCALAPPDATA "PrintToUDF"
+        if (-not (Test-Path $spoolDir)) {
+            New-Item -ItemType Directory -Path $spoolDir -Force | Out-Null
+        }
+        $spoolFile = Join-Path $spoolDir "spool.pdf"
+        if (-not (Test-Path $spoolFile)) {
+            [System.IO.File]::WriteAllBytes($spoolFile, @())
+        }
+
+        # 2. Windows Printer Port
+        try {
+            if (-not (Get-PrinterPort -Name $spoolFile -ErrorAction SilentlyContinue)) {
+                Add-PrinterPort -Name $spoolFile -ErrorAction Stop
+                Write-Host "  [+] Yazıcı portu oluşturuldu: $spoolFile" -ForegroundColor Green
+            }
+        } catch {
+            Write-Host "  [i] Port bilgisi: $_" -ForegroundColor DarkGray
+        }
+
+        # 3. Windows Virtual Printer Aygıtı
+        try {
+            $existingPrinter = Get-Printer -Name "UYAP'a Yazdır (Print to UDF)" -ErrorAction SilentlyContinue
+            if (-not $existingPrinter) {
+                Add-Printer -Name "UYAP'a Yazdır (Print to UDF)" -DriverName "Microsoft Print To PDF" -PortName $spoolFile -ErrorAction Stop
+                Write-Host "  [+] 'UYAP'a Yazdır (Print to UDF)' sistem yazıcılarına eklendi!" -ForegroundColor Green
+            } else {
+                Write-Host "  [+] Sanal yazıcı zaten sistemde mevcut ve aktif." -ForegroundColor Green
+            }
+        } catch {
+            Write-Host "  [!] Yazıcı ekleme uyarısı: $_" -ForegroundColor DarkGray
+        }
+
+        # 4. Arka Plan Yazdırma İzleyicisi (Python varsa Pythonw, yoksa PowerShell Watcher)
+        $startupDir = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Startup"
+        if (Test-Path $startupDir) {
+            $vbsPath = Join-Path $startupDir "PrintToUDF_Watcher.vbs"
+            $watcherPs1 = Join-Path $targetDir "PrintToUDF_Watcher.ps1"
+
+            if ($pyExeObj -and (Test-Path $pyScript)) {
+                $vbsContent = "CreateObject(`"Wscript.Shell`").Run `"`"`"$($pyExeObj.Source)`"`" `"`"$pyScript`"`" --daemon`", 0, False`r`n"
+            } else {
+                $vbsContent = "CreateObject(`"Wscript.Shell`").Run `"powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File `"`"$watcherPs1`"`" -TargetDir `"`"$targetDir`"`" `", 0, False`r`n"
+            }
+            Set-Content -Path $vbsPath -Value $vbsContent -Encoding Ascii
+            Write-Host "  [+] Windows Başlangıcına eklendi (Sessiz servis): $vbsPath" -ForegroundColor Green
+        }
     } else {
         Write-Host "  [i] Sanal yazıcı kurulumu için Yönetici hakları gerekir." -ForegroundColor Gray
         Write-Host "      Tüm diğer özellikler (Sağ Tık, Masaüstü Editör, CLI, SendTo) başarıyla kuruldu." -ForegroundColor Green

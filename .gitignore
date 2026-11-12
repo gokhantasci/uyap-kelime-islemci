@@ -19,12 +19,18 @@ yarn-error.log*
 # Logs
 *.log
 
-tools/
+tools/*
+!tools/build_releases.py
 *.jar
 
 examples/*.png
 
 .playwright-mcp/
+# Large Generated Release Archives (keep wordpress zip)
+releases/*.zip
+!releases/uyap-kelime-islemci-wordpress-plugin.zip
+
+# Python & Temp
 __pycache__/
 scratch/
 
