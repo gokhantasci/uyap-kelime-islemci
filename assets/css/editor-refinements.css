@@ -1667,3 +1667,6 @@ body.ude-signed-readonly #editor { cursor: default; }
 
 /* Yedek: class="active" ile açılan eski modal çağrıları da görünür olsun */
 .ax-modal-backdrop.active { display: flex !important; }
+
+/* Resim seçim kutusu: "#editor > :not(...) { position: relative }" kuralı onu belge sonuna akıtıyordu */
+#editor > .uki-img-overlay { position: absolute !important; }

@@ -502,8 +502,8 @@ test('Resim Ekle/Düzenle (UkiImage) ve Grafik Şerit Paritesi: Görsel ekleme, 
                 if (r.type === 'image' || r.imageData) {
                     foundImageRun = true;
                     assert.ok(r.imageData.length > 10, 'Görsel base64 verisi korunmalı');
-                    assert.equal(r.imgWidth, '540', 'Görsel genişliği korunmalı');
-                    assert.equal(r.imgHeight, '405', 'Görsel yüksekliği korunmalı');
+                    assert.equal(r.imgWidth, '405', 'Görsel genişliği UDF\'de pt olarak (540px = 405pt) yazılmalı');
+                    assert.equal(r.imgHeight, '304', 'Görsel yüksekliği UDF\'de pt olarak (405px = 304pt) yazılmalı');
                 }
             }
         }

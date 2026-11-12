@@ -767,17 +767,18 @@
                 img.style.maxWidth = '100%';
                 img.style.maxHeight = '750px';
                 img.style.objectFit = 'contain';
-                if (run.imgWidth) {
-                    let wVal = parseInt(run.imgWidth, 10);
-                    if (wVal > 540) wVal = 540;
-                    img.style.width = wVal + 'px';
-                    img.setAttribute('width', String(wVal));
+                // UDF'deki boyut pt'dir: ekranda px = pt * 4/3
+                let wPx = run.imgWidth ? Math.round(parseFloat(run.imgWidth) * 4 / 3) : 0;
+                let hPx = run.imgHeight ? Math.round(parseFloat(run.imgHeight) * 4 / 3) : 0;
+                if (wPx > 700) { if (hPx) hPx = Math.round(hPx * 700 / wPx); wPx = 700; }
+                if (hPx > 1000) { if (wPx) wPx = Math.round(wPx * 1000 / hPx); hPx = 1000; }
+                if (wPx > 0) {
+                    img.style.width = wPx + 'px';
+                    img.setAttribute('width', String(wPx));
                 }
-                if (run.imgHeight) {
-                    let hVal = parseInt(run.imgHeight, 10);
-                    if (hVal > 750) hVal = 750;
-                    img.style.height = hVal + 'px';
-                    img.setAttribute('height', String(hVal));
+                if (hPx > 0) {
+                    img.style.height = hPx + 'px';
+                    img.setAttribute('height', String(hPx));
                 }
                 pEl.appendChild(img);
                 return;
@@ -1208,8 +1209,18 @@
 
                     if (item.image) {
                         const imgResolver = item.resolver || 'hvl-default';
-                        const wAttr = item.imgWidth ? ` width="${parseInt(item.imgWidth, 10)}"` : '';
-                        const hAttr = item.imgHeight ? ` height="${parseInt(item.imgHeight, 10)}"` : '';
+                        // UDF resim boyutu pt cinsindendir (UDE 1 birimi 4/3 piksel çizer); editördeki px değerleri pt'ye çevrilir
+                        const toPtAttr = (v) => {
+                            const str = String(v == null ? '' : v).trim();
+                            if (!str || /%\s*$/.test(str)) return '';
+                            const n = parseFloat(str);
+                            if (!isFinite(n) || n <= 0) return '';
+                            return String(Math.max(1, Math.round(/pt\s*$/i.test(str) ? n : n * 0.75)));
+                        };
+                        const wPt = toPtAttr(item.imgWidth);
+                        const hPt = toPtAttr(item.imgHeight);
+                        const wAttr = wPt ? ` width="${wPt}"` : '';
+                        const hAttr = hPt ? ` height="${hPt}"` : '';
                         contentsXml.push(`<image resolver="${imgResolver}" imageData="${item.image}"${wAttr}${hAttr} startOffset="${start}" length="${len}" />`);
                         continue;
                     }
