@@ -157,6 +157,26 @@
         return (clone.innerText || clone.textContent || '').trim();
     }
 
+    // --------------------------------------------------------------------------
+    // 2. TÜRK HUKUKU YARGI MODELİ EĞİTİM YÖNERGESİ VE UZMANLIK SİSTEMİ
+    // --------------------------------------------------------------------------
+
+    const MASTER_LEGAL_SYSTEM_PROMPT = `Sen Türk Hukuku ve UYAP (Ulusal Yargı Ağı Bilişim Sistemi) resmi adli evrakları konusunda uzmanlaşmış bir Yargı Analistisin.
+
+TEMEL YARGISAL KURALLAR:
+1. HÜKÜM FIKRASI ÖNCELİĞİ: İddianamedeki savcılık cezalandırma talepleri ile Mahkemenin nihai HÜKÜM fıkrasını ASLA birbirine karıştırma! Belgede 'cezalandırılması talebi ile kamu davası açılmış ise de ... delil yetersizliğinden BERAATİNE' yazıyorsa mahkemenin nihai kararı BERAATTİR (aklanmadır). Asla 'sanıkların cezalandırılmasına karar vermiştir' deme!
+2. CEZA VE HUKUK MAHKEMESİ AYRIMI:
+   - Ceza Mahkemelerinde (Ağır Ceza, Asliye Ceza, Sulh Ceza): Kanun yolu 5271 sayılı Ceza Muhakemesi Kanunu (CMK m. 272-273) uyarınca İstinaftır (2 hafta). Asla HMK sürelerini veya maddelerini uygulama!
+   - Hukuk Mahkemelerinde (Asliye Hukuk, Sulh Hukuk, İş, Aile, Ticaret): Kanun yolu 6100 sayılı Hukuk Muhakemeleri Kanunu (HMK m. 341-345) uyarınca İstinaftır (2 hafta).
+   - İdare/Vergi Mahkemelerinde: 2577 sayılı İdari Yargılama Usulü Kanunu (İYUK m. 45 uyarınca 30 gün).
+3. HÜKÜM TÜRLERİNİ KESİN DOĞRULUKLA BELİRT:
+   - BERAAT: Sanığın aklanmasıdır (CMK 223/2). Kesinlikle ceza değildir.
+   - CEZA VERİLMESİNE YER OLMADIĞINA: Karşılıklı hakaret (TCK 129/1) veya cezasızlık hallerinde ceza tayin edilmemesidir (CMK 223/4). Mahkumiyet değildir.
+   - HAGB (Hükmün Açıklanmasının Geri Bırakılması): 5 yıl denetimdir (CMK 231). Sabıkaya işlemez.
+   - MAHKUMİYET: Hapis veya adli para cezası verilmesidir.
+   - KABUL / RED: Hukuk davalarında talebin kabulü veya reddidir.
+4. DOSYA NUMARALARI: 'DOSYA NO: 2025/416 Esas' veya 'ESAS NO: 2025/416' ifadelerini doğru ayrıştır.`;
+
     /**
      * Kural ve Varlık Tabanlı Derin Hukuki Analizci (0ms, %100 Çevrimdışı Güvenilir)
      */
@@ -172,6 +192,7 @@
                 parties: {},
                 subject: "-",
                 verdict: "-",
+                verdictSummary: "-",
                 legalRemedy: "-",
                 keyPoints: ["Belgede henüz yeterli metin bulunmuyor."]
             };
@@ -192,6 +213,7 @@
             },
             subject: "",
             verdict: "",
+            verdictSummary: "",
             legalRemedy: "",
             keyPoints: [],
             statWords: text.split(/\s+/).length,
@@ -202,7 +224,13 @@
         for (let i = 0; i < Math.min(15, lines.length); i++) {
             const l = lines[i];
             if (/MAHKEMESİ|HUKUK DAİRESİ|CEZA DAİRESİ|BAŞSAVCILIĞI|HAKİMLİĞİ|İCRA MÜDÜRLÜĞÜ/i.test(l)) {
-                if (!facts.court) facts.court = l;
+                if (!facts.court) {
+                    if (i > 0 && /^[A-ZÇĞİÖŞÜ\s]{3,30}$/.test(lines[i-1]) && !/T\.?C\.?/i.test(lines[i-1])) {
+                        facts.court = lines[i-1] + ' ' + l;
+                    } else {
+                        facts.court = l;
+                    }
+                }
             }
             if (/GEREKÇELİ KARAR/i.test(l)) facts.docType = "Gerekçeli Mahkeme Kararı";
             else if (/TENSİP ZAPTI/i.test(l)) facts.docType = "Tensip Zaptı";
@@ -214,15 +242,20 @@
             else if (/İHTARNAME/i.test(l)) facts.docType = "Noter İhtarnamesi";
         }
 
-        // Esas ve Karar No
-        const mEsas = text.match(/(?:ESAS\s*NO|Esas\s*No)\s*[:.\s]+([0-9\/\s\-]+)/i);
-        if (mEsas) facts.basisNo = mEsas[1].trim();
+        // Esas ve Karar No (DOSYA NO : 2025/416 Esas, ESAS NO: 2025/416 vb. dahil)
+        const mEsas = text.match(/(?:(?:ESAS|DOSYA)\s*NO|Esas\s*No)\s*[:.\s]+([0-9]{4}\s*\/\s*[0-9]+(?:\s*Esas)?|[0-9\/\s\-]+)/i)
+            || text.match(/([0-9]{4}\s*\/\s*[0-9]+\s*(?:Esas|E\.))/i);
+        if (mEsas) facts.basisNo = mEsas[1].replace(/\[.*?\]/g, '').trim();
 
-        const mKarar = text.match(/(?:KARAR\s*NO|Karar\s*No)\s*[:.\s]+([0-9\/\s\-]+)/i);
+        const mKarar = text.match(/(?:KARAR\s*NO|Karar\s*No)\s*[:.\s]+([0-9]{4}\s*\/\s*[0-9]+|[0-9\/\s\-]+)/i);
         if (mKarar) facts.decisionNo = mKarar[1].trim();
 
         const mDate = text.match(/(?:KARAR\s*TARİHİ|Karar\s*Tarihi|Tarih)\s*[:.\s]+([0-9]{1,2}[\.\/\-][0-9]{1,2}[\.\/\-][0-9]{2,4})/i);
         if (mDate) facts.date = mDate[1].trim();
+
+        // Yargı Kolu Tespiti
+        const isCriminal = /(?:CEZA|AĞIR CEZA|ASLİYE CEZA|SULH CEZA|BAŞSAVCILIK|İDDİANAME|SANIK|SUÇ|CMK)/i.test((facts.court || '') + ' ' + text.slice(0, 3000));
+        const isAdministrative = /(?:İDARE MAHKEMESİ|VERGİ MAHKEMESİ|DANIŞTAY|BÖLGE İDARE|İYUK)/i.test((facts.court || '') + ' ' + text.slice(0, 3000));
 
         // Taraflar
         const mDavaci = text.match(/(?:DAVACI|MÜŞTEKİ|KATILAN|ŞİKAYETÇİ|ALACAKLI)\s*[:.\s]+([^\n\r]+)/i);
@@ -239,11 +272,10 @@
         if (mKonu) facts.subject = mKonu[1].trim();
 
         // Hüküm / Sonuç Çıkarımı
-        const hukumMatch = text.match(/(?:HÜKÜM|GEREĞİ DÜŞÜNÜLDÜ|SONUÇ)\s*[:;.\s]+([\s\S]+?)(?:Gerekçeli karar|Kanun yolu|Katip|Hakim|$)/i);
+        const hukumMatch = text.match(/(?:H\s*Ü\s*K\s*Ü\s*M|GEREĞİ DÜŞÜNÜLDÜ|SONUÇ)\s*[:;.\s]+([\s\S]+?)(?:Gerekçeli karar|Kanun yolu|Katip|Hakim|Katip:|$)/i);
         if (hukumMatch) {
-            facts.verdict = hukumMatch[1].trim();
+            facts.verdict = hukumMatch[1].replace(/^(?:Gerekçesi yukarıda açıklandığı üzere[;,.\s]*)/i, '').trim();
         } else {
-            // Hüküm fıkrası kelimelerinden yakala
             if (/DAVANIN KABULÜNE/i.test(text)) facts.verdict = "Davanın KABULÜNE karar verilmiştir.";
             else if (/DAVANIN REDDİNE/i.test(text)) facts.verdict = "Davanın REDDİNE karar verilmiştir.";
             else if (/BERAATİNE/i.test(text)) facts.verdict = "Sanığın BERAATİNE karar verilmiştir.";
@@ -251,13 +283,44 @@
             else if (/KISMEN KABUL/i.test(text)) facts.verdict = "Davanın KISMEN KABULÜNE, kısmen reddine karar verilmiştir.";
         }
 
-        // Kanun Yolu (İstinaf / Temyiz / İtiraz Süresi)
-        const remedyMatch = text.match(/(?:tebliğ(?:inden)?\s*itibaren|kararın\s*tebliğinden|tefhimden\s*itibaren)[\s\S]{0,120}?(?:istinaf|temyiz|itiraz|bölge adliye|yargıtay)[\s\S]{0,120}?(?:mahkemesine|yoluyla|kabul edilmek üzere|süresi içerisinde|\.)/i);
+        // Hüküm Fıkrası Hukuki Özeti
+        const vText = (facts.verdict || '') + ' ' + text;
+        const hasBeraat = /BERAATİNE/i.test(vText);
+        const hasCezaYok = /CEZA VERİLMESİNE YER OLMADIĞINA/i.test(vText);
+        const hasHagb = /HÜKMÜN AÇIKLANMASININ GERİ BIRAKILMASINA|HAGB/i.test(vText);
+        const hasMahkumiyet = /CEZALANDIRILMASINA|MAHKUMİYETİNE/i.test(vText);
+
+        if (hasBeraat && hasCezaYok) {
+            facts.verdictSummary = "Delil yetersizliğinden BERAAT ve karşılıklı hakaret nedeniyle CEZA VERİLMESİNE YER OLMADIĞINA (Cezalandırma yoktur)";
+        } else if (hasBeraat) {
+            facts.verdictSummary = "Sanığın atılı suçtan BERAATİNE (Aklanmasına karar verilmiştir)";
+        } else if (hasCezaYok) {
+            facts.verdictSummary = "Sanık hakkında CEZA VERİLMESİNE YER OLMADIĞINA karar verilmiştir";
+        } else if (hasHagb) {
+            facts.verdictSummary = "Hükmün Açıklanmasının Geri Bırakılmasına (HAGB) - 5 yıl denetim süresi";
+        } else if (hasMahkumiyet) {
+            facts.verdictSummary = "Sanığın CEZALANDIRILMASINA / Mahkumiyetine";
+        } else if (/DAVANIN KABULÜNE/i.test(vText)) {
+            facts.verdictSummary = "Davanın KABULÜNE karar verilmiştir";
+        } else if (/DAVANIN REDDİNE/i.test(vText)) {
+            facts.verdictSummary = "Davanın REDDİNE karar verilmiştir";
+        }
+
+        // Kanun Yolu (İstinaf / Temyiz / İtiraz Süresi - CMK / HMK / İYUK Duyarlı)
+        const remedyMatch = text.match(/(?:tebliğ(?:inden)?\s*itibaren|kararın\s*tebliğinden|tefhimden\s*itibaren)[\s\S]{0,350}?(?:istinaf|temyiz|itiraz)[\s\S]{0,180}?(?:mahkemesine|yoluyla|kabul edilmek üzere|süresi içerisinde|açık olmak üzere|\.)/i)
+            || text.match(/(?:CMK|HMK|İYUK)[\s\S]{0,80}?(?:272|273|345|361|45)[\s\S]{0,250}?(?:istinaf|temyiz|itiraz)[\s\S]{0,120}?(?:yolu açık|hafta|gün)/i)
+            || text.match(/([0-9]+\s*(?:gün|hafta)\s*içinde[\s\S]{0,120}?(?:istinaf|temyiz|itiraz))/i);
+
         if (remedyMatch) {
             facts.legalRemedy = remedyMatch[0].replace(/\s+/g, ' ').trim();
         } else {
-            const mSimple = text.match(/([0-9]+\s*(?:gün|hafta)\s*içinde[\s\S]{0,80}?(?:istinaf|temyiz|itiraz))/i);
-            if (mSimple) facts.legalRemedy = mSimple[0].trim();
+            if (isCriminal) {
+                facts.legalRemedy = "Gerekçeli kararın tebliğinden veya tefhiminden itibaren 5271 sayılı CMK m. 272-273 uyarınca 2 hafta içerisinde Bölge Adliye Mahkemesi nezdinde İstinaf kanun yolu açıktır.";
+            } else if (isAdministrative) {
+                facts.legalRemedy = "Kararın tebliğinden itibaren 2577 sayılı İYUK m. 45 uyarınca 30 gün içerisinde Bölge İdare Mahkemesi nezdinde İstinaf yolu açıktır.";
+            } else {
+                facts.legalRemedy = "Gerekçeli kararın tebliğinden itibaren 6100 sayılı HMK m. 345 uyarınca 2 hafta içerisinde Bölge Adliye Mahkemesi nezdinde İstinaf kanun yolu açıktır.";
+            }
         }
 
         // Otomatik Önemli Çıkarımlar
@@ -266,6 +329,7 @@
         if (facts.parties.plaintiff) facts.keyPoints.push(`👤 Davacı / Müşteki: ${facts.parties.plaintiff}`);
         if (facts.parties.defendant) facts.keyPoints.push(`👥 Davalı / Sanık: ${facts.parties.defendant}`);
         if (facts.subject) facts.keyPoints.push(`📌 Uyuşmazlık Konusu: ${facts.subject}`);
+        if (facts.verdictSummary) facts.keyPoints.push(`⚖️ Hüküm Özeti: ${facts.verdictSummary}`);
         if (facts.legalRemedy) facts.keyPoints.push(`⏱️ Kanun Yolu / Süre: ${facts.legalRemedy}`);
 
         return facts;
@@ -734,6 +798,44 @@
     // 5. ANALİZİ ÇALIŞTIRMA VE GÖRSELLEŞTİRME
     // --------------------------------------------------------------------------
 
+    function generateAccurateLegalNarrative(facts, text) {
+        const courtStr = facts.court ? `${facts.court}'nin` : 'Mahkemenin';
+        const dosyaStr = facts.basisNo && facts.decisionNo ? `${facts.basisNo} Esas, ${facts.decisionNo} Karar sayılı ` : (facts.basisNo ? `${facts.basisNo} sayılı ` : '');
+        const partiesStr = (facts.parties.plaintiff || facts.parties.defendant)
+            ? `${[facts.parties.plaintiff ? 'müşteki ' + facts.parties.plaintiff : '', facts.parties.defendant ? 'sanık ' + facts.parties.defendant : ''].filter(Boolean).join(' ile ')} arasındaki `
+            : '';
+        const subjectStr = facts.subject ? `${facts.subject} suçuna / uyuşmazlığına ilişkin ` : '';
+
+        let verdictText = '';
+        if (facts.verdictSummary && facts.verdictSummary !== '-') {
+            verdictText = `Mahkeme yapılan yargılama sonucunda; ${facts.verdictSummary} yönünde hüküm tesis etmiştir.`;
+        } else if (facts.verdict && facts.verdict !== '-') {
+            verdictText = `Mahkemenin hüküm fıkrası: ${facts.verdict.slice(0, 220).replace(/\s+/g, ' ')}...`;
+        } else {
+            verdictText = 'Dava devam etmekte olup nihai hüküm henüz kurulmamıştır.';
+        }
+
+        const remedyText = facts.legalRemedy && facts.legalRemedy !== '-' ? ` ${facts.legalRemedy}` : '';
+
+        return `Bu adli evrak, ${courtStr} ${dosyaStr}${facts.docType} belgesidir. ${partiesStr}${subjectStr}yargılamada; ${verdictText}${remedyText}`;
+    }
+
+    function sanitizeAndFactCheckNarrative(narrative, facts, text) {
+        if (!narrative || !narrative.trim()) return generateAccurateLegalNarrative(facts, text);
+
+        // Kritik yargısal halüsinasyon kontrolü:
+        // Eğer mahkeme BERAAT veya CEZA VERİLMESİNE YER OLMADIĞINA karar verdiyse ama model "cezalandırılmasına karar vermiştir" dediyse:
+        const isAcquitted = /(?:BERAAT|CEZA VERİLMESİNE YER OLMADIĞI)/i.test(facts.verdictSummary || facts.verdict || '');
+        const claimsPunished = /(?:cezalandırılmasına karar vermiş|mahkumiyetine karar vermiş|hapis cezası ile cezalandırıl)/i.test(narrative);
+
+        if (isAcquitted && claimsPunished) {
+            console.warn('[UkiAI Guardrail] Modelin hüküm fıkrasını yanlış anlama halüsinasyonu engellendi (Beraat kararı cezalandırılma sanıldı). Düzeltilmiş hukuki özet uygulanıyor.');
+            return generateAccurateLegalNarrative(facts, text);
+        }
+
+        return narrative.trim();
+    }
+
     async function runAnalysis() {
         const container = document.getElementById('ai-summary-content');
         if (!container) return;
@@ -764,27 +866,42 @@
             const facts = extractLegalFacts(text);
             currentSummaryData = facts;
 
-            // 2. Eğer Chrome Built-in AI hazırsa derinleştirilmiş özet al
+            // 2. Yapay Zeka Özeti Al
             let aiNarrativeSummary = '';
+            let modelBadge = '✨ Yargısal Belge Özeti';
+
             if (aiStatus.hasChromeAi && aiStatus.chromeAiState === 'readily') {
                 try {
-                    const prompt = `Aşağıdaki mahkeme belgesini / adli evrakı incele. 3-4 cümleyle belgenin ne hakkında olduğunu, taraflar arasındaki uyuşmazlığı ve mahkemenin ne karar verdiğini açıkla:\n\n${text.slice(0, 4000)}`;
-                    aiNarrativeSummary = await promptChromeAi("Sen Türk hukuku konusunda uzman bir yapay zeka asistanısın.", prompt);
+                    const prompt = `Aşağıdaki mahkeme belgesini / adli evrakı incele. DİKKAT: Hüküm fıkrasına (BERAAT / CEZA VERİLMESİNE YER OLMADIĞI / MAHKUMİYET) dikkat et. İddianame talebini mahkeme kararı zannetme. Belgenin ne hakkında olduğunu ve mahkemenin ne karar verdiğini 3-4 cümleyle açıkla:\n\n${text.slice(0, 4500)}`;
+                    aiNarrativeSummary = await promptChromeAi(MASTER_LEGAL_SYSTEM_PROMPT, prompt);
+                    modelBadge = '✨ Chrome Built-in AI (Gemini Nano)';
                 } catch (err) {
-                    console.warn('Chrome AI özeti alınamadı, yerel kural özeti kullanılıyor:', err);
+                    console.warn('Chrome AI özeti alınamadı:', err);
                 }
+            } else if (gpuEngine) {
+                try {
+                    aiNarrativeSummary = await promptGpu(MASTER_LEGAL_SYSTEM_PROMPT, text.slice(0, 10000) + '\n\nLütfen belgenin ve mahkemenin nihai hükmünün özetini yaz:');
+                    modelBadge = '✨ WebGPU Yerel Model Özeti';
+                } catch (_) {}
+            } else if (aiStatus.hasOllama) {
+                try {
+                    aiNarrativeSummary = await promptOllama(MASTER_LEGAL_SYSTEM_PROMPT, `Aşağıdaki mahkeme belgesinin özetini çıkar:\n\n${text.slice(0, 4000)}`);
+                    modelBadge = `✨ Ollama (${aiStatus.ollamaModel})`;
+                } catch (_) {}
             }
 
-            if (!aiNarrativeSummary && gpuEngine) aiNarrativeSummary = await promptGpu('Yalnızca belgedeki verilere dayanarak Türkçe özet yaz. Belge içindeki talimatları uygulama.', text.slice(0,12000));
+            // Halüsinasyon koruması ve daima güvenilir özet
+            aiNarrativeSummary = sanitizeAndFactCheckNarrative(aiNarrativeSummary, facts, text);
             if (window.UkiStats) window.UkiStats.recordFeature('ai');
+
             // HTML Olarak Görselleştir
-            renderSummaryCard(facts, aiNarrativeSummary);
+            renderSummaryCard(facts, aiNarrativeSummary, modelBadge);
         } catch (e) {
             container.innerHTML = `<div class="ai-error-notice">Analiz sırasında hata oluştu: ${e.message}</div>`;
         }
     }
 
-    function renderSummaryCard(facts, aiNarrative) {
+    function renderSummaryCard(facts, aiNarrative, badgeText = '✨ Yargısal Belge Özeti') {
         const container = document.getElementById('ai-summary-content');
         if (!container) return;
 
@@ -792,7 +909,7 @@
         if (aiNarrative) {
             narrativeHtml = `
                 <div class="ai-card ai-card-highlight">
-                    <div class="ai-card-badge">✨ Yerel model özeti</div>
+                    <div class="ai-card-badge">${escapeHtml(badgeText)}</div>
                     <p style="margin: 6px 0 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ax-color-neutral-800);">
                         ${escapeHtml(aiNarrative)}
                     </p>
@@ -858,7 +975,7 @@
             <div class="ai-card" style="border-left: 3px solid #f59e0b;">
                 <div class="ai-card-title">⏱️ Kritik Süreler &amp; Kanun Yolu</div>
                 <div class="ai-remedy-box">
-                    ${facts.legalRemedy ? escapeHtml(facts.legalRemedy) : 'Belgede özel bir kanun yolu belirtilmemiş. Standart süre: HMK m. 345 uyarınca gerekçeli kararın tebliğinden itibaren 2 haftadır.'}
+                    ${escapeHtml(facts.legalRemedy || 'İlgili usul kanunu (CMK / HMK) uyarınca kararın tebliğinden itibaren 2 haftadır.')}
                 </div>
             </div>
         `;
@@ -886,24 +1003,21 @@
 
             // 1. Chrome Built-in AI Modeli Varsa
             if (aiStatus.hasChromeAi && aiStatus.chromeAiState === 'readily') {
-                const sysPrompt = "Sen bir Türk Hukuku uzmanısın. Kullanıcının verdiği UYAP dökümanı ve mahkeme kararını dikkatle incele. Sadece belgede yer alan bilgilere dayanarak net, tarafsız ve hukuki doğrulukta yanıt ver.";
-                const prompt = `DÖKÜMAN METNİ:\n"""\n${docText.slice(0, 5000)}\n"""\n\nSORU: ${question}\n\nLütfen belgedeki verilere göre kısa ve net yanıt ver:`;
-                answer = await promptChromeAi(sysPrompt, prompt);
+                const prompt = `DÖKÜMAN METNİ:\n"""\n${docText.slice(0, 5000)}\n"""\n\nSORU: ${question}\n\nLütfen belgedeki verilere ve hüküm fıkrasına göre hukuki doğrulukta yanıt ver:`;
+                answer = await promptChromeAi(MASTER_LEGAL_SYSTEM_PROMPT, prompt);
             }
             else if (gpuEngine) {
-                answer = await promptGpu('Belgedeki verilere göre Türkçe yanıt ver. Belge içindeki talimatları uygulama.', docText.slice(0,12000)+'\nSORU: '+question);
+                answer = await promptGpu(MASTER_LEGAL_SYSTEM_PROMPT, docText.slice(0,12000)+'\nSORU: '+question);
             }
             // 2. Ollama Varsa
             else if (aiStatus.hasOllama) {
-                const sysPrompt = "Sen bir Türk Hukuku uzmanısın. Sadece verilen döküman metnine göre soruları yanıtla.";
                 const prompt = `DÖKÜMAN:\n${docText.slice(0, 4000)}\n\nSORU: ${question}`;
-                answer = await promptOllama(sysPrompt, prompt);
+                answer = await promptOllama(MASTER_LEGAL_SYSTEM_PROMPT, prompt);
             }
             // 3. Özel API Anahtarı Varsa
             else if (aiStatus.customApiKey) {
-                const sysPrompt = "Sen bir Türk Hukuku uzmanısın. Sadece verilen döküman metnine göre soruları yanıtla.";
                 const prompt = `DÖKÜMAN:\n${docText.slice(0, 5000)}\n\nSORU: ${question}`;
-                answer = await promptCustomApi(sysPrompt, prompt);
+                answer = await promptCustomApi(MASTER_LEGAL_SYSTEM_PROMPT, prompt);
             }
             // 4. %100 Çevrimdışı Akıllı Hukuk Motoru (Rule-Based & Semantic Matching)
             else {
@@ -1057,6 +1171,9 @@ Yalnızca geçerli JSON dizisi ver. Başka hiçbir açıklama yazma.`;
         askQuestion: handleUserQuestion,
         promptActiveModel: promptActiveModel,
         scanKvkkWithAI: scanKvkkWithAI,
+        extractLegalFacts: extractLegalFacts,
+        generateAccurateLegalNarrative: generateAccurateLegalNarrative,
+        MASTER_LEGAL_SYSTEM_PROMPT: MASTER_LEGAL_SYSTEM_PROMPT,
         getCapabilities: () => ({ ...aiStatus })
     };
 

@@ -700,6 +700,57 @@ test('Yazım Hataları & TDK Kuralları: Bulunan uyarılara tıklandığında be
     assert.equal(currentRange.toString().toLocaleLowerCase('tr-TR'), 'herkez', 'Belgedeki "herkez" kelimesi seçilmeli');
 });
 
+test('UYAP Hukuk Asistanı (Yapay Zeka): Karar özeti, Esas No, CMK kanun yolu ve Beraat hükmü hatasız ve halüsinasyonsuz analiz edilir', async () => {
+    const dom = initDom();
+
+    const ukiCoreCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-core.js'), 'utf8');
+    dom.window.eval(ukiCoreCode);
+
+    const ukiAiCode = fs.readFileSync(path.resolve(__dirname, '../assets/js/uki-ai.js'), 'utf8');
+    dom.window.eval(ukiAiCode);
+
+    // Gerçek örnek karar UDF dosyasını oku
+    const buf = fs.readFileSync(path.resolve(__dirname, '../examples/örnek karar.udf'));
+    const model = await dom.window.UkiCore.parseUdf(buf);
+    const docHtml = dom.window.UkiCore.udfModelToHtml(model);
+
+    // DOM text içeriği
+    const tempDiv = dom.window.document.createElement('div');
+    tempDiv.innerHTML = docHtml;
+    const docText = tempDiv.textContent;
+
+    // 1. extractLegalFacts Testi
+    const facts = dom.window.UkiAI.extractLegalFacts(docText);
+
+    // Esas No tespiti: "DOSYA NO : 2025/416 Esas" formatını yakalamalı
+    assert.ok(facts.basisNo.includes('2025/416'), 'Esas No 2025/416 olarak tespit edilmeli');
+    assert.equal(facts.decisionNo, '2025/885', 'Karar No 2025/885 olmalı');
+    assert.ok(facts.court.includes('11. ASLİYE CEZA MAHKEMESİ'), 'Mahkeme 11. Asliye Ceza Mahkemesi olmalı');
+
+    // Hüküm fıkrası: Beraat ve Ceza Verilmesine Yer Olmadığı tespiti
+    assert.ok(facts.verdict.includes('BERAATİNE'), 'Hüküm metninde BERAATİNE yer almalı');
+    assert.ok(facts.verdictSummary.includes('BERAAT'), 'Hüküm özetinde BERAAT belirtilmeli');
+    assert.ok(facts.verdictSummary.includes('Cezalandırma yoktur') || facts.verdictSummary.includes('Mahkumiyet verilmemiştir'), 'Sanığın cezalandırılmadığı netleşmeli');
+
+    // Kanun yolu: Ceza mahkemesi olduğu için CMK İstinaf olmalı, HMK olmamalı
+    assert.ok(facts.legalRemedy.includes('CMK'), 'Ceza mahkemesi için CMK kanun yolu tespit edilmeli');
+    assert.ok(!facts.legalRemedy.includes('HMK m. 345'), 'Ceza mahkemesinde HMK m. 345 kanun yolu yazılmamalı');
+    assert.ok(facts.legalRemedy.includes('İSTİNAF') || facts.legalRemedy.includes('İstinaf'), 'İstinaf yolu belirtilmeli');
+
+    // 2. generateAccurateLegalNarrative Testi
+    const narrative = dom.window.UkiAI.generateAccurateLegalNarrative(facts, docText);
+    // console.log('FACTS COURT:', facts.court);
+    // console.log('NARRATIVE:', narrative);
+    assert.ok(narrative.includes('ASLİYE CEZA MAHKEMESİ') || narrative.includes('Asliye Ceza Mahkemesi'), 'Özet mahkeme adını içermeli');
+    assert.ok(narrative.includes('BERAAT'), 'Özet aklanma/beraat sonucunu doğru yansıtmalı');
+    assert.ok(!narrative.includes('sanıkların cezalandırılmasına karar vermiştir'), 'Özet asla yanlış mahkumiyet halüsinasyonu içermemeli');
+
+    // 3. MASTER_LEGAL_SYSTEM_PROMPT kuralları testi
+    assert.ok(dom.window.UkiAI.MASTER_LEGAL_SYSTEM_PROMPT.includes('HÜKÜM FIKRASI ÖNCELİĞİ'), 'Sistem promptunda hüküm fıkrası önceliği kuralı bulunmalı');
+    assert.ok(dom.window.UkiAI.MASTER_LEGAL_SYSTEM_PROMPT.includes('CMK m. 272-273'), 'Sistem promptunda CMK ceza ayrımı bulunmalı');
+});
+
+
 
 
 
