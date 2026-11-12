@@ -120,3 +120,4 @@
     window.UkiLegalGlossary = UkiLegalGlossary;
 
 })(typeof window !== 'undefined' ? window : globalThis, typeof document !== 'undefined' ? document : {});
+

@@ -53,7 +53,7 @@
             const editor = document.getElementById('editor');
             if (!editor) return;
 
-            const text = (editor.innerText || editor.textContent || '').trim();
+            const text = String((editor.innerText || editor.textContent || '')).trim();
             if (!text || text.length < 5) return;
 
             // Eğer otomatikse ve son snapshot'tan beri metin değişmediyse kaydetme

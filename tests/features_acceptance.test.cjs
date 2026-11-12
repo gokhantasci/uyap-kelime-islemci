@@ -865,14 +865,13 @@ test('Avukat Antet Temaları & 657.com.tr Kurumsal Antet Paritesi: 8 adet presti
     }
     await new Promise(r => setTimeout(r, 120));
 
-    // 1. buildPortal657AntetHtml varlığı ve içeriği
+    // 1. buildPortal657AntetHtml varlığı ve içeriği (yalnızca logo, domain ve portal adresleri)
     assert.ok(typeof w.buildPortal657AntetHtml === 'function', 'buildPortal657AntetHtml fonksiyonu mevcut olmalı');
     const p657Html = w.buildPortal657AntetHtml(false);
     assert.ok(p657Html.includes('theme-portal-657'), '657 anteti theme-portal-657 sınıfı içermeli');
     assert.ok(p657Html.includes('657.COM.TR'), '657 anteti 657.COM.TR başlığı içermeli');
-    assert.ok(p657Html.includes('YARGI VE KAMU HUKUKU BİLGİ BANKASI'), '657 anteti alt başlığı içermeli');
     assert.ok(p657Html.includes('https://udf.657.com.tr'), '657 anteti web adresini içermeli');
-    assert.ok(p657Html.includes('65700-UYAP-DEV'), '657 anteti UETS kodunu içermeli');
+    assert.ok(p657Html.includes('https://657.com.tr'), '657 anteti portal adresini içermeli');
 
     // 2. buildLawyerAntetHtml 8 Temanın tamamını üretmeli
     const themeSelect = w.document.getElementById('lawyer-theme-select');

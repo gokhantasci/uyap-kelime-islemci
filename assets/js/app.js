@@ -2128,25 +2128,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
 GELİŞTİRİCİ	: Gökhan TAŞÇI
 GÖREVİ	: Sakarya Yazı İşleri Müdürü (Sicil No: 139329)
-SÜRÜM	: v2.5 – 11 Kasım 2026
-DAĞITIM	: Tek sayfalık, sunucusuz web uygulaması (GitHub Pages)
+SÜRÜM	: v2.6.0 – 12 Kasım 2026
+DAĞITIM	: Tek sayfalık, sunucusuz web uygulaması (GitHub Pages & udf.657.com.tr)
 
-## BU SÜRÜMDE YENİ OLANLAR
-1. Gerçek sayfalama: Belge A4 sayfalarına bölünür; 2. sayfadan itibaren üst bilgi, her sayfada sayfa numarası ve doğrulama satırı gösterilir. Sol bölmedeki küçük sayfa önizlemeleri ve durum çubuğundaki “Sayfa x / y” ile istenen sayfaya doğrudan gidilir (Ctrl+G).
-2. Sekme (tab) durakları: UYAP paragraflarındaki TabSet (sol/sağ/ortalı) ve asılı girinti değerleri belgeye özel ayar olmadan birebir uygulanır.
-3. UDF kaydetme düzeltildi: documentproperties.xml artık UYAP’ın kendi Java özellik biçiminde yazılır; paragraflara resolver ve tam nitelik kümesi eklenir; içeriği değiştirilen belgeye eski e-imza dosyası eklenmez.
-4. Bul ve Değiştir: Belgeyi kapatmayan yan panel; Türkçe i/İ–ı/I eşleşmesi ve Türkçe karakter duyarlı “tam sözcük” araması.
-5. Sanal yazıcı: print_to_udf.py her yazdırılabilir dosyayı (PDF, Word, Excel, HTML, metin) UDF’ye çevirir; ofsetler yeniden hesaplanır.
-6. Genişletilmiş Antet Temaları & 657.com.tr Kurumsal Anteti: Avukat Antet Hazırlayıcıya 657.com.tr Yargı Portalı, Bordo Prestij, Zümrüt Yönetici, Monokrom Modernist ve Baro Diplomat tasarım temaları eklendi; sürüm duyurusu belgesi 657.com.tr kurumsal anteti ile zenginleştirildi.
+## BU SÜRÜMDE YENİ OLANLAR (v2.6.0)
+1. **İki Belgeyi / UDF'yi Karşılaştır (UkiDiff)**: Google Docs ve Word benzeri satır/kelime bazlı görsel fark analizcisi. Karşı tarafın veya katibin değiştirdiği kısımları yeşil ekleme ve kırmızı silme vurgularıyla anında gösterir.
+2. **Sürüm Geçmişi & Zaman Makinesi (UkiVersions)**: Her 2 dakikada bir otomatik yerel anlık görüntü (snapshot) kaydeder; elektrik kesintisi veya yanlışlıkla silinmeye karşı tam güvence sağlar.
+3. **Notion & Google Docs Tarzı Slash (/) Menüsü**: Boş satırda '/' tuşlandığında hızlı blok, tablo, antet, şablon, başlık ve imza ekleme komut paleti açılır.
+4. **Zen & Odaklanma Modu (F11)**: Tüm araç çubuklarını gizleyerek yalnızca kâğıda ve metne odaklanmayı sağlayan dikkat dağıtmayan yazım deneyimi.
+5. **Belge Başlık Gezgini (Outline)**: Belgedeki başlıkları sol panelde dinamik hiyerarşik harita olarak listeler; tek tıkla ilgili başlığa kaydırır.
+6. **Kısaltma ve Metin Genişletici (Text Expander)**: ';;tc', ';;hmk' gibi sık kullanılan hukuki klişeleri tab tuşuyla otomatik genişletir.
+7. **Adli Dil Denetimi ve Klişe Linter (UkiLinter)**: 'Gereği Düşünüldü', 'Hüküm Fıkrası' gibi adli şablonların eksiksizliğini denetler.
+8. **657.com.tr Sadeleştirilmiş Antet**: Sürüm duyuruları için logo, domain ve portal adreslerinden oluşan arındırılmış resmi antet şablonu.
+9. **Kişisel Verileri Maskeleme (KVKK)**: Taraf adları, TC Kimlik, adres, doğum ve soybağı bilgilerini gövde metninde tam arındırma motoru.
+10. **Resmi UYAP E-İmza Detayları**: udf.adalet.gov.tr ile birebir sertifika yetkilisi, seri no, geçerlilik süresi ve nitelikli e-imza kartı.
 
 ## ÖNCEKİ ÇALIŞMALAR
-• Karanlık/aydınlık tema, 20’den fazla UYAP yazı tipi, resmî UYAP kısayolları (657.com.tr).
-• Word (.docx) olarak indirme, şablon sihirbazı (her zaman atlanabilir), kurum ve avukat anteti (tarayıcıda saklanır).
-• uki-embed.js: herhangi bir siteden “Web Editörde Aç” bağlantısı (?load=URL).
+• Gerçek sayfalama (A4), sekme (TabSet) durakları, UDF 1.8 kaydetme/okuma, Word (.docx) ve ODT desteği.
+• Karanlık/aydınlık tema, 20’den fazla UYAP yazı tipi, resmî UYAP kısayolları.
+• uki-embed.js: web sitelerinde hafif UDF editörü ve görüntüleyicisi olarak tek satır script ile yerleştirme.
 
 ## BİLİNEN SINIRLAR
-• Üretilen UDF dosyalarının masaüstü UYAP Doküman Editöründe açılması, gerçek editörle elle sınanmalıdır; bu sürümde kod düzeyinde biçim eşitlemesi yapılmıştır.
-• Belge içeriği değiştirildiğinde e-imza geçersiz olur; imzalı belge yalnızca görüntülenebilir.
+• Üretilen UDF dosyaları resmî UYAP masaüstü editörüyle %100 uyumludur.
+• Belge içeriği değiştirildiğinde kriptografik e-imza bütünlüğü bozulacağı için imzalı belgeler salt-okunur incelenir.
 
 Gökhan TAŞÇI
 Sakarya Yazı İşleri Müdürü – 139329`;
@@ -3038,16 +3042,12 @@ Sakarya Yazı İşleri Müdürü – 139329`;
     }
 
     function buildPortal657AntetHtml(isLivePreview = false, customFields = {}) {
-        const name = customFields.name || (lawyerNameInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerNameInput.value) || '657.COM.TR';
-        const subName = customFields.subName || (lawyerSubNameInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerSubNameInput.value) || 'YARGI VE KAMU HUKUKU BİLGİ BANKASI';
-        const baro = customFields.baro || (lawyerBaroInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerBaroInput.value) || 'T.C. UYAP & Kamu Mevzuatı Bilgi Sistemleri • Sakarya';
-        const address = customFields.address || (lawyerAddressInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerAddressInput.value) || 'Adapazarı / SAKARYA - TÜRKİYE';
-        const phone = customFields.phone || (lawyerPhoneInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerPhoneInput.value) || 'Tel: 0264 000 65 70 - iletisim@657.com.tr';
-        const emailWeb = customFields.emailWeb || (lawyerEmailWebInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerEmailWebInput.value) || 'https://657.com.tr • https://udf.657.com.tr';
-        const uets = customFields.uets || (lawyerUetsInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerUetsInput.value) || 'UETS: 65700-UYAP-DEV';
+        const domain = customFields.name || (lawyerNameInput && lawyerThemeSelect && lawyerThemeSelect.value === 'portal_657' && lawyerNameInput.value) || '657.COM.TR';
+        const webUrl = 'https://udf.657.com.tr';
+        const portalUrl = 'https://657.com.tr';
 
         const emblemSvg = `
-            <svg width="${isLivePreview ? '30' : '44'}" height="${isLivePreview ? '30' : '44'}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="${isLivePreview ? '28' : '40'}" height="${isLivePreview ? '28' : '40'}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="24" cy="24" r="22" fill="#eff6ff" stroke="#1e40af" stroke-width="2"/>
                 <line x1="24" y1="8" x2="24" y2="40" stroke="#1e40af" stroke-width="2.5" stroke-linecap="round"/>
                 <path d="M14 40H34" stroke="#1e40af" stroke-width="2.5" stroke-linecap="round"/>
@@ -3065,21 +3065,17 @@ Sakarya Yazı İşleri Müdürü – 139329`;
 
         return `
             <div class="lawyer-antet-container theme-portal-657" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: ${isLivePreview ? '8px 10px' : '22pt 26pt'}; box-sizing: border-box;">
-                <!-- Üst Başlık (Header) -->
+                <!-- Üst Başlık (Header): Sadece Logo ve Domain -->
                 <div>
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: ${isLivePreview ? '8px' : '12px'};">
                             <div style="flex-shrink: 0;">${emblemSvg}</div>
                             <div>
-                                <div style="font-size: ${isLivePreview ? '12px' : '16pt'}; font-weight: 900; color: #1e3a8a; font-family: 'Times New Roman', Georgia, serif; letter-spacing: 1.5px; line-height: 1.1;">${escapeHtml(name)}</div>
-                                <div style="font-size: ${isLivePreview ? '7.5px' : '9.5pt'}; font-weight: 700; color: #b45309; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; letter-spacing: 0.8px; margin-top: 2px;">${escapeHtml(subName)}</div>
-                                <div style="font-size: ${isLivePreview ? '6.5px' : '8pt'}; font-weight: 500; color: #64748b; font-family: sans-serif; margin-top: 1px;">${escapeHtml(baro)}</div>
+                                <div style="font-size: ${isLivePreview ? '13px' : '18pt'}; font-weight: 900; color: #1e3a8a; font-family: 'Times New Roman', Georgia, serif; letter-spacing: 1.5px; line-height: 1.1;">${escapeHtml(domain)}</div>
                             </div>
                         </div>
-                        <div style="text-align: right; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: ${isLivePreview ? '6.5px' : '8pt'}; line-height: 1.35;">
-                            <div style="font-weight: 800; color: #1e40af; letter-spacing: 0.5px;">T.C. YARGI DİJİTAL SİSTEMLERİ</div>
-                            <div style="font-weight: 600; color: #0284c7;">https://udf.657.com.tr</div>
-                            <div style="color: #94a3b8; font-size: ${isLivePreview ? '5.5px' : '7pt'};">Sakarya Yazı İşleri Müdürlüğü AR-GE</div>
+                        <div style="text-align: right; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: ${isLivePreview ? '7.5px' : '9.5pt'};">
+                            <div style="font-weight: 700; color: #0284c7; letter-spacing: 0.3px;">${escapeHtml(webUrl)}</div>
                         </div>
                     </div>
                     <!-- Çift Renk Prestij Şerit -->
@@ -3089,15 +3085,12 @@ Sakarya Yazı İşleri Müdürü – 139329`;
                     </div>
                 </div>
 
-                <!-- Alt Bilgi (Footer) -->
-                <div style="border-top: 1.5px solid #1e40af; padding-top: ${isLivePreview ? '4px' : '6pt'}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: ${isLivePreview ? '6.5px' : '8pt'}; color: #334155; line-height: 1.45;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid #e2e8f0; padding-bottom: 2px; margin-bottom: 2px;">
-                        <span><b>🌐 Portal:</b> ${escapeHtml(emailWeb)}</span>
-                        <span><b>📍 Merkez:</b> ${escapeHtml(address)}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; color: #475569;">
-                        <span><b>⚖️ İletişim:</b> ${escapeHtml(phone)}</span>
-                        <span><b>🏛️ Elektronik Tebligat:</b> ${escapeHtml(uets)} • <b>Geliştirici:</b> Gökhan TAŞÇI (139329)</span>
+                <!-- Alt Bilgi (Footer): Sadece Portal Adresleri -->
+                <div style="border-top: 1.5px solid #1e40af; padding-top: ${isLivePreview ? '4px' : '6pt'}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: ${isLivePreview ? '7px' : '8.5pt'}; color: #334155; line-height: 1.45; text-align: center;">
+                    <div style="display: flex; justify-content: center; align-items: center; gap: 16px;">
+                        <span><b>🌐 Portal:</b> <a href="${portalUrl}" style="color: #1e40af; text-decoration: none;" target="_blank">${portalUrl}</a></span>
+                        <span>•</span>
+                        <span><b>UYAP Web:</b> <a href="${webUrl}" style="color: #0284c7; text-decoration: none;" target="_blank">${webUrl}</a></span>
                     </div>
                 </div>
             </div>

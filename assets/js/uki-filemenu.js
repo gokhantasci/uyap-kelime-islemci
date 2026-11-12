@@ -192,6 +192,14 @@
         menu.hidden = false;
         trigger.setAttribute('aria-expanded', 'true');
         root.classList.add('open');
+        try {
+            const rect = menu.getBoundingClientRect();
+            const maxAllowed = (typeof window !== 'undefined' ? window.innerHeight : 800) - rect.top - 12;
+            if (maxAllowed > 100 && rect.bottom > (typeof window !== 'undefined' ? window.innerHeight : 800)) {
+                menu.style.maxHeight = maxAllowed + 'px';
+                menu.style.overflowY = 'auto';
+            }
+        } catch (_) {}
         refreshLists();
     }
     function close() {
