@@ -2,7 +2,7 @@
   "metadata": {
     "title": "UYAP ve Türk Adli Yargı Belgeleri Yapay Zeka Eğitim ve İstemi Veri Seti",
     "description": "Yerel LLM'ler (Chrome AI, WebLLM, Ollama Qwen/Llama) ve bulut modelleri için Türk Hukuku karar yapısı, CMK/HMK süreleri ve hüküm fıkrası analiz eğitimi.",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "language": "tr-TR",
     "target_domains": [
       "Ceza Yargılaması (CMK)",
@@ -17,52 +17,154 @@
       "BERAAT": {
         "law": "5271 sayılı CMK m. 223/2",
         "description": "Sanığın suçsuz bulunarak aklanması kararıdır. Adli para cezası veya hapis cezası verilmez.",
-        "keywords": ["BERAATİNE", "beraatine karar verildi", "delil yetersizliği"]
+        "keywords": [
+          "BERAATİNE",
+          "beraatine karar verildi",
+          "delil yetersizliği"
+        ]
       },
       "CEZA_VERILMESINE_YER_OLMADIGI": {
         "law": "5271 sayılı CMK m. 223/4 ve TCK m. 129",
         "description": "Kusurun bulunmaması veya cezasızlık hallerinde (örneğin karşılıklı hakaret) ceza verilmemesidir.",
-        "keywords": ["CEZA VERİLMESİNE YER OLMADIĞINA", "ceza tayinine yer olmadığına"]
+        "keywords": [
+          "CEZA VERİLMESİNE YER OLMADIĞINA",
+          "ceza tayinine yer olmadığına"
+        ]
       },
       "HAGB": {
         "law": "5271 sayılı CMK m. 231/5",
         "description": "Hükmün Açıklanmasının Geri Bırakılması. Sanık denetim süresinde kasti suç işlemezse dava düşer.",
-        "keywords": ["HÜKMÜN AÇIKLANMASININ GERİ BIRAKILMASINA", "HAGB"]
+        "keywords": [
+          "HÜKMÜN AÇIKLANMASININ GERİ BIRAKILMASINA",
+          "HAGB"
+        ]
       },
       "MAHKUMIYET": {
         "law": "5271 sayılı CMK m. 223/5",
         "description": "Sanığın cezalandırılması kararıdır (hapis veya adli para cezası).",
-        "keywords": ["CEZALANDIRILMASINA", "HAPİS CEZASI İLE", "ADLİ PARA CEZASI İLE"]
+        "keywords": [
+          "CEZALANDIRILMASINA",
+          "HAPİS CEZASI İLE",
+          "ADLİ PARA CEZASI İLE"
+        ]
       },
       "DUSME": {
         "law": "5271 sayılı CMK m. 223/8",
         "description": "Şikayetten vazgeçme, zamanaşımı veya ölüm nedeniyle kamu davasının düşmesi.",
-        "keywords": ["DAVANIN DÜŞMESİNE", "DÜŞÜRÜLMESİNE"]
+        "keywords": [
+          "DAVANIN DÜŞMESİNE",
+          "DÜŞÜRÜLMESİNE"
+        ]
+      },
+      "GOREVSIZLIK": {
+        "law": "HMK m. 114/1-c, 20",
+        "description": "Esasa girmeden mahkemenin görevli olmadığına karar vermesi. Kabul/ret veya mahkumiyet DEĞİLDİR.",
+        "keywords": [
+          "GÖREVSİZLİĞİNE"
+        ]
+      },
+      "KABUL": {
+        "law": "HMK m. 297",
+        "description": "Davanın (kısmen veya tamamen) kabulü.",
+        "keywords": [
+          "DAVANIN KABULÜNE",
+          "KISMEN KABULÜNE"
+        ]
+      },
+      "RED": {
+        "law": "HMK m. 297",
+        "description": "Davanın reddi.",
+        "keywords": [
+          "DAVANIN REDDİNE"
+        ]
+      },
+      "IPTAL": {
+        "law": "İYUK m. 2, 27",
+        "description": "İdari işlemin iptali.",
+        "keywords": [
+          "İPTALİNE"
+        ]
       }
     },
     "legal_remedies": {
       "criminal": {
-        "court_types": ["AĞIR CEZA", "ASLİYE CEZA", "SULH CEZA", "ÇOCUK MAHKEMESİ"],
+        "court_types": [
+          "AĞIR CEZA",
+          "ASLİYE CEZA",
+          "SULH CEZA",
+          "ÇOCUK MAHKEMESİ"
+        ],
         "governing_law": "CMK (Ceza Muhakemesi Kanunu)",
         "appeal_article": "CMK m. 272, 273 (Bölge Adliye Mahkemesi İstinaf)",
         "duration": "Gerekçeli kararın tebliğinden veya tefhiminden itibaren 2 hafta",
         "target": "Bölge Adliye Mahkemesi Ceza Dairesi"
       },
       "civil": {
-        "court_types": ["ASLİYE HUKUK", "SULH HUKUK", "AİLE MAHKEMESİ", "İŞ MAHKEMESİ", "TİCARET MAHKEMESİ"],
+        "court_types": [
+          "ASLİYE HUKUK",
+          "SULH HUKUK",
+          "AİLE MAHKEMESİ",
+          "İŞ MAHKEMESİ",
+          "TİCARET MAHKEMESİ"
+        ],
         "governing_law": "HMK (Hukuk Muhakemeleri Kanunu)",
         "appeal_article": "HMK m. 341, 345 (Bölge Adliye Mahkemesi İstinaf)",
         "duration": "Gerekçeli kararın tebliğinden itibaren 2 hafta",
         "target": "Bölge Adliye Mahkemesi Hukuk Dairesi"
       },
       "administrative": {
-        "court_types": ["İDARE MAHKEMESİ", "VERGİ MAHKEMESİ"],
+        "court_types": [
+          "İDARE MAHKEMESİ",
+          "VERGİ MAHKEMESİ"
+        ],
         "governing_law": "İYUK (İdari Yargılama Usulü Kanunu)",
         "appeal_article": "İYUK m. 45 (Bölge İdare Mahkemesi İstinaf)",
         "duration": "Tebliğden itibaren 30 gün",
         "target": "Bölge İdare Mahkemesi"
       }
-    }
+    },
+    "remedy_table": [
+      {
+        "branch": "ceza",
+        "case": "Genel (ağır ceza, asliye ceza)",
+        "kind": "İSTİNAF",
+        "period": "2 hafta",
+        "law": "CMK m. 272-273",
+        "authority": "Bölge Adliye Mahkemesi"
+      },
+      {
+        "branch": "ceza",
+        "case": "Basit yargılama usulü",
+        "kind": "İTİRAZ",
+        "period": "2 hafta",
+        "law": "CMK m. 252",
+        "authority": "Kararı veren mahkeme"
+      },
+      {
+        "branch": "ceza",
+        "case": "HAGB kararı",
+        "kind": "İTİRAZ",
+        "period": "7 gün",
+        "law": "CMK m. 231/12, 268",
+        "authority": "Yetkili merci"
+      },
+      {
+        "branch": "hukuk",
+        "case": "Genel",
+        "kind": "İSTİNAF",
+        "period": "2 hafta",
+        "law": "HMK m. 345",
+        "authority": "Bölge Adliye Mahkemesi"
+      },
+      {
+        "branch": "idari",
+        "case": "Genel",
+        "kind": "İSTİNAF",
+        "period": "30 gün",
+        "law": "İYUK m. 45",
+        "authority": "Bölge İdare Mahkemesi"
+      }
+    ]
   },
   "training_examples": [
     {
@@ -76,7 +178,11 @@
         "decision_no": "2025/885",
         "court": "Sakarya 11. Asliye Ceza Mahkemesi",
         "verdict": "BERAAT ve CEZA VERİLMESİNE YER OLMADIĞI (Cezalandırma yoktur)",
-        "legal_remedy": "Tebliğden itibaren CMK 272/1 uyarınca 2 hafta içinde Sakarya Bölge Adliye Mahkemesi İstinaf yolu açıktır."
+        "legal_remedy": "Tebliğden itibaren CMK 272/1 uyarınca 2 hafta içinde Sakarya Bölge Adliye Mahkemesi İstinaf yolu açıktır.",
+        "expected_verdict_types": [
+          "BERAAT",
+          "CEZA_VERILMEMESI"
+        ]
       }
     },
     {
@@ -90,9 +196,108 @@
         "decision_no": "2024/380",
         "court": "İstanbul 4. Asliye Hukuk Mahkemesi",
         "verdict": "Davanın KABULÜNE karar verilmiştir.",
-        "legal_remedy": "Tebliğden itibaren HMK m. 345 uyarınca 2 hafta içerisinde İstanbul Bölge Adliye Mahkemesi İstinaf yolu açıktır."
+        "legal_remedy": "Tebliğden itibaren HMK m. 345 uyarınca 2 hafta içerisinde İstanbul Bölge Adliye Mahkemesi İstinaf yolu açıktır.",
+        "expected_verdict_types": [
+          "KABUL"
+        ],
+        "expected_remedy_period": "2 hafta"
+      }
+    },
+    {
+      "id": "ex_ceza_basit_itiraz_003",
+      "court_type": "Ceza Yargılaması",
+      "document_type": "Gerekçeli Karar",
+      "input_text": "T.C.\nSAKARYA\n11. ASLİYE CEZA MAHKEMESİ\nBASİT YARGILAMA USULÜ\nBERAAT - C.V.Y.O\nDOSYA NO : 2025/416 Esas\nKARAR NO : 2025/885\nGEREKÇELİ KARAR\nMÜŞTEKİ SANIK : BİLGE DALGIÇ, İbrahim Halil ve Güldoğan kızı\nMÜŞTEKİ SANIK : ÇAĞATAY DALGIÇ, İsa ve Sultane oğlu\nSUÇ : Hakaret, Basit Tehdit\nKARAR TARİHİ : 08/12/2025\nYukarıda açık kimliği yazılı sanık hakkında mahkememizde Basit Yargılama Usulü uygulanmak suretiyle yapılan yargılama sonunda hüküm kurulmuştur.\nH Ü K Ü M: Gerekçesi yukarıda açıklandığı üzere;\n1-Her ne kadar sanığın tehdit suçunu işlediği iddiası ile cezalandırılması talebi ile kamu davası açılmış ise de delil bulunmaması nedeniyle CMK 223/2-e gereğince sanığın BERAATİNE,\n2-Müşteki sanıkların hakaret suçunu işlediği iddiası ile kamu davası açılmış ise de eylemlerin karşılıklı olduğu anlaşıldığından TCK 129/1 gereğince CEZA VERİLMESİNE YER OLMADIĞINA,\n3-Yargılama giderinin sanıktan tahsiline,\nDair; basit yargılama usulüne göre kurulan iş bu hükme karşı, gerekçeli kararın tebliğinden itibaren İKİ HAFTA içinde CMK 252/1 maddesi uyarınca mahkememize İTİRAZ yolunun açık olduğu, karar kesinleşecektir.\nKatip 270851\nHakim 190039",
+      "ideal_output": {
+        "summary": "Sakarya 11. Asliye Ceza Mahkemesi'nin 2025/416 Esas, 2025/885 Karar sayılı basit yargılama kararında tehdit suçundan BERAAT, hakaret suçundan CEZA VERİLMESİNE YER OLMADIĞINA karar verilmiştir. Kanun yolu: belgede yazdığı üzere 2 hafta içinde İTİRAZ (CMK 252/1); 7 gün DEĞİLDİR.",
+        "verdict": "BERAAT + CEZA VERİLMESİNE YER OLMADIĞINA (Cezalandırma yoktur)",
+        "legal_remedy": "Tebliğden itibaren 2 hafta içinde kararı veren mahkemeye İTİRAZ (CMK m. 252/1).",
+        "expected_verdict_types": [
+          "BERAAT",
+          "CEZA_VERILMEMESI",
+          "GIDER"
+        ],
+        "expected_remedy_period": "2 hafta",
+        "decision_no": "2025/885",
+        "basis_no": "2025/416"
+      }
+    },
+    {
+      "id": "ex_ceza_hagb_004",
+      "court_type": "Ceza Yargılaması",
+      "document_type": "Gerekçeli Karar",
+      "input_text": "T.C.\nANKARA\n5. ASLİYE CEZA MAHKEMESİ\nESAS NO : 2024/77\nKARAR NO : 2025/12\nSANIK : AHMET YILMAZ\nSUÇ : Kasten Yaralama\nH Ü K Ü M:\n1-Sanığın TCK 86/2 maddesi gereğince 5 AY HAPİS CEZASI İLE CEZALANDIRILMASINA,\n2-Sanığa verilen cezanın CMK 231/5 uyarınca HÜKMÜN AÇIKLANMASININ GERİ BIRAKILMASINA, 5 yıl denetim süresi belirlenmesine,\nDair; karara karşı tebliğden itibaren YEDİ GÜN içinde Ankara Bölge Adliye Mahkemesi'ne gitmek üzere mahkememize itiraz yolu açıktır.",
+      "ideal_output": {
+        "summary": "Sanık 5 ay hapis cezası ile cezalandırılmış, ancak cezası için HÜKMÜN AÇIKLANMASININ GERİ BIRAKILMASINA karar verilmiştir. HAGB kararında kural olarak ceza infaz edilmez; 5 yıl denetim süresi vardır. Bu karar bir 'mahkumiyet hükmü açıklanması' değildir. Kanun yolu: 7 gün içinde İTİRAZ.",
+        "verdict": "5 ay hapis cezası + HAGB",
+        "legal_remedy": "Tebliğden itibaren 7 gün içinde İTİRAZ (CMK m. 231/12, 268).",
+        "expected_verdict_types": [
+          "MAHKUMIYET",
+          "HAGB"
+        ],
+        "expected_remedy_period": "7 gün"
+      }
+    },
+    {
+      "id": "ex_ceza_mahkumiyet_005",
+      "court_type": "Ceza Yargılaması",
+      "document_type": "Gerekçeli Karar",
+      "input_text": "T.C.\nİZMİR\n3. AĞIR CEZA MAHKEMESİ\nESAS NO : 2023/10\nKARAR NO : 2024/55\nSANIK : MEHMET DEMİR\nSUÇ : Hırsızlık\nH Ü K Ü M:\n1-Sanığın TCK 142/1-b gereğince 3 YIL HAPİS CEZASI İLE CEZALANDIRILMASINA,\nDair; karar tebliğinden itibaren İKİ HAFTA içinde Bölge Adliye Mahkemesine İSTİNAF yolu açıktır.",
+      "ideal_output": {
+        "summary": "İzmir 3. Ağır Ceza Mahkemesi sanığı hırsızlık suçundan 3 yıl hapis cezası ile cezalandırmıştır. Kanun yolu Bölge Adliye Mahkemesine İSTİNAF, süre 2 hafta.",
+        "verdict": "3 yıl hapis cezası ile MAHKUMİYET",
+        "legal_remedy": "Tebliğden itibaren 2 hafta içinde Bölge Adliye Mahkemesi nezdinde İSTİNAF (CMK m. 272-273).",
+        "expected_verdict_types": [
+          "MAHKUMIYET"
+        ],
+        "expected_remedy_period": "2 hafta"
+      }
+    },
+    {
+      "id": "ex_hukuk_red_sure_uyarisi_006",
+      "court_type": "Hukuk Yargılaması",
+      "document_type": "Gerekçeli Karar",
+      "input_text": "T.C.\nBURSA\n2. ASLİYE HUKUK MAHKEMESİ\nESAS NO : 2024/9\nKARAR NO : 2024/21\nDAVACI : A\nDAVALI : B\nH Ü K Ü M:\n1-Davanın REDDİNE,\nDair; kararın tebliğinden itibaren ON GÜN içinde Bölge Adliye Mahkemesi'ne İSTİNAF yolu açıktır.",
+      "ideal_output": {
+        "summary": "Bursa 2. Asliye Hukuk Mahkemesi davayı reddetmiştir. Belgede istinaf süresi 'ON GÜN' yazılmıştır; HMK m. 345 uyarınca süre 2 haftadır. Analiz bu çelişkiyi UYARI olarak bildirmelidir.",
+        "verdict": "Davanın REDDİ",
+        "legal_remedy": "Belgede 10 gün yazıyor; HMK m. 345'e göre 2 hafta olmalıdır (kullanıcı uyarılır).",
+        "expected_verdict_types": [
+          "RED"
+        ],
+        "expected_remedy_period": "10 gün",
+        "expected_warning_count": 1
+      }
+    },
+    {
+      "id": "ex_idare_iptal_007",
+      "court_type": "İdari Yargılama",
+      "document_type": "Gerekçeli Karar",
+      "input_text": "T.C.\nANKARA\n3. İDARE MAHKEMESİ\nESAS NO : 2023/500\nKARAR NO : 2024/100\nDAVACI : XYZ A.Ş.\nDAVALI : Maliye Bakanlığı\nH Ü K Ü M:\n1-Dava konusu işlemin İPTALİNE,\nDair; tebliğden itibaren 30 GÜN içinde Bölge İdare Mahkemesi'ne İSTİNAF yolu açıktır.",
+      "ideal_output": {
+        "summary": "Ankara 3. İdare Mahkemesi dava konusu işlemi iptal etmiştir. Kanun yolu Bölge İdare Mahkemesine İSTİNAF, süre 30 gündür (İYUK m. 45).",
+        "verdict": "İşlemin İPTALİ",
+        "legal_remedy": "Tebliğden itibaren 30 gün içinde Bölge İdare Mahkemesi nezdinde İSTİNAF (İYUK m. 45).",
+        "expected_verdict_types": [
+          "IPTAL"
+        ],
+        "expected_remedy_period": "30 gün"
+      }
+    },
+    {
+      "id": "ex_hukuk_gorevsizlik_008",
+      "court_type": "Hukuk Yargılaması",
+      "document_type": "Karar",
+      "input_text": "T.C.\nKOCAELİ\n1. SULH HUKUK MAHKEMESİ\nESAS NO : 2024/300\nKARAR NO : 2024/310\nDAVACI : A\nDAVALI : B\nH Ü K Ü M:\n1-Mahkememizin GÖREVSİZLİĞİNE,\n2-Kesinleşmesinden sonra iki hafta içinde başvuru halinde dosyanın görevli Asliye Hukuk Mahkemesine gönderilmesine,",
+      "ideal_output": {
+        "summary": "Kocaeli 1. Sulh Hukuk Mahkemesi GÖREVSİZLİK kararı vermiştir; bu bir esasa ilişkin kabul/ret ya da mahkumiyet kararı değildir. Dosya kesinleşme sonrası başvuru halinde görevli mahkemeye gönderilecektir.",
+        "verdict": "GÖREVSİZLİK",
+        "legal_remedy": "Görevsizlik kararı sonrası başvuru ile görevli mahkemeye gönderme.",
+        "expected_verdict_types": [
+          "GOREVSIZLIK"
+        ],
+        "expected_remedy_period": "2 hafta"
       }
     }
   ]
 }
-

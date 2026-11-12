@@ -208,6 +208,7 @@ TEMEL YARGISAL KURALLAR:
 1. HÜKÜM FIKRASI ÖNCELİĞİ: İddianamedeki savcılık cezalandırma talepleri ile Mahkemenin nihai HÜKÜM fıkrasını ASLA birbirine karıştırma! Belgede 'cezalandırılması talebi ile kamu davası açılmış ise de ... delil yetersizliğinden BERAATİNE' yazıyorsa mahkemenin nihai kararı BERAATTİR (aklanmadır). Asla 'sanıkların cezalandırılmasına karar vermiştir' deme!
 2. CEZA VE HUKUK MAHKEMESİ AYRIMI:
    - Ceza Mahkemelerinde (Ağır Ceza, Asliye Ceza, Sulh Ceza): Kanun yolu 5271 sayılı Ceza Muhakemesi Kanunu (CMK m. 272-273) uyarınca İstinaftır (2 hafta). Asla HMK sürelerini veya maddelerini uygulama!
+   - BASİT YARGILAMA USULÜ ile verilen hükümlerde kanun yolu İSTİNAF değil İTİRAZdır (CMK m. 252, 2 hafta). HAGB kararlarına karşı İTİRAZ süresi 7 gündür (CMK m. 231/12, 268). Belgenin kendi 'Dair;' fıkrasında yazan süre ve merci ESASTIR; kendi kafandan süre uydurma.
    - Hukuk Mahkemelerinde (Asliye Hukuk, Sulh Hukuk, İş, Aile, Ticaret): Kanun yolu 6100 sayılı Hukuk Muhakemeleri Kanunu (HMK m. 341-345) uyarınca İstinaftır (2 hafta).
    - İdare/Vergi Mahkemelerinde: 2577 sayılı İdari Yargılama Usulü Kanunu (İYUK m. 45 uyarınca 30 gün).
 3. HÜKÜM TÜRLERİNİ KESİN DOĞRULUKLA BELİRT:
@@ -216,7 +217,10 @@ TEMEL YARGISAL KURALLAR:
    - HAGB (Hükmün Açıklanmasının Geri Bırakılması): 5 yıl denetimdir (CMK 231). Sabıkaya işlemez.
    - MAHKUMİYET: Hapis veya adli para cezası verilmesidir.
    - KABUL / RED: Hukuk davalarında talebin kabulü veya reddidir.
-4. DOSYA NUMARALARI: 'DOSYA NO: 2025/416 Esas' veya 'ESAS NO: 2025/416' ifadelerini doğru ayrıştır.`;
+4. DOSYA NUMARALARI: 'DOSYA NO: 2025/416 Esas' veya 'ESAS NO: 2025/416' ifadelerini doğru ayrıştır.
+5. MADDE MADDE HÜKÜM: 'H Ü K Ü M' başlığından sonraki 1-, 2-, 3- numaralı her fıkrayı AYRI değerlendir. Bir fıkradaki 'cezalandırılması talebi ile kamu davası açılmış ise de ... BERAATİNE' kalıbı mahkumiyet DEĞİL beraattir. 'Yargılama giderinin sanıktan tahsiline' gibi fıkralar mahkumiyet anlamına gelmez, yalnızca gider/harç hükmüdür.
+6. GÖREVSİZLİK / YETKİSİZLİK kararları esasa ilişkin kabul, ret veya mahkumiyet kararı DEĞİLDİR; dosyanın görevli/yetkili mahkemeye gönderilmesine ilişkindir.
+7. BELİRSİZSE DÜRÜST OL: Belgede olmayan bilgiyi (ceza miktarı, tarih, isim, süre) UYDURMA. Bilgi yoksa 'belgede belirtilmemiştir' de. Belgedeki kanun yolu süresi kanundaki süreyle çelişiyorsa bunu açıkça belirt.`;
 
     /**
      * Kural ve Varlık Tabanlı Derin Hukuki Analizci (0ms, %100 Çevrimdışı Güvenilir)
@@ -367,10 +371,27 @@ TEMEL YARGISAL KURALLAR:
         const mKonu = text.match(/(?:DAVA\s*KONUSU|DAVANIN\s*KONUSU|SUÇ|TALEP\s*KONUSU|TALEP)\s*[:.\s]+([^\n\r]+)/i);
         if (mKonu) facts.subject = mKonu[1].trim();
 
-        // Hüküm / Sonuç Çıkarımı
-        const hukumMatch = text.match(/(?:H\s*Ü\s*K\s*Ü\s*M|GEREĞİ DÜŞÜNÜLDÜ|SONUÇ)\s*[:;.\s]+([\s\S]+?)(?:Gerekçeli karar|Kanun yolu|Katip|Hakim|Katip:|$)/i);
-        if (hukumMatch) {
-            facts.verdict = hukumMatch[1].replace(/^(?:Gerekçesi yukarıda açıklandığı üzere[;,.\s]*)/i, '').trim();
+        // ------------------------------------------------------------------
+        // Hüküm bloğu: yalnızca "H Ü K Ü M" BAŞLIĞINDAN başlar ("hüküm kurulmuştur" gibi cümleler başlık sayılmaz)
+        // ------------------------------------------------------------------
+        const up = (s) => String(s || '').toLocaleUpperCase('tr-TR');
+        const headMatch = text.match(/^[ \t]*(?:H\s*Ü\s*K\s*Ü\s*M|Hüküm)[ \t]*[:;.]?/m);
+        let hukumBlock = '';
+        let remedyBlock = '';
+        if (headMatch) {
+            hukumBlock = text.slice(headMatch.index);
+        } else {
+            const g = text.match(/GEREĞİ\s+DÜŞÜNÜLDÜ\s*[:;.]?[\s\S]*$/);
+            if (g) hukumBlock = g[0];
+        }
+        if (hukumBlock) {
+            const dair = hukumBlock.match(/(?:^|\n|\s)(?:Dair|DAİR|D\s*A\s*İ\s*R)\s*[;,]/);
+            if (dair) {
+                remedyBlock = hukumBlock.slice(dair.index);
+                hukumBlock = hukumBlock.slice(0, dair.index);
+            }
+            hukumBlock = hukumBlock.split(/\n\s*(?:Katip|Kâtip|Hakim|Hâkim|Başkan|Üye)\b/)[0];
+            facts.verdict = hukumBlock.replace(/[ \t]+\n/g, '\n').trim();
         } else {
             if (/DAVANIN KABULÜNE/i.test(text)) facts.verdict = "Davanın KABULÜNE karar verilmiştir.";
             else if (/DAVANIN REDDİNE/i.test(text)) facts.verdict = "Davanın REDDİNE karar verilmiştir.";
@@ -379,62 +400,154 @@ TEMEL YARGISAL KURALLAR:
             else if (/KISMEN KABUL/i.test(text)) facts.verdict = "Davanın KISMEN KABULÜNE, kısmen reddine karar verilmiştir.";
         }
 
-        // Hüküm Fıkrası Hukuki Özeti
-        const vText = (facts.verdict || '') + ' ' + text;
-        const hasBeraat = /BERAATİNE/i.test(vText);
-        const hasCezaYok = /CEZA VERİLMESİNE YER OLMADIĞINA/i.test(vText);
-        const hasHagb = /HÜKMÜN AÇIKLANMASININ GERİ BIRAKILMASINA|HAGB/i.test(vText);
-        const hasMahkumiyet = /CEZALANDIRILMASINA|MAHKUMİYETİNE/i.test(vText);
-
-        if (hasBeraat && hasCezaYok) {
-            facts.verdictSummary = "Delil yetersizliğinden BERAAT ve karşılıklı hakaret nedeniyle CEZA VERİLMESİNE YER OLMADIĞINA (Cezalandırma yoktur)";
-        } else if (hasBeraat) {
-            facts.verdictSummary = "Sanığın atılı suçtan BERAATİNE (Aklanmasına karar verilmiştir)";
-        } else if (hasCezaYok) {
-            facts.verdictSummary = "Sanık hakkında CEZA VERİLMESİNE YER OLMADIĞINA karar verilmiştir";
-        } else if (hasHagb) {
-            facts.verdictSummary = "Hükmün Açıklanmasının Geri Bırakılmasına (HAGB) - 5 yıl denetim süresi";
-        } else if (hasMahkumiyet) {
-            facts.verdictSummary = "Sanığın CEZALANDIRILMASINA / Mahkumiyetine";
-        } else if (/DAVANIN KABULÜNE/i.test(vText)) {
-            facts.verdictSummary = "Davanın KABULÜNE karar verilmiştir";
-        } else if (/DAVANIN REDDİNE/i.test(vText)) {
-            facts.verdictSummary = "Davanın REDDİNE karar verilmiştir";
+        // Hüküm maddelerine ayır ve her birini sınıflandır
+        const VERDICT_RULES = [
+            ['BERAAT', /BERAAT/],
+            ['CEZA_VERILMEMESI', /CEZA\s+VERİLMESİNE\s+YER\s+OLMADIĞINA/],
+            ['HAGB', /HÜKMÜN\s+AÇIKLANMASININ\s+GERİ\s+BIRAKILMASINA|\bHAGB\b/],
+            ['KOVUSTURMA_YOK', /KOVUŞTURMA\s+YAPILMASINA\s+YER\s+OLMADIĞINA/],
+            ['DUSME', /DÜŞMESİNE|DÜŞÜRÜLMESİNE/],
+            ['GOREVSIZLIK', /GÖREVSİZLİ[ĞK]/],
+            ['YETKISIZLIK', /YETKİSİZLİ[ĞK]/],
+            ['KISMEN_KABUL', /KISMEN\s+KABUL/],
+            ['IPTAL', /İPTALİNE|İPTAL\s+EDİLMESİNE/],
+            ['KABUL', /KABULÜNE|KABUL\s+EDİLMESİNE/],
+            ['RED', /REDDİNE|REDDEDİLMESİNE/],
+            ['MAHKUMIYET', /CEZALANDIRILMASINA|MAHKUM(?:İYETİNE|\s+EDİLMESİNE)|HAPİS\s+CEZASI\s+İLE|ADLİ\s+PARA\s+CEZASI\s+İLE|HAPİS\s+CEZASIYLA/],
+            ['TAZMINAT', /TAZMİNAT/],
+            ['GIDER', /YARGILAMA\s+GİDER|HARÇ|VEK[AÂ]LET\s+ÜCRET|MASRAF|AAÜT/]
+        ];
+        const VERDICT_LABELS = {
+            BERAAT: 'BERAAT (aklanma)',
+            CEZA_VERILMEMESI: 'CEZA VERİLMESİNE YER OLMADIĞINA',
+            HAGB: 'Hükmün Açıklanmasının Geri Bırakılması (HAGB)',
+            KOVUSTURMA_YOK: 'Kovuşturma yapılmasına yer olmadığına',
+            DUSME: 'Davanın DÜŞMESİ',
+            GOREVSIZLIK: 'GÖREVSİZLİK',
+            YETKISIZLIK: 'YETKİSİZLİK',
+            KISMEN_KABUL: 'Davanın KISMEN KABULÜ',
+            IPTAL: 'İşlemin İPTALİ',
+            KABUL: 'Davanın KABULÜ',
+            RED: 'Davanın REDDİ',
+            MAHKUMIYET: 'MAHKUMİYET',
+            TAZMINAT: 'Tazminat',
+            GIDER: 'Yargılama gideri / harç / vekalet ücreti'
+        };
+        function classifyItem(itemText) {
+            const u = up(itemText);
+            let types = VERDICT_RULES.filter(r => r[1].test(u)).map(r => r[0]);
+            // "cezalandırılması talebi ... BERAATİNE" gibi maddelerde mahkumiyet sanılmasın
+            if (types.some(t => ['BERAAT', 'CEZA_VERILMEMESI', 'DUSME', 'KOVUSTURMA_YOK'].includes(t))) {
+                types = types.filter(t => t !== 'MAHKUMIYET');
+            }
+            if (types.includes('KISMEN_KABUL')) types = types.filter(t => t !== 'KABUL' && t !== 'RED');
+            if (types.includes('GOREVSIZLIK') || types.includes('YETKISIZLIK')) types = types.filter(t => !['KABUL', 'RED', 'MAHKUMIYET'].includes(t));
+            return types;
+        }
+        facts.verdictItems = [];
+        if (hukumBlock) {
+            const body = hukumBlock.replace(/^[ \t]*(?:H\s*Ü\s*K\s*Ü\s*M|Hüküm)[ \t]*[:;.]?/, '').replace(/^\s*Gerekçesi\s+yukarıda\s+açıklandığı\s+üzere\s*[;,.:]?/i, '');
+            const markers = [...body.matchAll(/(?:^|\n)[ \t]*(\d{1,2})[ \t]*[-.)][ \t]*/g)];
+            const chunks = markers.length
+                ? markers.map((m, i) => ({ no: Number(m[1]), text: body.slice(m.index + m[0].length, i + 1 < markers.length ? markers[i + 1].index : body.length).trim() }))
+                : [{ no: 1, text: body.trim() }];
+            chunks.filter(c => c.text).forEach(c => {
+                const types = classifyItem(c.text);
+                facts.verdictItems.push({ no: c.no, text: c.text.replace(/\s+/g, ' '), types, type: types[0] || 'DIGER' });
+            });
+        }
+        facts.verdictTypes = [...new Set(facts.verdictItems.flatMap(i => i.types))];
+        if (!facts.verdictItems.length && facts.verdict) {
+            facts.verdictTypes = classifyItem(facts.verdict);
         }
 
-        // Kanun Yolu (İstinaf / Temyiz / İtiraz Süresi - CMK / HMK / İYUK Duyarlı)
-        const isBasitYargilama = /basit\s*yargılama/i.test(text);
-
-        const remedyMatch = text.match(/(?:Dair[;,]|D\s*A\s*İ\s*R[;,]|Tebliğ(?:inden)?\s*itibaren|kararın\s*tebliğinden|tefhimden\s*itibaren|tefhim\s*veya\s*tebliğden)[\s\S]{0,600}?(?:istinaf|temyiz|itiraz)[\s\S]{0,250}?(?:mahkemesine|yoluyla|kabul edilmek üzere|süresi içerisinde|açık olmak üzere|açık olduğu|karar verildi|\.)/i)
-            || text.match(/(?:CMK|5271)[\s\S]{0,120}?(?:272|273|251|252|267)[\s\S]{0,350}?(?:istinaf|temyiz|itiraz)[\s\S]{0,150}?(?:yolu açık|hafta|gün|karar verildi)/i)
-            || text.match(/(?:HMK|6100)[\s\S]{0,100}?(?:341|345|361)[\s\S]{0,250}?(?:istinaf|temyiz)[\s\S]{0,120}?(?:yolu açık|hafta|gün)/i)
-            || text.match(/(?:İYUK|2577)[\s\S]{0,100}?(?:45|46)[\s\S]{0,250}?(?:istinaf|temyiz)[\s\S]{0,120}?(?:yolu açık|gün)/i)
-            || text.match(/([0-9]+\s*(?:gün|hafta)\s*içinde[\s\S]{0,120}?(?:istinaf|temyiz|itiraz))/i);
-
-        if (remedyMatch && (!isCriminal || !/HMK/i.test(remedyMatch[0]))) {
-            facts.legalRemedy = remedyMatch[0].replace(/\s+/g, ' ').trim();
-        } else {
-            if (isCriminal) {
-                if (isBasitYargilama) {
-                    facts.legalRemedy = "Basit Yargılama Usulü (CMK m. 251) uyarınca kararın tebliğinden itibaren 7 gün içinde kararı veren mahkemeye İTİRAZ kanun yolu açıktır (CMK m. 252).";
-                } else {
-                    facts.legalRemedy = "Gerekçeli kararın tebliğinden veya tefhiminden itibaren 5271 sayılı CMK m. 272-273 uyarınca 2 hafta içerisinde Bölge Adliye Mahkemesi nezdinde İstinaf kanun yolu açıktır.";
-                }
-            } else if (isAdministrative) {
-                facts.legalRemedy = "Kararın tebliğinden itibaren 2577 sayılı İYUK m. 45 uyarınca 30 gün içerisinde Bölge İdare Mahkemesi nezdinde İstinaf yolu açıktır.";
-            } else {
-                facts.legalRemedy = "Gerekçeli kararın tebliğinden itibaren 6100 sayılı HMK m. 345 uyarınca 2 hafta içerisinde Bölge Adliye Mahkemesi nezdinde İstinaf kanun yolu açıktır.";
+        // Hüküm Fıkrası Hukuki Özeti
+        const primaryTypes = facts.verdictTypes.filter(t => !['GIDER', 'TAZMINAT'].includes(t));
+        const summaryTypes = primaryTypes.length ? primaryTypes : facts.verdictTypes;
+        const upVerdict = up(hukumBlock || facts.verdict || '');
+        const parts = summaryTypes.map(t => {
+            if (t === 'MAHKUMIYET') {
+                const m = upVerdict.match(/((?:\d+\s*(?:YIL|AY|GÜN)\s*)+)(?:\S+\s+){0,2}?HAPİS/);
+                const para = upVerdict.match(/(\d[\d.]*)\s*(?:GÜN)\s*ADLİ\s+PARA/);
+                if (m) return (m[1].trim().toLocaleLowerCase('tr-TR') + ' hapis cezası ile MAHKUMİYET');
+                if (para) return (para[1] + ' gün adli para cezası ile MAHKUMİYET');
+                return VERDICT_LABELS.MAHKUMIYET;
             }
+            if (t === 'HAGB') {
+                const d = upVerdict.match(/(\d+)\s*YIL\s*(?:DENETİM|SÜRE)/);
+                return VERDICT_LABELS.HAGB + (d ? ' - ' + d[1] + ' yıl denetim süresi' : '');
+            }
+            return VERDICT_LABELS[t] || t;
+        });
+        if (parts.length) {
+            facts.verdictSummary = parts.join(' + ');
+            if (!facts.verdictTypes.includes('MAHKUMIYET') && (facts.verdictTypes.includes('BERAAT') || facts.verdictTypes.includes('CEZA_VERILMEMESI'))) {
+                facts.verdictSummary += ' (Cezalandırma yoktur)';
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // Kanun yolu: önce belgede YAZANI ayrıştır, sonra kanunla karşılaştır
+        // ------------------------------------------------------------------
+        const isBasitYargilama = /BASİT\s+YARGILAMA/.test(up(text));
+        const branch = isAdministrative ? 'idari' : (isCriminal ? 'ceza' : 'hukuk');
+        const NUM_WORDS = { 'BİR': 1, 'İKİ': 2, 'ÜÇ': 3, 'DÖRT': 4, 'BEŞ': 5, 'ALTI': 6, 'YEDİ': 7, 'SEKİZ': 8, 'DOKUZ': 9, 'ON': 10, 'ONBEŞ': 15, 'OTUZ': 30 };
+        function parseStatedRemedy(block) {
+            if (!block) return null;
+            const u = up(block).replace(/\s+/g, ' ');
+            const kinds = ['İTİRAZ', 'İSTİNAF', 'TEMYİZ'].map(k => ({ k, i: u.indexOf(k) })).filter(x => x.i >= 0).sort((a, b) => a.i - b.i);
+            if (!kinds.length) return null;
+            const out = { kind: kinds[0].k, period: '', authority: '', law: '', statedInDocument: true };
+            const p = u.match(/(\d+|BİR|İKİ|ÜÇ|DÖRT|BEŞ|ALTI|YEDİ|SEKİZ|DOKUZ|ONBEŞ|ON|OTUZ)\s*(?:\(\s*\d+\s*\)\s*)?(GÜN|HAFTA|AY)\b/);
+            if (p) {
+                const n = /^\d+$/.test(p[1]) ? Number(p[1]) : NUM_WORDS[p[1]];
+                out.period = n + ' ' + p[2].toLocaleLowerCase('tr-TR');
+            }
+            if (/BÖLGE\s+ADLİYE\s+MAHKEMESİ/.test(u)) out.authority = 'Bölge Adliye Mahkemesi';
+            else if (/BÖLGE\s+İDARE\s+MAHKEMESİ/.test(u)) out.authority = 'Bölge İdare Mahkemesi';
+            else if (/YARGITAY/.test(u)) out.authority = 'Yargıtay';
+            else if (/DANIŞTAY/.test(u)) out.authority = 'Danıştay';
+            else if (/MAHKEMEMİZE|KARARI\s+VEREN\s+MAHKEME|MAHKEMEMİZ/.test(u)) out.authority = 'kararı veren mahkeme';
+            const l = u.match(/\b(CMK|HMK|İYUK|TCK)\s*(?:M\.?|MADDE)?\s*(\d+(?:\/\d+)?)/);
+            if (l) out.law = l[1] + ' m. ' + l[2];
+            return out;
+        }
+        function expectedRemedy() {
+            if (branch === 'ceza') {
+                if (facts.verdictTypes.includes('HAGB')) return { kind: 'İTİRAZ', period: '7 gün', law: 'CMK m. 231/12, 268', authority: 'kararı veren mahkeme aracılığıyla yetkili merci' };
+                if (isBasitYargilama) return { kind: 'İTİRAZ', period: '2 hafta', law: 'CMK m. 252', authority: 'kararı veren mahkeme' };
+                return { kind: 'İSTİNAF', period: '2 hafta', law: 'CMK m. 272-273', authority: 'Bölge Adliye Mahkemesi' };
+            }
+            if (branch === 'idari') return { kind: 'İSTİNAF', period: '30 gün', law: 'İYUK m. 45', authority: 'Bölge İdare Mahkemesi' };
+            return { kind: 'İSTİNAF', period: '2 hafta', law: 'HMK m. 345', authority: 'Bölge Adliye Mahkemesi' };
+        }
+        const expected = expectedRemedy();
+        const stated = parseStatedRemedy(remedyBlock);
+        facts.warnings = [];
+        const skipRemedyCheck = facts.verdictTypes.some(t => ['GOREVSIZLIK', 'YETKISIZLIK'].includes(t));
+        if (stated) {
+            facts.remedy = Object.assign({}, stated, { law: stated.law || expected.law, authority: stated.authority || expected.authority });
+            if (!skipRemedyCheck && stated.period && stated.period !== expected.period) {
+                facts.warnings.push(`Belgede kanun yolu süresi "${stated.period}" yazıyor; ${expected.law} uyarınca süre ${expected.period} olmalıdır. Lütfen kontrol edin.`);
+            }
+            if (!skipRemedyCheck && stated.kind !== expected.kind && stated.kind !== 'TEMYİZ') {
+                facts.warnings.push(`Belgede "${stated.kind}" kanun yolu yazıyor; ${expected.law} uyarınca "${expected.kind}" beklenir. Lütfen kontrol edin.`);
+            }
+            facts.legalRemedy = `Kararın tebliğinden/tefhiminden itibaren ${facts.remedy.period || 'kanuni süre'} içinde ${facts.remedy.authority ? facts.remedy.authority + ' nezdinde ' : ''}${facts.remedy.kind} kanun yolu açıktır (${facts.remedy.law}).`;
+        } else {
+            facts.remedy = Object.assign({}, expected, { statedInDocument: false });
+            facts.legalRemedy = `(Belgede belirtilmemiş; kanuna göre) Tebliğden itibaren ${expected.period} içinde ${expected.authority} nezdinde ${expected.kind} kanun yolu açıktır (${expected.law}).`;
         }
 
         // Otomatik Önemli Çıkarımlar
         if (facts.court) facts.keyPoints.push(`🏛️ Merci: ${facts.court}`);
-        if (facts.basisNo || facts.decisionNo) facts.keyPoints.push(`📂 Dosya No: Esas ${facts.basisNo || '-'} / Karar ${facts.decisionNo || '-'}`);
+        if (facts.basisNo || facts.decisionNo) facts.keyPoints.push(`📂 Dosya No: Esas ${String(facts.basisNo || '-').replace(/\s*Esas$/i, '')} / Karar ${facts.decisionNo || '-'}`);
         if (facts.parties.plaintiff) facts.keyPoints.push(`👤 Davacı / Müşteki: ${facts.parties.plaintiff}`);
         if (facts.parties.defendant) facts.keyPoints.push(`👥 Davalı / Sanık: ${facts.parties.defendant}`);
         if (facts.subject) facts.keyPoints.push(`📌 Uyuşmazlık Konusu: ${facts.subject}`);
         if (facts.verdictSummary) facts.keyPoints.push(`⚖️ Hüküm Özeti: ${facts.verdictSummary}`);
         if (facts.legalRemedy) facts.keyPoints.push(`⏱️ Kanun Yolu / Süre: ${facts.legalRemedy}`);
+        (facts.warnings || []).forEach(w => facts.keyPoints.push(`⚠️ ${w}`));
 
         return facts;
     }
@@ -955,6 +1068,39 @@ TEMEL YARGISAL KURALLAR:
         return narrative.trim();
     }
 
+    // Eğitim örnekleri (assets/data/uyap-ai-training-data.json): modele few-shot olarak verilir
+    let trainingExamplesCache = null;
+    async function loadTrainingExamples() {
+        if (trainingExamplesCache) return trainingExamplesCache;
+        try {
+            const res = await fetch('assets/data/uyap-ai-training-data.json');
+            const data = await res.json();
+            trainingExamplesCache = Array.isArray(data.training_examples) ? data.training_examples : [];
+        } catch (_) {
+            trainingExamplesCache = [];
+        }
+        return trainingExamplesCache;
+    }
+
+    function buildFewShotBlock(examples, facts) {
+        if (!examples || !examples.length) return '';
+        const branchWord = /İDARE|VERGİ/i.test(facts.court || '') ? 'İdari' : (/CEZA/i.test(facts.court || '') ? 'Ceza' : 'Hukuk');
+        const picked = examples.filter(e => (e.court_type || '').startsWith(branchWord)).slice(0, 2);
+        if (!picked.length) return '';
+        return '\nDOĞRU ANALİZ ÖRNEKLERİ (bu üslup ve titizlikte yaz):\n' + picked.map((e, i) =>
+            `Örnek ${i + 1}: ${e.ideal_output.summary}`).join('\n') + '\n';
+    }
+
+    function buildVerifiedFactsBlock(facts) {
+        const lines = [];
+        if (facts.verdictItems && facts.verdictItems.length) {
+            lines.push('- Hüküm fıkraları: ' + facts.verdictItems.map(i => `${i.no}) ${(i.types[0] || 'DİĞER')}`).join('; '));
+        }
+        if (facts.legalRemedy) lines.push('- Kanun yolu: ' + facts.legalRemedy);
+        (facts.warnings || []).forEach(w => lines.push('- DİKKAT: ' + w));
+        return lines.length ? '\n' + lines.join('\n') : '';
+    }
+
     async function runAnalysis() {
         const container = document.getElementById('ai-summary-content');
         if (!container) return;
@@ -990,13 +1136,14 @@ TEMEL YARGISAL KURALLAR:
             let modelBadge = '✨ Yargısal Belge Özeti';
 
             const docContext = prepareDocumentContext(text, 9000);
+            const fewShot = buildFewShotBlock(await loadTrainingExamples(), facts);
             const summaryPrompt = `Aşağıdaki mahkeme belgesini / adli evrakı incele.
 HUKUKİ ÇEKİRDEK VERİLER (DOĞRULANMIŞTIR):
 - Belge Türü: ${facts.docType}
 - Mahkeme / Merci: ${facts.court || 'Mahkeme'}
 - Taraflar: ${facts.parties.plaintiff ? 'Davacı/Müşteki: ' + facts.parties.plaintiff : ''} | ${facts.parties.defendant ? 'Davalı/Sanık: ' + facts.parties.defendant : ''}
-- MAHKEMENİN NİHAİ HÜKMÜ: ${facts.verdictSummary || (facts.verdict ? facts.verdict.slice(0, 300) : 'Belirtilmemiş')}
-
+- MAHKEMENİN NİHAİ HÜKMÜ: ${facts.verdictSummary || (facts.verdict ? facts.verdict.slice(0, 300) : 'Belirtilmemiş')}${buildVerifiedFactsBlock(facts)}
+${fewShot}
 DİKKAT KURALI: Savcılığın iddianamedeki cezalandırma talebini veya iddiaları MAHKEME KARARI ZANNETME! Mahkeme nihai hüküm fıkrasında ne karar verdiyse (örneğin BERAAT / CEZA VERİLMESİNE YER OLMADIĞINA) ona göre özet çıkar.
 Belgenin ne hakkında olduğunu, taraflar arasındaki uyuşmazlığı ve mahkemenin nihai olarak ne karar verdiğini 3-4 akıcı cümleyle açıkla:
 

@@ -159,6 +159,39 @@
     }
 
     function buildMenus() {
+        const exec = (cmd) => { const ed = $('editor'); if (ed) ed.focus(); try { document.execCommand(cmd); } catch (_) { /* yoksay */ } };
+        const edit = makeMenu('Düzenle', [
+            { icon: I.undo, label: 'Geri al', kbd: 'Ctrl+Z', run: () => click('btn-tb-undo') },
+            { icon: I.redo, label: 'İleri al', kbd: 'Ctrl+Y', run: () => click('btn-tb-redo') },
+            '-',
+            { icon: I.scan, label: 'Kes', kbd: 'Ctrl+X', run: () => exec('cut') },
+            { icon: I.paper, label: 'Kopyala', kbd: 'Ctrl+C', run: () => exec('copy') },
+            {
+                icon: I.paper, label: 'Yapıştır', kbd: 'Ctrl+V', run: () => {
+                    const ed = $('editor'); if (ed) ed.focus();
+                    if (navigator.clipboard && navigator.clipboard.readText) {
+                        navigator.clipboard.readText().then((t) => { document.execCommand('insertText', false, t); }, () => {
+                            if (window.showToast) window.showToast('Yapıştırmak için Ctrl+V tuşunu kullanın (tarayıcı pano izni gerekli).', 'info');
+                        });
+                    } else if (window.showToast) window.showToast('Yapıştırmak için Ctrl+V tuşunu kullanın.', 'info');
+                }
+            },
+            '-',
+            { icon: I.find, label: 'Bul ve değiştir', kbd: 'Ctrl+F', run: () => click('btn-find-replace') },
+            { icon: I.find, label: 'Sayfaya git…', kbd: 'Ctrl+G', run: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', ctrlKey: true, bubbles: true, cancelable: true })) }
+        ]);
+
+        const format = makeMenu('Biçim', [
+            { icon: I.textColor, label: 'Yazı tipi…', kbd: 'Ctrl+D', run: () => click('btn-font-dialog') },
+            { icon: I.pageSetup, label: 'Paragraf…', run: () => click('btn-para-setup') },
+            '-',
+            {
+                icon: I.check, label: 'Otomatik büyük harf (cümle başı)',
+                check: () => { const c = $('chk-auto-caps'); return !!(c && c.checked); },
+                run: () => { const c = $('chk-auto-caps'); if (c) { c.checked = !c.checked; c.dispatchEvent(new Event('change', { bubbles: true })); } }
+            }
+        ]);
+
         const insert = makeMenu('Ekle', [
             { icon: I.header, label: 'Üst yazı (üst bilgi)…', run: () => window.openHeaderSetupModal && window.openHeaderSetupModal() },
             { icon: I.headerRemove, label: 'Üst yazıyı kaldır', run: () => window.removeDocumentHeader && window.removeDocumentHeader() },
@@ -167,6 +200,7 @@
             { icon: I.footerRemove, label: 'Alt yazıyı kaldır', run: () => window.removeDocumentFooter && window.removeDocumentFooter() },
             '-',
             { icon: I.pageNum, label: 'Sayfa numarası…', run: () => window.openPageNumSetupModal && window.openPageNumSetupModal() },
+            { icon: I.pageBreak, label: 'Tab (sekme boşluğu)', kbd: 'Tab', run: () => { const ed = $('editor'); if (ed) ed.focus(); document.execCommand('insertText', false, '\t'); } },
             { icon: I.pageBreak, label: 'Sayfa kesmesi (sonraki sayfa)', kbd: 'Ctrl+Enter', run: () => window.insertPageBreak && window.insertPageBreak() },
             { icon: I.find, label: 'Sayfaya git…', kbd: 'Ctrl+G', run: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', ctrlKey: true, bubbles: true, cancelable: true })) },
             '-',
@@ -179,6 +213,9 @@
         ]);
 
         const view = makeMenu('Görünüm', [
+            { icon: I.pageSetup, label: 'Sayfa yapısı…', run: () => click('btn-page-setup') },
+            { icon: I.ruler, label: 'Görünmez karakterler', check: () => { const e = $('editor'); return !!(e && e.classList.contains('show-invisibles')); }, run: () => { if (window.toggleInvisibleChars) window.toggleInvisibleChars(); else click('btn-toggle-invisibles'); } },
+            '-',
             { icon: I.thumbs, label: 'Sayfa önizlemeleri', kbd: 'Ctrl+G', check: isActive('btn-toggle-thumbnails'), run: () => click('btn-toggle-thumbnails') },
             { icon: I.ruler, label: 'Cetvel', check: isActive('btn-toggle-ruler'), run: () => click('btn-toggle-ruler') },
             { icon: I.ruler, label: 'Mizanpaj denetçisi (Layout Debugger)', kbd: 'Ctrl+Alt+D', check: () => !!(window.UkiLayoutDebugger && window.UkiLayoutDebugger.isEnabled()), run: () => window.UkiLayoutDebugger && window.UkiLayoutDebugger.toggle() },
@@ -219,7 +256,7 @@
             '-',
             { icon: I.user, label: 'Hakkında / geliştirici', run: aboutDeveloper }
         ]);
-        return [insert, view, tools, help];
+        return [edit, view, insert, format, tools, help];
     }
 
     // ---------------- Araç çubuğu ----------------

@@ -410,6 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editorEl.classList.toggle('show-invisibles', invisibleCharsActive);
         showToast(invisibleCharsActive ? 'Boşluk ve sekmeler görünür yapıldı.' : 'Boşluk işaretleri gizlendi.', 'info');
     }
+    window.toggleInvisibleChars = toggleInvisibleChars;
 
     async function triggerNewDoc() {
         if (!window.UkiApp.isDirty() || await UkiDialog.confirm('Geçerli belgedeki kaydedilmemiş değişiklikler kaybolabilir. Yeni boş belge açılsın mı?', { title: 'Yeni belge', okText: 'Yeni belge aç' })) {
