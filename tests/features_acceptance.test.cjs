@@ -845,6 +845,90 @@ test('Avukat Antet Temaları & 657.com.tr Kurumsal Antet Paritesi: 8 adet presti
     dom.window.close();
 });
 
+test('Mobil Uyumluluk & Duyarlı Arayüz (Mobile Suite): Akıcı okuma modu, A4 sığdırma, alt hızlı işlem çubuğu ve mobil çekmeceler', async () => {
+    const html = fs.readFileSync('index.html', 'utf8');
+    const dom = new JSDOM(html, {
+        url: 'http://localhost:8080',
+        runScripts: 'outside-only',
+        pretendToBeVisual: true
+    });
+    const w = dom.window;
+    w.JSZip = require('../assets/vendor/jszip.min.js');
+    w.TextDecoder = TextDecoder;
+    w.TextEncoder = TextEncoder;
+    w.Blob = Blob;
+    w.document.queryCommandState = () => false;
+    w.document.queryCommandValue = () => '';
+    w.document.execCommand = () => true;
+    w.HTMLElement.prototype.scrollIntoView = () => {};
+    w.Range.prototype.getClientRects = () => [];
+    w.Range.prototype.getBoundingClientRect = () => ({ width: 0, height: 0, left: 0, right: 0, top: 0, bottom: 0 });
+    w.fetch = async (url) => {
+        const name = String(url).replace(/^http:\/\/localhost:8080\//, '');
+        if (fs.existsSync(name)) {
+            const data = fs.readFileSync(name);
+            return {
+                ok: true,
+                text: async () => data.toString(),
+                json: async () => JSON.parse(data),
+                arrayBuffer: async () => data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
+            };
+        }
+        return { ok: false, statusText: 'Not found' };
+    };
+
+    // 1. Mobil Meta Etiketleri Kontrolü
+    const metaViewport = w.document.querySelector('meta[name="viewport"]');
+    assert.ok(metaViewport && metaViewport.content.includes('width=device-width'), 'Viewport meta etiketi mevcut olmalı');
+    const metaMobileApp = w.document.querySelector('meta[name="mobile-web-app-capable"]');
+    assert.ok(metaMobileApp && metaMobileApp.content === 'yes', 'Mobile web app meta etiketi bulunmalı');
+
+    for (const m of html.matchAll(/<script src="(assets\/js\/[^"]+)"/g)) {
+        w.eval(fs.readFileSync(m[1], 'utf8'));
+    }
+    await new Promise(r => setTimeout(r, 120));
+
+    // 2. Mobil Hızlı Eylem Çubuğu ve Çekmece Varlığı
+    const mqBar = w.document.getElementById('mobile-quick-bar');
+    assert.ok(mqBar, 'mobile-quick-bar öğesi mevcut olmalı');
+    const formatDrawer = w.document.getElementById('mobile-format-drawer');
+    assert.ok(formatDrawer, 'mobile-format-drawer çekmecesi mevcut olmalı');
+    const drawerBackdrop = w.document.getElementById('mobile-drawer-backdrop');
+    assert.ok(drawerBackdrop, 'mobile-drawer-backdrop katmanı mevcut olmalı');
+
+    assert.ok(w.UkiMobile, 'window.UkiMobile denetleyicisi tanımlı olmalı');
+
+    // 3. Biçimlendirme Çekmecesinin Açılması ve Kapanması
+    w.UkiMobile.toggleFormatDrawer();
+    assert.equal(formatDrawer.style.display, 'block', 'Format çekmecesi açılmalı');
+    assert.equal(drawerBackdrop.style.display, 'block', 'Çekmece arka planı görünmeli');
+
+    w.UkiMobile.closeAllDrawers();
+    assert.equal(formatDrawer.style.display, 'none', 'Çekmeceler kapanmalı');
+    assert.equal(drawerBackdrop.style.display, 'none', 'Arka plan gizlenmeli');
+
+    // 4. Sayfalar (Thumbnails) Mobil Çekmece Kontrolü
+    const thumbnailsSidebar = w.document.getElementById('thumbnails-sidebar');
+    w.UkiMobile.toggleThumbnailsDrawer();
+    assert.ok(thumbnailsSidebar.classList.contains('open-mobile'), 'Sayfalar çekmecesi open-mobile sınıfı almalı');
+    assert.equal(drawerBackdrop.style.display, 'block', 'Arka plan açılmalı');
+
+    w.UkiMobile.closeAllDrawers();
+    assert.ok(!thumbnailsSidebar.classList.contains('open-mobile'), 'Sayfalar çekmecesi kapanmalı');
+
+    // 5. Görünüm Modu Değiştirme (Akıcı Metin <-> A4 Baskı Boyutu)
+    w.UkiMobile.updateViewMode(true);
+    assert.ok(w.document.body.classList.contains('mobile-a4-mode'), 'A4 modunda body.mobile-a4-mode eklenmeli');
+    assert.equal(w.document.getElementById('mq-view-mode-text').textContent, 'Akıcı', 'A4 modunda düğme Akıcı metnine dönmeli');
+
+    w.UkiMobile.updateViewMode(false);
+    assert.ok(!w.document.body.classList.contains('mobile-a4-mode'), 'Akıcı modda body.mobile-a4-mode kaldırılmalı');
+    assert.equal(w.document.getElementById('mq-view-mode-text').textContent, 'A4 Görünüm', 'Akıcı modda düğme A4 Görünüm olmalı');
+
+    dom.window.close();
+});
+
+
 
 
 

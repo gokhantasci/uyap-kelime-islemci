@@ -6570,3 +6570,536 @@ mark.find-hit.current {
     from { transform: translateY(20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
+
+/* ==========================================================================
+   10. MOBİL UYUMLULUK VE DUYARLI TASARIM (MOBILE RESPONSIVE SUITE)
+   ========================================================================== */
+
+/* Masaüstünde mobil hızlı bar ve çekmeceler gizlenir */
+.mobile-quick-bar,
+.mobile-format-drawer,
+.mobile-drawer-backdrop {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    /* Temel görünüm ve taşma kontrolü */
+    html, body {
+        overflow-x: hidden !important;
+        -webkit-text-size-adjust: 100%;
+        touch-action: manipulation;
+    }
+
+    .app-shell {
+        height: 100vh;
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    /* 1. ÜST ÇUBUK (HEADER BAR) */
+    .header-bar {
+        height: 44px !important;
+        min-height: 44px !important;
+        padding: 0 8px !important;
+        gap: 6px !important;
+        justify-content: space-between !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .header-bar .brand {
+        margin-right: 2px !important;
+        gap: 5px !important;
+        font-size: 12px !important;
+        flex-shrink: 0;
+    }
+
+    .header-bar .brand span:not(:first-of-type),
+    .brand-badge,
+    .developer-credit-badge {
+        display: none !important;
+    }
+
+    .header-bar .doc-info {
+        flex: 1 1 auto;
+        min-width: 60px;
+        max-width: 150px;
+        margin: 0 2px;
+        justify-content: center;
+    }
+
+    .header-bar #doc-title {
+        width: 100% !important;
+        height: 28px !important;
+        font-size: 11.5px !important;
+        padding: 2px 6px !important;
+        text-align: left !important;
+        border: 1px solid var(--ax-border-subtle) !important;
+        border-radius: 6px !important;
+    }
+
+    .header-bar .header-actions {
+        display: flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        margin-left: auto !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* Üst çubukta yalnızca en kritik eylemler (Kaydet ve AI) görünür, diğerleri menülerden erişilir */
+    .header-bar .header-actions .tool-btn:not(#btn-save):not(#btn-ai-assistant) {
+        display: none !important;
+    }
+
+    #btn-save {
+        height: 30px !important;
+        padding: 0 8px !important;
+        font-size: 11.5px !important;
+        font-weight: 700 !important;
+        border-radius: 6px !important;
+    }
+
+    #btn-ai-assistant {
+        height: 30px !important;
+        padding: 0 6px !important;
+        font-size: 11px !important;
+        border-radius: 6px !important;
+    }
+
+    #btn-ai-assistant span:not(.ai-icon-sparkle):not(#ai-provider-badge) {
+        display: none !important;
+    }
+
+    /* Dosya ve üst menüler */
+    .fm-root {
+        margin: 0 2px !important;
+    }
+
+    .fm-trigger {
+        height: 28px !important;
+        padding: 0 7px !important;
+        font-size: 11.5px !important;
+        border-radius: 6px !important;
+    }
+
+    .fm-menu {
+        position: fixed !important;
+        top: 48px !important;
+        left: 8px !important;
+        right: 8px !important;
+        min-width: 0 !important;
+        max-width: calc(100vw - 16px) !important;
+        max-height: 80vh !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28) !important;
+        border-radius: 12px !important;
+    }
+
+    /* 2. ARAÇ ÇUBUĞU (TOOLBAR) - YATAY AKICI ŞERİT */
+    .toolbar {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        height: 42px !important;
+        min-height: 42px !important;
+        padding: 3px 6px !important;
+        gap: 3px !important;
+        background: var(--ax-surface-default) !important;
+        border-bottom: 1px solid var(--ax-border-subtle) !important;
+    }
+
+    .toolbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .tool-group {
+        display: inline-flex !important;
+        flex-shrink: 0 !important;
+        align-items: center !important;
+        gap: 2px !important;
+        padding: 0 2px !important;
+    }
+
+    .tool-divider {
+        height: 18px !important;
+        margin: 0 2px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .tool-btn {
+        height: 34px !important;
+        min-width: 32px !important;
+        padding: 0 6px !important;
+        font-size: 12px !important;
+        flex-shrink: 0 !important;
+        border-radius: 5px !important;
+    }
+
+    /* Buton içi uzun metinleri gizleyerek ikonları ön plana çıkar */
+    #btn-new span,
+    #btn-page-setup span,
+    #btn-toggle-thumbnails span,
+    #btn-view-signatures span,
+    #btn-print span,
+    #btn-kvkk-modal span,
+    #btn-language-tools span,
+    #btn-doc-dark span,
+    #btn-watermark-dialog span {
+        display: none !important;
+    }
+
+    .tool-select {
+        height: 32px !important;
+        font-size: 12px !important;
+        padding: 2px 4px !important;
+        border-radius: 5px !important;
+        flex-shrink: 0 !important;
+    }
+
+    #font-family-select {
+        width: 100px !important;
+        max-width: 100px !important;
+    }
+
+    #font-size-select {
+        width: 64px !important;
+        max-width: 64px !important;
+    }
+
+    #zoom-select {
+        width: 64px !important;
+        max-width: 64px !important;
+    }
+
+    /* 3. YATAY CETVEL (MOBİLDE GİZLENİR) */
+    #horizontal-ruler {
+        display: none !important;
+    }
+
+    /* 4. ÇALIŞMA ALANI VE SAYFA (A4 / RESPONSIVE WORKSPACE) */
+    .workspace-container {
+        padding: 8px 6px 58px 6px !important;
+        width: 100% !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+    }
+
+    .page-wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        flex-shrink: 0 !important;
+        transition: transform 0.2s ease !important;
+    }
+
+    /* Varsayılan Mobil Akıcı Görünüm: Metin ekrana tam oturur, yatay kaydırma gerekmez */
+    body:not(.mobile-a4-mode) #editor,
+    body:not(.mobile-a4-mode) .a4-page {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        min-height: calc(100vh - 170px) !important;
+        padding: 18px 12px !important;
+        margin: 0 auto !important;
+        box-sizing: border-box !important;
+        font-size: 14.5px !important;
+        line-height: 1.5 !important;
+        border-radius: 6px !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08) !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+
+    /* A4 Baskı Modunda: Gerçek sayfa boyutu ölçeklendirilir */
+    body.mobile-a4-mode .page-wrapper {
+        align-self: center !important;
+    }
+
+    /* Antet katmanı mobilde ekrana uyum sağlar */
+    .a4-antet-layer,
+    .lawyer-antet-container {
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 5. SAYFALAR BÖLMESİ (MOBİLDE SOL ÇEKMECE / DRAWER) */
+    #thumbnails-sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 250px !important;
+        max-width: 82vw !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        z-index: 10500 !important;
+        border-radius: 0 !important;
+        box-shadow: 6px 0 28px rgba(0, 0, 0, 0.38) !important;
+        margin-right: 0 !important;
+        transform: translateX(-100%);
+        transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        display: flex !important;
+    }
+
+    #thumbnails-sidebar.open-mobile {
+        transform: translateX(0) !important;
+    }
+
+    .mobile-drawer-backdrop {
+        display: block !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        background: rgba(0, 0, 0, 0.45) !important;
+        z-index: 10400 !important;
+        backdrop-filter: blur(2px) !important;
+        -webkit-backdrop-filter: blur(2px) !important;
+    }
+
+    /* 6. MOBİL HIZLI İŞLEM ÇUBUĞU (BOTTOM QUICK BAR) */
+    .mobile-quick-bar {
+        display: flex !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 48px !important;
+        background: var(--ax-surface-default) !important;
+        border-top: 1px solid var(--ax-border-subtle) !important;
+        z-index: 9900 !important;
+        align-items: center !important;
+        justify-content: space-around !important;
+        padding: 0 4px !important;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .mq-btn {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: transparent !important;
+        border: none !important;
+        font-size: 10px !important;
+        font-weight: 600 !important;
+        color: var(--ax-color-neutral-700) !important;
+        padding: 3px 4px !important;
+        gap: 2px !important;
+        border-radius: 6px !important;
+        flex: 1 1 0 !important;
+        cursor: pointer !important;
+        touch-action: manipulation !important;
+    }
+
+    .mq-btn:active,
+    .mq-btn.active {
+        color: var(--ax-color-primary) !important;
+        background: var(--ax-surface-subtle) !important;
+    }
+
+    .mq-btn-primary {
+        color: var(--ax-color-primary) !important;
+        font-weight: 700 !important;
+    }
+
+    /* 7. MOBİL BİÇİMLENDİRME ÇEKMECESİ (FORMAT DRAWER) */
+    .mobile-format-drawer {
+        position: fixed !important;
+        bottom: 48px !important;
+        left: 0 !important;
+        right: 0 !important;
+        background: var(--ax-surface-default) !important;
+        border-top: 1px solid var(--ax-border-subtle) !important;
+        border-top-left-radius: 14px !important;
+        border-top-right-radius: 14px !important;
+        box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.18) !important;
+        z-index: 9950 !important;
+        padding: 12px 14px 14px 14px !important;
+        animation: mfSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    @keyframes mfSlideUp {
+        from { transform: translateY(100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .mobile-drawer-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+        border-bottom: 1px solid var(--ax-border-subtle);
+    }
+
+    .mobile-drawer-close {
+        background: transparent;
+        border: none;
+        font-size: 20px;
+        color: var(--ax-color-neutral-600);
+        cursor: pointer;
+        padding: 0 4px;
+        line-height: 1;
+    }
+
+    .mf-row {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 7px;
+        flex-wrap: wrap;
+    }
+
+    .mf-btn {
+        flex: 1 1 auto;
+        height: 35px;
+        border-radius: 6px;
+        border: 1px solid var(--ax-border-subtle);
+        background: var(--ax-surface-subtle);
+        color: var(--ax-color-neutral-800);
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        cursor: pointer;
+    }
+
+    .mf-btn:active {
+        background: var(--ax-color-primary);
+        color: #ffffff;
+        border-color: var(--ax-color-primary);
+    }
+
+    .mf-select {
+        flex: 1 1 auto;
+        height: 35px;
+        border-radius: 6px;
+        border: 1px solid var(--ax-border-subtle);
+        background: var(--ax-surface-subtle);
+        color: var(--ax-color-neutral-800);
+        font-size: 12px;
+        font-weight: 600;
+        padding: 0 8px;
+    }
+
+    /* 8. DURUM ÇUBUĞU (STATUS BAR - MOBİL) */
+    .status-bar {
+        position: fixed !important;
+        bottom: 48px !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 20px !important;
+        font-size: 9.5px !important;
+        padding: 0 8px !important;
+        border-top: 1px solid var(--ax-border-subtle) !important;
+        z-index: 9800 !important;
+        background: var(--ax-surface-default) !important;
+    }
+
+    .status-bar #stat-margins-info,
+    .status-bar #status-wpm-widget,
+    .status-bar #stat-chars {
+        display: none !important;
+    }
+
+    .status-privacy-pill {
+        padding: 1px 4px !important;
+        font-size: 9px !important;
+    }
+
+    .status-privacy-pill span:last-child {
+        display: none !important;
+    }
+
+    /* 9. PENCERELER VE İLETİŞİM KUTULARI (MODALS ON MOBILE) */
+    .ax-modal-backdrop {
+        padding: 8px !important;
+        align-items: flex-end !important;
+    }
+
+    .ax-modal-dialog {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 86vh !important;
+        border-bottom-left-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        margin: 0 !important;
+    }
+
+    .ax-modal-body {
+        padding: 12px 14px !important;
+        max-height: 65vh !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .lawyer-builder-layout,
+    .antet-grid-3col,
+    .ocr-grid,
+    .wizard-form-grid,
+    .template-wizard-grid {
+        flex-direction: column !important;
+        display: flex !important;
+        gap: 12px !important;
+    }
+
+    .lawyer-preview-column,
+    .antet-preview-container {
+        min-height: 200px !important;
+        max-height: 260px !important;
+    }
+
+    .margin-inputs-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .ax-modal-footer {
+        padding: 8px 12px !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+    }
+
+    .ax-modal-footer .tool-btn,
+    .ax-modal-footer .tool-btn-primary,
+    .ax-modal-footer .tool-btn-secondary {
+        flex: 1 1 auto !important;
+        min-height: 36px !important;
+        justify-content: center !important;
+    }
+
+    /* Karanlık tema mobil kontrolleri */
+    [data-theme="dark"] .mobile-quick-bar,
+    [data-theme="dark"] .mobile-format-drawer {
+        background: var(--ax-surface-default) !important;
+        border-color: var(--ax-border-subtle) !important;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.45) !important;
+    }
+
+    [data-theme="dark"] .mq-btn {
+        color: var(--ax-color-neutral-300) !important;
+    }
+
+    [data-theme="dark"] .mq-btn:active,
+    [data-theme="dark"] .mq-btn.active {
+        color: #60a5fa !important;
+        background: rgba(59, 130, 246, 0.15) !important;
+    }
+
+    [data-theme="dark"] .mf-btn,
+    [data-theme="dark"] .mf-select {
+        background: var(--ax-surface-subtle) !important;
+        border-color: var(--ax-border-subtle) !important;
+        color: var(--ax-color-neutral-200) !important;
+    }
+}

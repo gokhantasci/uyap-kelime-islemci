@@ -5215,6 +5215,201 @@ function openColorPicker(pickerId, ev) {
         }
     }
 
+    // ----------------------------------------------------
+    // MOBİL DUYARLI KONTROL SİSTEMİ (MOBILE SUITE)
+    // ----------------------------------------------------
+    function initMobileSuite() {
+        const mqBar = document.getElementById('mobile-quick-bar');
+        const mqBtnFormat = document.getElementById('mq-btn-format');
+        const mqBtnFind = document.getElementById('mq-btn-find');
+        const mqBtnAi = document.getElementById('mq-btn-ai');
+        const mqBtnPages = document.getElementById('mq-btn-pages');
+        const mqBtnViewMode = document.getElementById('mq-btn-view-mode');
+        const mqViewModeText = document.getElementById('mq-view-mode-text');
+        const mqBtnSave = document.getElementById('mq-btn-save');
+
+        const formatDrawer = document.getElementById('mobile-format-drawer');
+        const btnCloseFormat = document.getElementById('btn-close-mobile-format');
+        const drawerBackdrop = document.getElementById('mobile-drawer-backdrop');
+        const thumbnailsSidebar = document.getElementById('thumbnails-sidebar');
+
+        const mFontFamily = document.getElementById('mobile-font-family-select');
+        const mFontSize = document.getElementById('mobile-font-size-select');
+        const mColorPicker = document.getElementById('mobile-text-color-picker');
+
+        function isMobile() {
+            return window.innerWidth <= 768;
+        }
+
+        function closeAllDrawers() {
+            if (formatDrawer) formatDrawer.style.display = 'none';
+            if (thumbnailsSidebar) thumbnailsSidebar.classList.remove('open-mobile');
+            if (drawerBackdrop) drawerBackdrop.style.display = 'none';
+            if (mqBtnFormat) mqBtnFormat.classList.remove('active');
+            if (mqBtnPages) mqBtnPages.classList.remove('active');
+        }
+
+        // 1. Biçimlendirme Çekmecesi
+        if (mqBtnFormat && formatDrawer) {
+            mqBtnFormat.addEventListener('click', () => {
+                const isOpen = formatDrawer.style.display === 'block';
+                closeAllDrawers();
+                if (!isOpen) {
+                    formatDrawer.style.display = 'block';
+                    if (drawerBackdrop) drawerBackdrop.style.display = 'block';
+                    mqBtnFormat.classList.add('active');
+                }
+            });
+        }
+        if (btnCloseFormat) {
+            btnCloseFormat.addEventListener('click', closeAllDrawers);
+        }
+
+        // 2. Çekmece Dışına Tıklanınca Kapat
+        if (drawerBackdrop) {
+            drawerBackdrop.addEventListener('click', closeAllDrawers);
+        }
+
+        // 3. Bul ve Değiştir
+        if (mqBtnFind) {
+            mqBtnFind.addEventListener('click', () => {
+                closeAllDrawers();
+                const btnFind = document.getElementById('btn-find');
+                if (btnFind) btnFind.click();
+                else {
+                    const modalFind = document.getElementById('modal-find-replace');
+                    if (modalFind) openModal(modalFind);
+                }
+            });
+        }
+
+        // 4. AI Asistan
+        if (mqBtnAi) {
+            mqBtnAi.addEventListener('click', () => {
+                closeAllDrawers();
+                const btnAi = document.getElementById('btn-ai-assistant');
+                if (btnAi) btnAi.click();
+            });
+        }
+
+        // 5. Sayfalar / Gezinti Çekmecesi
+        if (mqBtnPages && thumbnailsSidebar) {
+            mqBtnPages.addEventListener('click', () => {
+                const isOpen = thumbnailsSidebar.classList.contains('open-mobile');
+                closeAllDrawers();
+                if (!isOpen) {
+                    thumbnailsSidebar.classList.add('open-mobile');
+                    if (drawerBackdrop) drawerBackdrop.style.display = 'block';
+                    mqBtnPages.classList.add('active');
+                }
+            });
+        }
+
+        // 6. Kaydet (UDF)
+        if (mqBtnSave) {
+            mqBtnSave.addEventListener('click', () => {
+                closeAllDrawers();
+                const btnSave = document.getElementById('btn-save');
+                if (btnSave) btnSave.click();
+            });
+        }
+
+        // 7. Mobil Görünüm Modu Değiştirici (Akıcı Metin <-> A4 Sayfa Sığdırma)
+        let isA4Mode = false;
+        function updateViewMode(a4) {
+            isA4Mode = a4;
+            const pageWrapper = document.getElementById('page-wrapper');
+            const wsContainer = document.getElementById('workspace-container');
+
+            if (isA4Mode) {
+                document.body.classList.add('mobile-a4-mode');
+                if (mqViewModeText) mqViewModeText.textContent = 'Akıcı';
+                if (pageWrapper && wsContainer) {
+                    const targetW = 794;
+                    const availW = Math.max(300, (wsContainer.clientWidth || window.innerWidth) - 16);
+                    const scale = Math.min(1, availW / targetW);
+                    pageWrapper.style.transform = `scale(${scale})`;
+                    pageWrapper.style.transformOrigin = 'top center';
+                }
+                showToast('A4 Sayfa Görünümü: Belge ekrana sığdırıldı.', 'info');
+            } else {
+                document.body.classList.remove('mobile-a4-mode');
+                if (mqViewModeText) mqViewModeText.textContent = 'A4 Görünüm';
+                if (pageWrapper) {
+                    pageWrapper.style.transform = 'none';
+                    pageWrapper.style.transformOrigin = 'top center';
+                }
+                showToast('Mobil Akıcı Görünüm: Kolay okuma ve yazım modu.', 'info');
+            }
+            if (typeof recalculatePagesAndThumbnails === 'function') {
+                recalculatePagesAndThumbnails();
+            }
+        }
+
+        if (mqBtnViewMode) {
+            mqBtnViewMode.addEventListener('click', () => {
+                updateViewMode(!isA4Mode);
+            });
+        }
+
+        // 8. Mobil Biçimlendirme Komutları
+        if (formatDrawer) {
+            formatDrawer.querySelectorAll('[data-command]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const cmd = btn.getAttribute('data-command');
+                    if (cmd) {
+                        editor.exec(cmd);
+                    }
+                });
+            });
+        }
+
+        // Mobil Yazı Tipi & Punto Bağlantısı
+        if (mFontFamily) {
+            mFontFamily.addEventListener('change', () => {
+                editor.setFontFamily(mFontFamily.value);
+                const deskSelect = document.getElementById('font-family-select');
+                if (deskSelect) deskSelect.value = mFontFamily.value;
+            });
+        }
+        if (mFontSize) {
+            mFontSize.addEventListener('change', () => {
+                editor.setFontSize(mFontSize.value);
+                const deskSelect = document.getElementById('font-size-select');
+                if (deskSelect) deskSelect.value = mFontSize.value;
+            });
+        }
+        if (mColorPicker) {
+            mColorPicker.addEventListener('input', () => {
+                editor.setTextColor(mColorPicker.value);
+            });
+        }
+
+        // Ekran boyutu değiştiğinde ölçek güncelleme
+        window.addEventListener('resize', () => {
+            if (isMobile() && isA4Mode) {
+                updateViewMode(true);
+            }
+        });
+
+        // Mobilde başlangıç optimizasyonu
+        if (isMobile()) {
+            if (thumbnailsSidebar) {
+                thumbnailsSidebar.classList.remove('active');
+            }
+        }
+
+        // Dışa aktar
+        window.UkiMobile = {
+            isMobile,
+            updateViewMode,
+            closeAllDrawers,
+            toggleFormatDrawer: () => mqBtnFormat && mqBtnFormat.click(),
+            toggleThumbnailsDrawer: () => mqBtnPages && mqBtnPages.click()
+        };
+    }
+
+    initMobileSuite();
     checkUrlParamsAndInit();
 
     window.addEventListener('hashchange', () => {
